@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>B-School Login – Smart LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root{--navy:#1a237e;--purple:#7c4dff;--purple2:#6a1fd8;--white:#fff;--gray:#f4f6fb;--text:#263238;--muted:#78909c;--red:#e53935;}
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;min-height:100vh;background:linear-gradient(135deg,#311b92 0%,#7c4dff 40%,#6a1fd8 100%);display:flex;align-items:center;justify-content:center;padding:24px 16px;position:relative;overflow:hidden;}
+    body::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='80' height='92' viewBox='0 0 80 92' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='40,5 70,22 70,56 40,73 10,56 10,22' fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='1.5'/%3E%3C/svg%3E") repeat;}
+    .glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+    .glow.g1{width:400px;height:400px;background:rgba(255,255,255,0.10);top:-80px;right:-80px;}
+    .glow.g2{width:350px;height:350px;background:rgba(106,31,216,0.3);bottom:-60px;left:-60px;}
+    .card{position:relative;z-index:10;background:#fff;border-radius:24px;padding:40px 36px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,0.22);}
+    .back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);text-decoration:none;margin-bottom:24px;transition:color 0.2s;}
+    .back-link:hover{color:var(--navy);}
+    .card-header{text-align:center;margin-bottom:28px;}
+    .role-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#7c4dff,#6a1fd8);color:#fff;font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;margin-bottom:16px;letter-spacing:0.5px;}
+    .card-title{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;color:var(--navy);}
+    .card-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+    .form-group{margin-bottom:18px;}
+    .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:7px;}
+    .input-wrap{position:relative;}
+    .input-wrap i.ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;}
+    .input-wrap input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#fafafa;transition:border-color 0.2s,box-shadow 0.2s;outline:none;}
+    .input-wrap input:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,77,255,0.1);background:#fff;}
+    .toggle-pw{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:14px;border:none;background:none;padding:0;}
+    .forgot-row{text-align:right;margin-top:6px;}
+    .forgot-row a{font-size:12px;color:var(--purple);text-decoration:none;}
+    .forgot-row a:hover{text-decoration:underline;}
+    .btn-login{width:100%;padding:13px;background:linear-gradient(135deg,#7c4dff,#6a1fd8);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;letter-spacing:0.3px;transition:opacity 0.2s,transform 0.15s;margin-top:4px;}
+    .btn-login:hover{opacity:0.92;transform:translateY(-1px);}
+    .btn-login:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+    .msg{padding:11px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
+    .msg.error{background:#fdecea;color:var(--red);border:1px solid #f5c6c6;}
+    .msg.success{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+    .footer-copy{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;}
+    @media(max-width:480px){.card{padding:30px 22px;}}
+  </style>
+</head>
+<body>
+<div class="glow g1"></div><div class="glow g2"></div>
+<div class="card">
+  <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+  <div class="card-header">
+    <div class="role-badge"><i class="fas fa-building-columns"></i>&nbsp;B‑School</div>
+    <div class="card-title">B‑School Login</div>
+    <div class="card-sub">Track batches, progress & analytics</div>
+  </div>
+  <div class="msg" id="msgBox"></div>
+  <form id="loginForm" novalidate>
+    <div class="form-group">
+      <label for="email">Email / Username</label>
+      <div class="input-wrap">
+        <i class="fas fa-envelope ico"></i>
+        <input type="text" id="email" placeholder="bschool@example.com" autocomplete="username" required/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <div class="input-wrap">
+        <i class="fas fa-lock ico"></i>
+        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required/>
+        <button type="button" class="toggle-pw" onclick="togglePw()"><i class="fas fa-eye" id="eyeIcon"></i></button>
+      </div>
+      <div class="forgot-row"><a href="forgot-password.html">Forgot password?</a></div>
+    </div>
+    <button type="submit" class="btn-login" id="loginBtn"><i class="fas fa-sign-in-alt"></i>&nbsp; Sign In</button>
+  </form>
+  <div class="footer-copy">© 2026 Connecting Dot Consultancy Pvt. Ltd. All rights reserved.</div>
+</div>
+<script>
+  function togglePw(){
+    const i=document.getElementById('password'),e=document.getElementById('eyeIcon');
+    if(i.type==='password'){i.type='text';e.className='fas fa-eye-slash';}
+    else{i.type='password';e.className='fas fa-eye';}
+  }
+  function showMsg(m,t='error'){const b=document.getElementById('msgBox');b.textContent=m;b.className='msg '+t;b.style.display='block';}
+  document.getElementById('loginForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    document.getElementById('msgBox').style.display='none';
+    const email=document.getElementById('email').value.trim();
+    const password=document.getElementById('password').value;
+    if(!email||!password){showMsg('Please fill in all fields.');return;}
+    const btn=document.getElementById('loginBtn');
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>&nbsp; Signing in…';
+    try{
+      const r=await fetch('/api/v1/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:email,password,role:'bschool'})});
+      const d=await r.json();
+      if(r.ok&&d.success){
+        localStorage.setItem('lms_token',d.data.token);
+        localStorage.setItem('lms_refresh',d.data.refreshToken||'');
+        localStorage.setItem('lms_user',JSON.stringify({name:d.data.name,role:d.data.role,id:d.data.id}));
+        showMsg('Login successful! Redirecting…','success');
+        setTimeout(()=>{window.location.href='bschool-dashboard.html';},600);
+      }else{
+        showMsg(d.error||'Invalid credentials. Please try again.');
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i>&nbsp; Sign In';
+      }
+    }catch(err){
+      showMsg('Unable to connect. Please check your network.');
+      btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i>&nbsp; Sign In';
+    }
+  });
+</script>
+</body>
+</html>

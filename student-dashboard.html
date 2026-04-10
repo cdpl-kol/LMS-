@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Student Dashboard – Smart LMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --navy:#1a237e;--navy2:#111b60;--blue:#1565c0;--orange:#ff6b35;--orange2:#e55a2b;
+  --pink:#e91e8c;--purple:#7c4dff;--green:#43a047;--teal:#00bcd4;
+  --bg:#f0f4ff;--white:#fff;--text:#263238;--muted:#78909c;--brd:#e3e8f0;
+  --sid-w:240px;--top-h:60px;--shadow:0 2px 12px rgba(26,35,126,0.09);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);font-size:14px;}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sid-w);background:var(--navy);display:flex;flex-direction:column;z-index:200;overflow-y:auto;transition:transform 0.25s;}
+.sb-header{padding:16px 18px;background:var(--navy2);display:flex;align-items:center;gap:10px;min-height:var(--top-h);border-bottom:1px solid rgba(255,255,255,0.08);}
+.sb-header img{max-height:38px;max-width:130px;object-fit:contain;}
+.sb-header .sb-name{font-size:13px;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;}
+.sb-section{font-size:10px;color:rgba(255,255,255,0.35);padding:18px 18px 6px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 18px;color:rgba(255,255,255,0.72);text-decoration:none;font-size:13px;cursor:pointer;border-left:3px solid transparent;transition:all 0.15s;border:none;background:none;width:100%;text-align:left;}
+.nav-item i{width:18px;text-align:center;font-size:14px;}
+.nav-item:hover{background:rgba(255,255,255,0.07);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,0.13);color:#fff;border-left:3px solid var(--pink);}
+.sb-footer{margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.08);}
+.sb-user{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.8);font-size:13px;}
+.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--pink);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0;}
+
+/* ═══ TOPBAR ═══ */
+.topbar{position:fixed;top:0;left:var(--sid-w);right:0;height:var(--top-h);background:var(--white);border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:100;box-shadow:var(--shadow);}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.hamburger{display:none;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text);}
+.page-title{font-family:'Poppins',sans-serif;font-size:16px;font-weight:600;color:var(--navy);}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.notif-btn{position:relative;background:none;border:none;cursor:pointer;font-size:17px;color:var(--muted);padding:6px;}
+.notif-badge{position:absolute;top:2px;right:2px;width:8px;height:8px;background:var(--orange);border-radius:50%;}
+.logout-btn{display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--brd);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--muted);cursor:pointer;transition:all 0.15s;}
+.logout-btn:hover{border-color:var(--pink);color:var(--pink);}
+
+/* ═══ MAIN ═══ */
+.main{margin-left:var(--sid-w);margin-top:var(--top-h);padding:24px;min-height:calc(100vh - var(--top-h));}
+.section{display:none;}.section.active{display:block;}
+
+/* ═══ STATS ═══ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-bottom:24px;}
+.stat-card{background:var(--white);border-radius:16px;padding:20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow);border:1px solid var(--brd);}
+.stat-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;}
+.ic-pink{background:linear-gradient(135deg,#e91e8c,#9c27b0);}
+.ic-blue{background:linear-gradient(135deg,#26d0ce,#1a8fe3);}
+.ic-orange{background:linear-gradient(135deg,#ff6b35,#e53935);}
+.ic-green{background:linear-gradient(135deg,#43a047,#00897b);}
+.ic-purple{background:linear-gradient(135deg,#7c4dff,#6a1fd8);}
+.ic-teal{background:linear-gradient(135deg,#00bcd4,#0097a7);}
+.stat-info .num{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;color:var(--navy);line-height:1;}
+.stat-info .lbl{font-size:12px;color:var(--muted);margin-top:3px;}
+
+/* ═══ CARDS ═══ */
+.card{background:var(--white);border-radius:16px;padding:22px;box-shadow:var(--shadow);border:1px solid var(--brd);margin-bottom:20px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.card-title{font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;}
+.chart-wrap{background:var(--white);border-radius:16px;padding:20px;box-shadow:var(--shadow);border:1px solid var(--brd);}
+.chart-wrap canvas{max-height:240px;}
+
+/* ═══ TABLE ═══ */
+table{width:100%;border-collapse:collapse;}
+th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--brd);text-align:left;}
+td{padding:12px 12px;border-bottom:1px solid var(--brd);font-size:13px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f8f9ff;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge.active{background:#e8f5e9;color:#2e7d32;}
+.badge.completed{background:#e8f5e9;color:#2e7d32;}
+.badge.pending{background:#fff3e0;color:#e65100;}
+.badge.failed{background:#fdecea;color:#c62828;}
+.badge.passed{background:#e8f5e9;color:#2e7d32;}
+.badge.upcoming{background:#e3f2fd;color:#1565c0;}
+.badge.present{background:#e8f5e9;color:#2e7d32;}
+.badge.absent{background:#fdecea;color:#c62828;}
+.badge.late{background:#fff3e0;color:#e65100;}
+
+/* ═══ BUTTONS ═══ */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;border:none;transition:all 0.15s;}
+.btn-primary{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-outline{background:transparent;border:1.5px solid var(--brd);color:var(--text);}
+.btn-outline:hover{border-color:var(--navy);color:var(--navy);}
+
+/* ═══ PROGRESS BARS ═══ */
+.prog-bar{background:#eee;border-radius:8px;height:8px;overflow:hidden;margin:6px 0;}
+.prog-fill{height:100%;border-radius:8px;transition:width 0.6s ease;}
+
+/* ═══ WELCOME BANNER ═══ */
+.welcome-banner{background:linear-gradient(135deg,#e91e8c,#9c27b0);border-radius:16px;padding:24px 28px;color:#fff;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+.welcome-banner h2{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px;}
+.welcome-banner p{font-size:13px;opacity:0.85;}
+.welcome-badge{background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);border-radius:12px;padding:10px 18px;text-align:center;}
+.welcome-badge .wbd-val{font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;}
+.welcome-badge .wbd-lbl{font-size:11px;opacity:0.8;text-transform:uppercase;letter-spacing:1px;}
+
+/* ═══ COURSE CARDS ═══ */
+.course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;}
+.crs-card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);border:1px solid var(--brd);overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;}
+.crs-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(26,35,126,0.14);}
+.crs-banner{height:6px;}
+.crs-body{padding:18px;}
+.crs-title{font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);margin-bottom:5px;}
+.crs-meta{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.crs-btn{margin-top:14px;background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;width:100%;font-family:'Inter',sans-serif;transition:opacity 0.2s;}
+.crs-btn:hover{opacity:0.9;}
+
+/* ═══ PROFILE CARD ═══ */
+.profile-card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);border:1px solid var(--brd);overflow:hidden;max-width:680px;}
+.profile-banner{background:linear-gradient(135deg,var(--pink),var(--purple));padding:28px 24px;color:#fff;text-align:center;}
+.profile-avatar{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.2);border:3px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;margin:0 auto 12px;color:#fff;}
+.profile-name{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;}
+.profile-role{font-size:13px;opacity:0.82;margin-top:3px;}
+.profile-body{padding:24px;}
+.pf-row{display:flex;gap:20px;margin-bottom:16px;flex-wrap:wrap;}
+.pf-field{flex:1;min-width:200px;}
+.pf-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;font-weight:600;}
+.pf-val{font-size:14px;color:var(--text);font-weight:500;}
+.profile-actions{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;}
+
+/* ═══ FORM ═══ */
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);background:#fafafa;outline:none;transition:border-color 0.2s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--pink);background:#fff;box-shadow:0 0 0 3px rgba(233,30,140,0.07);}
+.form-group textarea{resize:vertical;min-height:80px;}
+
+/* ═══ ALERT ═══ */
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;}
+.alert.error{background:#fdecea;color:#c62828;border:1px solid #f5c6c6;}
+.alert.success{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+
+/* ═══ TOAST ═══ */
+.toast{position:fixed;bottom:24px;right:24px;background:#323232;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;z-index:9999;display:none;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:320px;}
+.toast.show{display:block;}
+.toast.success{background:#2e7d32;}
+.toast.error{background:#c62828;}
+
+/* ═══ MODAL ═══ */
+#modalOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:center;justify-content:center;padding:20px;}
+#modalOverlay.open{display:flex;}
+.modal-box{background:var(--white);border-radius:16px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.2);overflow:hidden;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--brd);}
+.modal-title{font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);}
+.modal-close{background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);line-height:1;}
+.modal-body{padding:22px;}
+
+/* ═══ EMPTY STATE ═══ */
+.empty-state{text-align:center;padding:48px 24px;color:var(--muted);}
+.empty-state i{font-size:48px;margin-bottom:16px;opacity:0.35;}
+.empty-state p{font-size:14px;}
+
+/* ═══ FOOTER ═══ */
+.dash-footer{background:var(--navy);color:rgba(255,255,255,0.6);padding:14px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;font-size:12px;margin-top:32px;border-radius:12px;}
+.footer-social-row{display:flex;gap:8px;}
+.footer-social-btn{width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);display:inline-flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.75);text-decoration:none;font-size:12px;transition:background 0.2s;}
+.footer-social-btn:hover{background:var(--orange);}
+
+/* ═══ PAGINATION ═══ */
+.pagination{display:flex;gap:6px;justify-content:flex-end;margin-top:14px;}
+.page-btn{padding:5px 10px;border:1px solid var(--brd);border-radius:6px;background:#fff;font-size:12px;cursor:pointer;transition:all 0.15s;}
+.page-btn.active,.page-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .topbar{left:0;}
+  .main{margin-left:0;}
+  .hamburger{display:block;}
+  .charts-row{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .welcome-banner{flex-direction:column;}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr;}
+  .main{padding:16px;}
+  .pf-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-header">
+    <img src="logo.png" alt="Logo" id="sbLogo" onerror="this.style.display='none'"/>
+    <span class="sb-name">Student Portal</span>
+  </div>
+  <span class="sb-section">Main</span>
+  <button class="nav-item active" onclick="showSection('overview')"><i class="fas fa-th-large"></i>Dashboard</button>
+  <span class="sb-section">Learning</span>
+  <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>My Courses</button>
+  <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-line"></i>My Progress</button>
+  <button class="nav-item" onclick="showSection('exams')"><i class="fas fa-file-pen"></i>Exams & Results</button>
+  <button class="nav-item" onclick="showSection('assignments')"><i class="fas fa-tasks"></i>Assignments</button>
+  <span class="sb-section">School</span>
+  <button class="nav-item" onclick="showSection('attendance')"><i class="fas fa-calendar-check"></i>Attendance</button>
+  <button class="nav-item" onclick="showSection('timetable')"><i class="fas fa-clock"></i>Timetable</button>
+  <button class="nav-item" onclick="showSection('materials')"><i class="fas fa-folder-open"></i>Study Materials</button>
+  <button class="nav-item" onclick="showSection('scorm')"><i class="fas fa-cube"></i>E-Learning (SCORM)</button>
+  <span class="sb-section">Account</span>
+  <button class="nav-item" onclick="showSection('notifications')"><i class="fas fa-bell"></i>Notifications</button>
+  <button class="nav-item" onclick="showSection('profile')"><i class="fas fa-user"></i>My Profile</button>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sbAvatar">S</div>
+      <div>
+        <div style="font-size:13px;color:#fff;font-weight:600;" id="sbUserName">Student</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.45);">Student Portal</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ TOPBAR ═══ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <span class="page-title" id="pageTitle">Dashboard</span>
+  </div>
+  <div class="topbar-right">
+    <button class="notif-btn" onclick="showSection('notifications')"><i class="fas fa-bell"></i><span class="notif-badge" id="notifBadge" style="display:none;"></span></button>
+    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</button>
+  </div>
+</header>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main class="main">
+
+  <!-- ── OVERVIEW ── -->
+  <div class="section active" id="sec-overview">
+    <div class="welcome-banner" id="welcomeBanner">
+      <div>
+        <h2>Welcome back, <span id="welcomeName">Student</span>! 👋</h2>
+        <p>Track your courses, exams, and progress — all in one place.</p>
+      </div>
+      <div class="welcome-badge">
+        <div class="wbd-val" id="overallProgress">—%</div>
+        <div class="wbd-lbl">Overall Progress</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon ic-pink"><i class="fas fa-book-open"></i></div><div class="stat-info"><div class="num" id="st-courses">—</div><div class="lbl">Enrolled Courses</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-blue"><i class="fas fa-file-pen"></i></div><div class="stat-info"><div class="num" id="st-exams">—</div><div class="lbl">Exams Attempted</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-green"><i class="fas fa-calendar-check"></i></div><div class="stat-info"><div class="num" id="st-attendance">—</div><div class="lbl">Attendance %</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-orange"><i class="fas fa-tasks"></i></div><div class="stat-info"><div class="num" id="st-assignments">—</div><div class="lbl">Assignments Due</div></div></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-wrap">
+        <div class="card-header"><span class="card-title">Exam Score History</span></div>
+        <canvas id="examScoreChart"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="card-header"><span class="card-title">Course Completion</span></div>
+        <canvas id="progressChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Activity</span>
+        <button class="btn btn-primary btn-sm" onclick="showSection('courses')">View Courses</button>
+      </div>
+      <div style="overflow-x:auto;"><table id="recentTable">
+        <thead><tr><th>#</th><th>Course</th><th>Module</th><th>Progress</th><th>Status</th></tr></thead>
+        <tbody id="recentTbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── MY COURSES ── -->
+  <div class="section" id="sec-courses">
+    <div class="card-header" style="margin-bottom:18px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">My Courses</span>
+    </div>
+    <div class="course-grid" id="coursesGrid">
+      <div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>
+    </div>
+  </div>
+
+  <!-- ── MY PROGRESS ── -->
+  <div class="section" id="sec-progress">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Module Progress — All Courses</span></div>
+      <div id="progressList"><div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-wrap">
+        <div class="card-header"><span class="card-title">Progress Overview</span></div>
+        <canvas id="progOverviewChart"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="card-header"><span class="card-title">Exam Performance</span></div>
+        <canvas id="examPerfChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EXAMS & RESULTS ── -->
+  <div class="section" id="sec-exams">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Available Exams</span></div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Exam Title</th><th>Course</th><th>Duration</th><th>Pass %</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="examsTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Exam Results History</span></div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Exam</th><th>Course</th><th>Score</th><th>Result</th><th>Date</th></tr></thead>
+        <tbody id="resultsTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── ASSIGNMENTS ── -->
+  <div class="section" id="sec-assignments">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">My Assignments</span>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Title</th><th>Batch</th><th>Due Date</th><th>Max Marks</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="assignTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── ATTENDANCE ── -->
+  <div class="section" id="sec-attendance">
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);max-width:600px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-icon ic-green"><i class="fas fa-check"></i></div><div class="stat-info"><div class="num" id="att-present">—</div><div class="lbl">Present Days</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-orange"><i class="fas fa-times"></i></div><div class="stat-info"><div class="num" id="att-absent">—</div><div class="lbl">Absent Days</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-blue"><i class="fas fa-percent"></i></div><div class="stat-info"><div class="num" id="att-pct">—</div><div class="lbl">Attendance %</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Attendance Record</span></div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Date</th><th>Batch</th><th>Status</th><th>Marked By</th></tr></thead>
+        <tbody id="attTbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── TIMETABLE ── -->
+  <div class="section" id="sec-timetable">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Class Schedule</span></div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Trainer</th><th>Batch</th><th>Room / Link</th></tr></thead>
+        <tbody id="ttTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── SCORM CONTENT ── -->
+  <div class="section" id="sec-scorm">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-cube" style="color:#e91e8c;margin-right:6px;"></i>Interactive E-Learning</span>
+      </div>
+      <div id="scormGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:4px 0;">
+        <div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STUDY MATERIALS ── -->
+  <div class="section" id="sec-materials">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Study Materials</span>
+        <select id="matCourseFilter" style="padding:7px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;" onchange="loadMaterials()">
+          <option value="">All Courses</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Course / Module</th><th>Action</th></tr></thead>
+        <tbody id="matTbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ── NOTIFICATIONS ── -->
+  <div class="section" id="sec-notifications">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Notifications</span>
+        <button class="btn btn-outline btn-sm" onclick="markAllRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
+      </div>
+      <div id="notifList"><div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- ── PROFILE ── -->
+  <div class="section" id="sec-profile">
+    <div class="profile-card" id="profileCard">
+      <div class="profile-banner">
+        <div class="profile-avatar" id="profileAvatar">S</div>
+        <div class="profile-name" id="profileName">Student Name</div>
+        <div class="profile-role">Student | Smart LMS</div>
+      </div>
+      <div class="profile-body">
+        <div class="alert" id="profileAlert"></div>
+        <div class="pf-row">
+          <div class="pf-field"><div class="pf-label">Email</div><div class="pf-val" id="profileEmail">—</div></div>
+          <div class="pf-field"><div class="pf-label">Phone</div><div class="pf-val" id="profilePhone">—</div></div>
+        </div>
+        <div class="pf-row">
+          <div class="pf-field"><div class="pf-label">Batch</div><div class="pf-val" id="profileBatch">—</div></div>
+          <div class="pf-field"><div class="pf-label">Enrolled On</div><div class="pf-val" id="profileJoined">—</div></div>
+        </div>
+        <div class="pf-row">
+          <div class="pf-field"><div class="pf-label">Status</div><div class="pf-val" id="profileStatus">—</div></div>
+        </div>
+        <div class="profile-actions">
+          <button class="btn btn-primary" onclick="openModal('editProfileModal')"><i class="fas fa-edit"></i> Edit Profile</button>
+          <button class="btn btn-outline" onclick="openModal('changePwModal')"><i class="fas fa-lock"></i> Change Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="dash-footer" id="dashFooter">
+    <span id="footerCopy">© 2026 Connecting Dot Consultancy Pvt. Ltd. All rights reserved.</span>
+    <div class="footer-social-row" id="footerSocial">
+      <a id="sf-fb"  href="#" target="_blank" class="footer-social-btn" style="display:none;" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+      <a id="sf-ig"  href="#" target="_blank" class="footer-social-btn" style="display:none;" title="Instagram"><i class="fab fa-instagram"></i></a>
+      <a id="sf-li"  href="#" target="_blank" class="footer-social-btn" style="display:none;" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+      <a id="sf-tw"  href="#" target="_blank" class="footer-social-btn" style="display:none;" title="Twitter/X"><i class="fab fa-x-twitter"></i></a>
+      <a id="sf-yt"  href="#" target="_blank" class="footer-social-btn" style="display:none;" title="YouTube"><i class="fab fa-youtube"></i></a>
+      <a id="sf-wa"  href="#" target="_blank" class="footer-social-btn" style="display:none;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══ MODALS ═══ -->
+<div id="modalOverlay">
+  <!-- Edit Profile -->
+  <div class="modal-box" id="editProfileModal" style="display:none;">
+    <div class="modal-header"><span class="modal-title">Edit Profile</span><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="alert" id="editProfileAlert"></div>
+      <div class="form-group"><label>Full Name</label><input type="text" id="ep-name" placeholder="Your name"/></div>
+      <div class="form-group"><label>Phone</label><input type="tel" id="ep-phone" placeholder="+91 9876543210"/></div>
+      <button class="btn btn-primary" onclick="saveProfile()"><i class="fas fa-save"></i> Save Changes</button>
+    </div>
+  </div>
+  <!-- Change Password -->
+  <div class="modal-box" id="changePwModal" style="display:none;">
+    <div class="modal-header"><span class="modal-title">Change Password</span><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="alert" id="changePwAlert"></div>
+      <div class="form-group"><label>Current Password</label><input type="password" id="cp-old" placeholder="Current password"/></div>
+      <div class="form-group"><label>New Password</label><input type="password" id="cp-new" placeholder="Min 8 chars, 1 uppercase, 1 number"/></div>
+      <div class="form-group"><label>Confirm New Password</label><input type="password" id="cp-confirm" placeholder="Repeat new password"/></div>
+      <button class="btn btn-primary" onclick="changePassword()"><i class="fas fa-lock"></i> Update Password</button>
+    </div>
+  </div>
+  <!-- Submit Assignment -->
+  <div class="modal-box" id="submitAssignModal" style="display:none;">
+    <div class="modal-header"><span class="modal-title">Submit Assignment</span><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="alert" id="submitAssignAlert"></div>
+      <input type="hidden" id="sa-id"/>
+      <div class="form-group"><label>Upload File (PDF / DOC / ZIP)</label><input type="file" id="sa-file" accept=".pdf,.doc,.docx,.zip"/></div>
+      <button class="btn btn-primary" onclick="submitAssignment()"><i class="fas fa-upload"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── AUTH ── */
+const TOKEN=()=>localStorage.getItem('lms_token')||'';
+const USER=()=>{try{return JSON.parse(localStorage.getItem('lms_user')||'{}')}catch{return {};}};
+if(!TOKEN()){window.location.href='student-login.html';}
+
+const BASE='/api/v1';
+async function api(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN()}};
+  if(body)opts.body=JSON.stringify(body);
+  try{
+    const r=await fetch(BASE+path,opts);
+    if(r.status===401){console.warn('401 on',path,'- session may have expired');window.location.href='student-login.html';return{success:false,error:'Session expired'};}
+    return r.json();
+  }catch{return{success:false,error:'Network error'};}
+}
+function fmt(v){return v??'—';}
+function dateFmt(d){return d?new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—';}
+function statusBadge(s){const m={active:'active',completed:'completed',pending:'pending',failed:'failed',passed:'passed',upcoming:'upcoming',present:'present',absent:'absent',late:'late'};return`<span class="badge ${m[s?.toLowerCase()]||'pending'}">${s||'—'}</span>`;}
+function showToast(m,t=''){const el=document.getElementById('toast');el.textContent=m;el.className='toast show '+(t||'');setTimeout(()=>el.className='toast',3000);}
+function showAlert(id,m,t='error'){const el=document.getElementById(id);if(!el)return;el.textContent=m;el.className='alert '+t;el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
+function logout(){localStorage.clear();window.location.href='student-login.html';}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+function openModal(id){document.getElementById('modalOverlay').classList.add('open');document.querySelectorAll('.modal-box').forEach(m=>m.style.display='none');document.getElementById(id).style.display='block';}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+/* ── INIT USER ── */
+const u=USER();
+if(u.name){
+  document.getElementById('welcomeName').textContent=u.name.split(' ')[0];
+  document.getElementById('sbUserName').textContent=u.name;
+  document.getElementById('sbAvatar').textContent=u.name[0]?.toUpperCase()||'S';
+}
+
+/* ── SECTION NAVIGATION ── */
+const sectionTitles={overview:'Dashboard',courses:'My Courses',progress:'My Progress',exams:'Exams & Results',assignments:'Assignments',attendance:'Attendance',timetable:'Timetable',materials:'Study Materials',scorm:'E-Learning (SCORM)',notifications:'Notifications',profile:'My Profile'};
+function showSection(name){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const sec=document.getElementById('sec-'+name);
+  if(sec)sec.classList.add('active');
+  document.getElementById('pageTitle').textContent=sectionTitles[name]||name;
+  // activate matching nav item
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.textContent.trim()===sectionTitles[name])n.classList.add('active');
+  });
+  const loaders={overview:loadOverview,courses:loadCourses,progress:loadProgress,exams:loadExams,assignments:loadAssignments,attendance:loadAttendance,timetable:loadTimetable,materials:loadMaterials,scorm:loadScorm,notifications:loadNotifications,profile:loadProfile};
+  if(loaders[name])loaders[name]();
+}
+
+/* ── OVERVIEW ── */
+let examScoreChart,progressChart;
+async function loadOverview(){
+  try{
+    const [meR,attR,examR,progR]=await Promise.all([
+      api('GET','/me'),
+      api('GET','/attendance/student/me'),
+      api('GET','/exam/results/me'),
+      api('GET','/progress/me')
+    ]);
+    // Update profile data
+    if(meR.success||meR.data){
+      const d=meR.data||meR;
+      if(d.name){document.getElementById('welcomeName').textContent=d.name.split(' ')[0];document.getElementById('sbUserName').textContent=d.name;document.getElementById('sbAvatar').textContent=d.name[0]?.toUpperCase()||'S';}
+    }
+    // Stats
+    if(attR.success||attR.data){
+      const a=attR.data||attR;
+      document.getElementById('st-attendance').textContent=(a.percentage||0)+'%';
+    }
+    if(examR.success||examR.data){
+      const results=examR.data||[];
+      document.getElementById('st-exams').textContent=Array.isArray(results)?results.length:'—';
+    }
+    if(progR.success||progR.data){
+      const p=progR.data||{};
+      const pct=Math.round(p.overall_percentage||0);
+      document.getElementById('overallProgress').textContent=pct+'%';
+    }
+    // Charts
+    buildExamChart(examR.data||[]);
+    buildProgressChart(progR.data||{});
+    // Recent activity table
+    const courses=await api('GET','/courses/enrolled');
+    if(courses.success||courses.data){
+      const rows=courses.data||[];
+      document.getElementById('st-courses').textContent=Array.isArray(rows)?rows.length:'—';
+      document.getElementById('recentTbody').innerHTML=rows.length?
+        rows.slice(0,5).map((c,i)=>`<tr>
+          <td>${i+1}</td><td>${fmt(c.title||c.course_title)}</td>
+          <td>${fmt(c.current_module||'—')}</td>
+          <td><div class="prog-bar"><div class="prog-fill" style="width:${c.progress||0}%;background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div></div><small>${c.progress||0}%</small></td>
+          <td>${statusBadge(c.status||'active')}</td>
+        </tr>`).join(''):
+        '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No courses enrolled yet.</td></tr>';
+    }
+    // Assignments due count
+    const asgn=await api('GET','/assignments/me');
+    if(asgn.success||asgn.data){
+      const pending=(asgn.data||[]).filter(a=>a.submission_status==='pending');
+      document.getElementById('st-assignments').textContent=pending.length;
+    }
+  }catch(e){console.error(e);}
+}
+
+function buildExamChart(results){
+  const ctx=document.getElementById('examScoreChart');
+  if(!ctx)return;
+  if(examScoreChart)examScoreChart.destroy();
+  const labels=Array.isArray(results)?results.slice(-8).map(r=>r.exam_title?.substring(0,12)||'Exam'):[];
+  const scores=Array.isArray(results)?results.slice(-8).map(r=>r.score||0):[];
+  examScoreChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Score',data:scores,borderColor:'#e91e8c',backgroundColor:'rgba(233,30,140,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#e91e8c',pointRadius:5}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});
+}
+
+function buildProgressChart(data){
+  const ctx=document.getElementById('progressChart');
+  if(!ctx)return;
+  if(progressChart)progressChart.destroy();
+  const courses=data.courses||[];
+  progressChart=new Chart(ctx,{type:'doughnut',data:{labels:courses.map(c=>c.title?.substring(0,14)||'Course'),datasets:[{data:courses.map(c=>c.percentage||0),backgroundColor:['#e91e8c','#9c27b0','#7c4dff','#1a8fe3','#43a047','#ff6b35']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
+}
+
+/* ── COURSES ── */
+async function loadCourses(){
+  const r=await api('GET','/courses/enrolled');
+  const rows=(r.data||[]);
+  document.getElementById('coursesGrid').innerHTML=rows.length?
+    rows.map(c=>`
+      <div class="crs-card">
+        <div class="crs-banner" style="background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div>
+        <div class="crs-body">
+          <div class="crs-title">${fmt(c.title||c.course_title)}</div>
+          <div class="crs-meta"><i class="fas fa-chalkboard-user"></i> ${fmt(c.trainer_name||'—')} &nbsp;|&nbsp; <i class="fas fa-layer-group"></i> ${fmt(c.batch_name||'—')}</div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${c.progress||0}%;background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div></div>
+          <div class="prog-lbl" style="font-size:12px;color:var(--muted);">${c.progress||0}% complete</div>
+          ${statusBadge(c.status||'active')}
+          <button class="crs-btn" onclick="viewCourse(${c.course_id||c.id})"><i class="fas fa-play-circle"></i> Continue Learning</button>
+        </div>
+      </div>`).join(''):
+    '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-book-open"></i><p>No courses enrolled yet. Contact your admin.</p></div>';
+}
+function viewCourse(id){showToast('Opening course content…');}
+
+/* ── PROGRESS ── */
+let progOChart,examPChart;
+async function loadProgress(){
+  const r=await api('GET','/progress/me');
+  const data=r.data||{};
+  const courses=data.courses||[];
+  document.getElementById('progressList').innerHTML=courses.length?
+    courses.map(c=>`
+      <div style="margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">
+          <span>${fmt(c.title)}</span><span>${c.percentage||0}%</span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${c.percentage||0}%;background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">${c.completed_modules||0} / ${c.total_modules||0} modules completed</div>
+      </div>`).join(''):
+    '<div style="text-align:center;padding:32px;color:var(--muted);">No progress data yet.</div>';
+  // Charts
+  const ctx1=document.getElementById('progOverviewChart');
+  if(ctx1){if(progOChart)progOChart.destroy();progOChart=new Chart(ctx1,{type:'bar',data:{labels:courses.map(c=>c.title?.substring(0,14)||'Course'),datasets:[{label:'Progress %',data:courses.map(c=>c.percentage||0),backgroundColor:'rgba(233,30,140,0.75)',borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});}
+  const er=await api('GET','/exam/results/me');
+  const results=er.data||[];
+  const ctx2=document.getElementById('examPerfChart');
+  if(ctx2){if(examPChart)examPChart.destroy();examPChart=new Chart(ctx2,{type:'line',data:{labels:results.slice(-10).map(r=>r.exam_title?.substring(0,10)||'Exam'),datasets:[{label:'Score',data:results.slice(-10).map(r=>r.score||0),borderColor:'#7c4dff',backgroundColor:'rgba(124,77,255,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#7c4dff'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});}
+}
+
+/* ── EXAMS ── */
+async function loadExams(){
+  const [exR,resR]=await Promise.all([api('GET','/exams/available'),api('GET','/exam/results/me')]);
+  const exams=exR.data||[];
+  document.getElementById('examsTbody').innerHTML=exams.length?
+    exams.map((e,i)=>`<tr>
+      <td>${i+1}</td><td>${fmt(e.title)}</td><td>${fmt(e.course_title||'—')}</td>
+      <td>${fmt(e.duration_minutes||e.duration||'—')} min</td><td>${fmt(e.pass_percentage||e.pass_percent||'—')}%</td>
+      <td>${statusBadge(e.status||'upcoming')}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="startExam(${e.id})" ${e.status==='completed'?'disabled':''}>
+        <i class="fas fa-play"></i> ${e.status==='completed'?'Completed':'Start'}
+      </button></td>
+    </tr>`).join(''):
+    '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No exams available.</td></tr>';
+  const results=resR.data||[];
+  document.getElementById('resultsTbody').innerHTML=results.length?
+    results.map((r,i)=>`<tr>
+      <td>${i+1}</td><td>${fmt(r.exam_title)}</td><td>${fmt(r.course_title||'—')}</td>
+      <td><strong>${r.score||0}/${r.max_score||100}</strong></td>
+      <td>${statusBadge(r.status==='passed'?'passed':'failed')}</td>
+      <td>${dateFmt(r.submitted_at)}</td>
+    </tr>`).join(''):
+    '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No exam results yet.</td></tr>';
+}
+function startExam(id){window.location.href='exam.html?id='+id;}
+
+/* ── ASSIGNMENTS ── */
+async function loadAssignments(){
+  const r=await api('GET','/assignments/me');
+  const rows=r.data||[];
+  document.getElementById('assignTbody').innerHTML=rows.length?
+    rows.map((a,i)=>`<tr>
+      <td>${i+1}</td><td>${fmt(a.title)}</td><td>${fmt(a.batch_name||'—')}</td>
+      <td>${dateFmt(a.due_date)}</td><td>${fmt(a.max_marks||'—')}</td>
+      <td>${statusBadge(a.submission_status||'pending')}</td>
+      <td>
+        ${a.submission_status==='submitted'?
+          `<span style="font-size:12px;color:var(--green);"><i class="fas fa-check"></i> Submitted ${a.marks_obtained!==null?'('+a.marks_obtained+'/'+a.max_marks+')':''}</span>`:
+          `<button class="btn btn-primary btn-sm" onclick="openSubmitModal(${a.id})"><i class="fas fa-upload"></i> Submit</button>`}
+      </td>
+    </tr>`).join(''):
+    '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No assignments found.</td></tr>';
+}
+function openSubmitModal(id){document.getElementById('sa-id').value=id;openModal('submitAssignModal');}
+async function submitAssignment(){
+  const id=document.getElementById('sa-id').value;
+  const file=document.getElementById('sa-file').files[0];
+  if(!file){showAlert('submitAssignAlert','Please select a file to upload.');return;}
+  const fd=new FormData();fd.append('file',file);
+  try{
+    const r=await fetch(BASE+'/assignments/'+id+'/submit',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
+    const d=await r.json();
+    if(d.success){closeModal();showToast('Assignment submitted successfully!','success');loadAssignments();}
+    else showAlert('submitAssignAlert',d.error||'Submit failed.');
+  }catch{showAlert('submitAssignAlert','Network error. Please try again.');}
+}
+
+/* ── ATTENDANCE ── */
+async function loadAttendance(){
+  const r=await api('GET','/attendance/student/me');
+  const data=r.data||{};
+  document.getElementById('att-present').textContent=data.present_days||0;
+  document.getElementById('att-absent').textContent=data.absent_days||0;
+  document.getElementById('att-pct').textContent=(data.percentage||0)+'%';
+  const records=data.records||[];
+  document.getElementById('attTbody').innerHTML=records.length?
+    records.map(a=>`<tr>
+      <td>${dateFmt(a.date)}</td><td>${fmt(a.batch_name||'—')}</td>
+      <td>${statusBadge(a.status)}</td><td>${fmt(a.marked_by_name||'—')}</td>
+    </tr>`).join(''):
+    '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">No attendance records found.</td></tr>';
+  // Update dashboard stat too
+  document.getElementById('st-attendance').textContent=(data.percentage||0)+'%';
+}
+
+/* ── TIMETABLE ── */
+async function loadTimetable(){
+  const r=await api('GET','/timetable/me');
+  const rows=r.data||[];
+  const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const sorted=rows.sort((a,b)=>days.indexOf(a.day_of_week)-days.indexOf(b.day_of_week));
+  document.getElementById('ttTbody').innerHTML=sorted.length?
+    sorted.map(t=>`<tr>
+      <td><strong>${fmt(t.day_of_week)}</strong></td>
+      <td>${fmt(t.start_time)} – ${fmt(t.end_time)}</td>
+      <td>${fmt(t.subject)}</td><td>${fmt(t.trainer_name||'—')}</td>
+      <td>${fmt(t.batch_name||'—')}</td>
+      <td>${t.room_or_link?`<a href="${t.room_or_link}" target="_blank" style="color:var(--blue);text-decoration:none;"><i class="fas fa-link"></i> ${t.room_or_link.startsWith('http')?'Join Online':t.room_or_link}</a>`:'—'}</td>
+    </tr>`).join(''):
+    '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No timetable scheduled yet.</td></tr>';
+}
+
+/* ── MATERIALS ── */
+async function loadMaterials(){
+  const cid=document.getElementById('matCourseFilter').value;
+  const path='/materials'+(cid?'/course/'+cid:'');
+  const r=await api('GET',path);
+  const rows=r.data||[];
+  document.getElementById('matTbody').innerHTML=rows.length?
+    rows.map((m,i)=>`<tr>
+      <td>${i+1}</td><td>${fmt(m.title)}</td>
+      <td><span class="badge pending">${fmt(m.type||'—')}</span></td>
+      <td>${fmt(m.course_title||m.module_name||'—')}</td>
+      <td><a href="${m.file_path_or_url||'#'}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-download"></i> Open</a></td>
+    </tr>`).join(''):
+    '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No materials available.</td></tr>';
+}
+
+/* ── SCORM ── */
+async function loadScorm(){
+  const grid=document.getElementById('scormGrid');
+  grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  const r=await api('GET','/scorm/packages');
+  const pkgs=r.data||[];
+  if(!pkgs.length){
+    grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-cube" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>No SCORM content available yet.</div>';
+    return;
+  }
+  // Load tracking for each package
+  const trackMap={};
+  await Promise.allSettled(pkgs.map(async p=>{
+    const t=await api('GET','/scorm/tracking/'+p.id);
+    trackMap[p.id]=t.data||{completion_status:'not attempted',score_raw:0};
+  }));
+  const statusColor={passed:'#1b5e20',completed:'#1b5e20',incomplete:'#e65100','not attempted':'#546e7a',failed:'#b71c1c'};
+  const statusIcon={passed:'fa-circle-check',completed:'fa-circle-check',incomplete:'fa-circle-half-stroke','not attempted':'fa-circle',failed:'fa-circle-xmark'};
+  grid.innerHTML=pkgs.map(p=>{
+    const t=trackMap[p.id]||{};
+    const st=t.completion_status||'not attempted';
+    const color=statusColor[st]||'#546e7a';
+    const icon=statusIcon[st]||'fa-circle';
+    const score=t.score_raw!=null?`${t.score_raw}/${t.score_max||100}`:null;
+    return`<div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);border:1.5px solid var(--brd);display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#e91e8c,#9c27b0);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas fa-cube" style="color:#fff;font-size:18px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:14px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.package_name||'SCORM Module'}</div>
+          <div style="font-size:11px;color:var(--muted);">${p.course_name||'—'} ${p.module_name?'• '+p.module_name:''}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;">
+        <i class="fas ${icon}" style="color:${color};"></i>
+        <span style="color:${color};font-weight:600;text-transform:capitalize;">${st}</span>
+        ${score?`<span style="margin-left:auto;color:var(--muted);">Score: <strong>${score}</strong></span>`:''}
+      </div>
+      <div style="background:var(--brd);border-radius:4px;height:5px;overflow:hidden;">
+        <div style="background:linear-gradient(90deg,#e91e8c,#9c27b0);height:100%;width:${st==='passed'||st==='completed'?100:st==='incomplete'?50:0}%;"></div>
+      </div>
+      <a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" class="btn btn-primary" style="text-align:center;justify-content:center;">
+        <i class="fas fa-${st==='incomplete'?'rotate-right':'play'}"></i> ${st==='incomplete'?'Resume':'Launch'}
+      </a>
+    </div>`;
+  }).join('');
+}
+
+/* ── NOTIFICATIONS ── */
+async function loadNotifications(){
+  const r=await api('GET','/notifications');
+  const list=r.data||[];
+  const unread=list.filter(n=>!n.is_read).length;
+  document.getElementById('notifBadge').style.display=unread?'block':'none';
+  document.getElementById('notifList').innerHTML=list.length?
+    list.map(n=>`
+      <div style="padding:14px 16px;background:${n.is_read?'var(--bg)':'#fff'};border-radius:10px;border-left:3px solid ${n.is_read?'var(--brd)':'var(--pink)'};margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:${n.is_read?'400':'600'};color:var(--navy);margin-bottom:3px;">${fmt(n.title||n.message)}</div>
+        <div style="font-size:12px;color:var(--muted);">${dateFmt(n.created_at)}</div>
+      </div>`).join(''):
+    '<div style="text-align:center;color:var(--muted);padding:32px;"><i class="fas fa-bell-slash" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i>No notifications.</div>';
+}
+async function markAllRead(){
+  await api('PUT','/notifications/read');
+  loadNotifications();
+  document.getElementById('notifBadge').style.display='none';
+  showToast('All notifications marked as read','success');
+}
+
+/* ── PROFILE ── */
+async function loadProfile(){
+  const r=await api('GET','/me');
+  const d=r.data||r;
+  if(d.name){
+    document.getElementById('profileName').textContent=d.name;
+    document.getElementById('profileAvatar').textContent=d.name[0]?.toUpperCase()||'S';
+    document.getElementById('profileEmail').textContent=d.email||'—';
+    document.getElementById('profilePhone').textContent=d.contact||d.phone||'—';
+    document.getElementById('profileBatch').textContent=d.batch_name||d.batch||'—';
+    document.getElementById('profileJoined').textContent=dateFmt(d.created_at||d.enrolled_at);
+    document.getElementById('profileStatus').innerHTML=statusBadge(d.status||'active');
+    document.getElementById('ep-name').value=d.name||'';
+    document.getElementById('ep-phone').value=d.contact||d.phone||'';
+  }
+}
+async function saveProfile(){
+  const name=document.getElementById('ep-name').value.trim();
+  const phone=document.getElementById('ep-phone').value.trim();
+  if(!name){showAlert('editProfileAlert','Name is required.');return;}
+  const r=await api('PUT','/me',{name,phone});
+  if(r.success){
+    const u=USER();u.name=name;localStorage.setItem('lms_user',JSON.stringify(u));
+    closeModal();showToast('Profile updated successfully!','success');loadProfile();
+    document.getElementById('sbUserName').textContent=name;
+    document.getElementById('sbAvatar').textContent=name[0]?.toUpperCase()||'S';
+  } else showAlert('editProfileAlert',r.error||'Update failed.');
+}
+async function changePassword(){
+  const oldPw=document.getElementById('cp-old').value;
+  const newPw=document.getElementById('cp-new').value;
+  const confirm=document.getElementById('cp-confirm').value;
+  if(!oldPw||!newPw||!confirm){showAlert('changePwAlert','All fields are required.');return;}
+  if(newPw!==confirm){showAlert('changePwAlert','New passwords do not match.');return;}
+  if(newPw.length<8||!/[A-Z]/.test(newPw)||!/[0-9]/.test(newPw)){showAlert('changePwAlert','Password must be min 8 chars, with 1 uppercase and 1 number.');return;}
+  const r=await api('POST','/auth/change-password',{old_password:oldPw,new_password:newPw});
+  if(r.success){closeModal();showToast('Password changed successfully!','success');['cp-old','cp-new','cp-confirm'].forEach(id=>document.getElementById(id).value='');}
+  else showAlert('changePwAlert',r.error||'Password change failed.');
+}
+
+/* ── SITE SETTINGS (social links, branding) ── */
+async function loadSiteSettings(){
+  try{
+    const r=await fetch('/api/v1/settings');
+    if(!r.ok)return;
+    const {data}=await r.json();
+    if(!data)return;
+    if(data.logo_url){document.getElementById('sbLogo').src=data.logo_url;document.getElementById('sbLogo').style.display='block';}
+    if(data.copyright_text)document.getElementById('footerCopy').textContent=data.copyright_text;
+    const sm={facebook:'sf-fb',instagram:'sf-ig',linkedin:'sf-li',twitter:'sf-tw',youtube:'sf-yt',whatsapp:'sf-wa'};
+    Object.entries(sm).forEach(([key,id])=>{const el=document.getElementById(id);if(el&&data['social_'+key]){el.href=data['social_'+key];el.style.display='inline-flex';}});
+  }catch{}
+}
+
+/* ── INIT ── */
+(async()=>{
+  await loadSiteSettings();
+  loadOverview();
+  // Preload courses for materials filter
+  const cr=await api('GET','/courses/enrolled');
+  const courses=cr.data||[];
+  const sel=document.getElementById('matCourseFilter');
+  courses.forEach(c=>{const o=document.createElement('option');o.value=c.course_id||c.id;o.textContent=c.title||c.course_title;sel.appendChild(o);});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Admin Dashboard – Smart LMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --navy:#1a237e;--navy2:#111b60;--blue:#1565c0;--orange:#ff6b35;--orange2:#e55a2b;
+  --bg:#f0f4ff;--white:#fff;--text:#263238;--muted:#78909c;--brd:#e3e8f0;
+  --sid-w:240px;--top-h:60px;
+  --shadow:0 2px 12px rgba(26,35,126,0.09);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);font-size:14px;}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;
+  width:var(--sid-w);background:var(--navy);
+  display:flex;flex-direction:column;
+  z-index:200;overflow-y:auto;
+  transition:transform 0.25s;
+}
+.sb-header{
+  padding:16px 18px;background:var(--navy2);
+  display:flex;align-items:center;gap:10px;
+  min-height:var(--top-h);border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.sb-header img{max-height:38px;max-width:130px;object-fit:contain;}
+.sb-header .sb-name{font-size:13px;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;}
+.sb-section{font-size:10px;color:rgba(255,255,255,0.35);padding:18px 18px 6px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 18px;color:rgba(255,255,255,0.72);
+  text-decoration:none;font-size:13px;cursor:pointer;
+  border-left:3px solid transparent;transition:all 0.15s;
+  border:none;background:none;width:100%;text-align:left;
+}
+.nav-item i{width:18px;text-align:center;font-size:14px;}
+.nav-item:hover{background:rgba(255,255,255,0.07);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,0.13);color:#fff;border-left:3px solid var(--orange);}
+.sb-footer{margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.08);}
+.sb-user{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.8);font-size:13px;}
+.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0;}
+
+/* ═══ TOPBAR ═══ */
+.topbar{
+  position:fixed;top:0;left:var(--sid-w);right:0;height:var(--top-h);
+  background:var(--white);border-bottom:1px solid var(--brd);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;z-index:100;box-shadow:var(--shadow);
+}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.hamburger{display:none;background:none;border:none;cursor:pointer;font-size:18px;color:var(--text);}
+.page-title{font-family:'Poppins',sans-serif;font-size:16px;font-weight:600;color:var(--navy);}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.notif-btn{position:relative;background:none;border:none;cursor:pointer;font-size:17px;color:var(--muted);padding:6px;}
+.notif-badge{position:absolute;top:2px;right:2px;width:8px;height:8px;background:var(--orange);border-radius:50%;}
+.topbar-avatar{width:36px;height:36px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+.logout-btn{display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--brd);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--muted);cursor:pointer;transition:all 0.15s;}
+.logout-btn:hover{border-color:var(--orange);color:var(--orange);}
+
+/* ═══ MAIN ═══ */
+.main{margin-left:var(--sid-w);margin-top:var(--top-h);padding:24px;min-height:calc(100vh - var(--top-h));}
+.section{display:none;}
+.section.active{display:block;}
+
+/* ═══ STATS CARDS ═══ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-bottom:24px;}
+.stat-card{
+  background:var(--white);border-radius:16px;padding:20px;
+  display:flex;align-items:center;gap:16px;box-shadow:var(--shadow);
+  border:1px solid var(--brd);
+}
+.stat-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;}
+.ic-blue{background:linear-gradient(135deg,#26d0ce,#1a8fe3);}
+.ic-pink{background:linear-gradient(135deg,#e91e8c,#9c27b0);}
+.ic-orange{background:linear-gradient(135deg,#ff6b35,#e53935);}
+.ic-green{background:linear-gradient(135deg,#43a047,#00897b);}
+.ic-purple{background:linear-gradient(135deg,#7c4dff,#6a1fd8);}
+.ic-teal{background:linear-gradient(135deg,#00bcd4,#0097a7);}
+.stat-info .num{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;color:var(--navy);line-height:1;}
+.stat-info .lbl{font-size:12px;color:var(--muted);margin-top:3px;}
+
+/* ═══ CARDS & TABLES ═══ */
+.card{background:var(--white);border-radius:16px;padding:22px;box-shadow:var(--shadow);border:1px solid var(--brd);margin-bottom:20px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.card-title{font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;}
+.chart-wrap{background:var(--white);border-radius:16px;padding:20px;box-shadow:var(--shadow);border:1px solid var(--brd);}
+.chart-wrap canvas{max-height:240px;}
+
+/* Table */
+table{width:100%;border-collapse:collapse;}
+th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--brd);text-align:left;}
+td{padding:12px 12px;border-bottom:1px solid var(--brd);font-size:13px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f8f9ff;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge.active{background:#e8f5e9;color:#2e7d32;}
+.badge.pending{background:#fff3e0;color:#e65100;}
+.badge.inactive{background:#fdecea;color:#c62828;}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;border:none;transition:all 0.15s;}
+.btn-primary{background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px);}
+.btn-orange{background:linear-gradient(135deg,var(--orange),var(--orange2));color:#fff;}
+.btn-orange:hover{opacity:0.9;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-outline{background:transparent;border:1.5px solid var(--brd);color:var(--text);}
+.btn-outline:hover{border-color:var(--navy);color:var(--navy);}
+.btn-danger{background:#fdecea;color:#c62828;border:1px solid #f5c6c6;}
+.btn-danger:hover{background:#c62828;color:#fff;}
+
+/* Form */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);background:#fafafa;outline:none;transition:border-color 0.2s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--navy);background:#fff;box-shadow:0 0 0 3px rgba(26,35,126,0.07);}
+.form-group textarea{resize:vertical;min-height:80px;}
+
+/* Alert */
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;}
+.alert.error{background:#fdecea;color:#c62828;border:1px solid #f5c6c6;}
+.alert.success{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+
+/* Settings logo preview */
+.logo-preview{width:180px;height:70px;border:2px dashed var(--brd);border-radius:8px;object-fit:contain;display:block;margin-bottom:10px;}
+
+/* Pagination */
+.pagination{display:flex;gap:6px;justify-content:flex-end;margin-top:14px;}
+.page-btn{padding:5px 10px;border:1px solid var(--brd);border-radius:6px;background:#fff;font-size:12px;cursor:pointer;transition:all 0.15s;}
+.page-btn.active,.page-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+/* Mobile */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .topbar{left:0;}
+  .main{margin-left:0;}
+  .hamburger{display:block;}
+  .charts-row{grid-template-columns:1fr;}
+  .form-row{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  footer{margin-left:0 !important;}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr;}
+  .main{padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-header">
+    <img src="logo.png" alt="Logo" id="sbLogo" onerror="this.style.display='none'"/>
+    <span class="sb-name">Admin Panel</span>
+  </div>
+
+  <span class="sb-section">Main</span>
+  <button class="nav-item active" onclick="showSection('overview')"><i class="fas fa-th-large"></i>Overview</button>
+
+  <span class="sb-section">Management</span>
+  <button class="nav-item" onclick="showSection('students')"><i class="fas fa-user-graduate"></i>Students</button>
+  <button class="nav-item" onclick="showSection('trainers')"><i class="fas fa-chalkboard-user"></i>Trainers</button>
+  <button class="nav-item" onclick="showSection('bschools')"><i class="fas fa-building-columns"></i>B-Schools</button>
+  <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Courses</button>
+  <button class="nav-item" onclick="showSection('batches')"><i class="fas fa-layer-group"></i>Batches</button>
+
+  <span class="sb-section">Academic</span>
+  <button class="nav-item" onclick="showSection('attendance')"><i class="fas fa-calendar-check"></i>Attendance</button>
+  <button class="nav-item" onclick="showSection('exams')"><i class="fas fa-file-pen"></i>Exams</button>
+  <button class="nav-item" onclick="showSection('assignments')"><i class="fas fa-tasks"></i>Assignments</button>
+  <button class="nav-item" onclick="showSection('timetable')"><i class="fas fa-clock"></i>Timetable</button>
+  <button class="nav-item" onclick="showSection('materials')"><i class="fas fa-folder-open"></i>Materials</button>
+  <button class="nav-item" onclick="showSection('certificates')"><i class="fas fa-certificate"></i>Certificates</button>
+
+  <span class="sb-section">Finance & Reports</span>
+  <button class="nav-item" onclick="showSection('fees')"><i class="fas fa-indian-rupee-sign"></i>Fee Management</button>
+  <button class="nav-item" onclick="showSection('analytics')"><i class="fas fa-chart-line"></i>Analytics</button>
+  <button class="nav-item" onclick="showSection('reports')"><i class="fas fa-file-chart-pie"></i>Reports</button>
+
+  <span class="sb-section">E-Learning</span>
+  <button class="nav-item" onclick="showSection('scorm')"><i class="fas fa-cube"></i>SCORM Packages</button>
+
+  <span class="sb-section">System</span>
+  <button class="nav-item" onclick="showSection('notifications')"><i class="fas fa-bell"></i>Notifications</button>
+  <button class="nav-item" onclick="showSection('settings')"><i class="fas fa-sliders"></i>Site Settings</button>
+
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar" id="sbAvatar">A</div>
+      <div>
+        <div style="font-size:13px;color:#fff;font-weight:600;" id="sbUserName">Admin</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.45);">Administrator</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ TOPBAR ═══ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <span class="page-title" id="pageTitle">Overview</span>
+  </div>
+  <div class="topbar-right">
+    <button class="notif-btn" onclick="showSection('notifications')"><i class="fas fa-bell"></i><span class="notif-badge"></span></button>
+    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</button>
+  </div>
+</header>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main class="main">
+
+  <!-- OVERVIEW -->
+  <div class="section active" id="sec-overview">
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-icon ic-blue"><i class="fas fa-user-graduate"></i></div><div class="stat-info"><div class="num" id="st-students">—</div><div class="lbl">Total Students</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-orange"><i class="fas fa-chalkboard-user"></i></div><div class="stat-info"><div class="num" id="st-trainers">—</div><div class="lbl">Trainers</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-pink"><i class="fas fa-book-open"></i></div><div class="stat-info"><div class="num" id="st-courses">—</div><div class="lbl">Courses</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-green"><i class="fas fa-layer-group"></i></div><div class="stat-info"><div class="num" id="st-batches">—</div><div class="lbl">Active Batches</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-purple"><i class="fas fa-indian-rupee-sign"></i></div><div class="stat-info"><div class="num" id="st-revenue">—</div><div class="lbl">Revenue (₹)</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-teal"><i class="fas fa-certificate"></i></div><div class="stat-info"><div class="num" id="st-certs">—</div><div class="lbl">Certificates Issued</div></div></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-wrap">
+        <div class="card-header"><span class="card-title">Monthly Enrollments</span></div>
+        <canvas id="enrollChart"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="card-header"><span class="card-title">Course Distribution</span></div>
+        <canvas id="courseChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Students</span>
+        <button class="btn btn-primary btn-sm" onclick="showSection('students')">View All</button>
+      </div>
+      <div style="overflow-x:auto;"><table id="recentStudentsTable">
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Batch</th><th>Status</th><th>Joined</th></tr></thead>
+        <tbody id="recentStudentsTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- STUDENTS -->
+  <div class="section" id="sec-students">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">All Students</span>
+        <div style="display:flex;gap:10px;">
+          <input type="search" id="studentSearch" placeholder="Search students…" style="padding:8px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;width:200px;"/>
+          <button class="btn btn-primary btn-sm" onclick="openModal('addStudentModal')"><i class="fas fa-plus"></i> Add Student</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Batch</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="studentsTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+      <div class="pagination" id="studentPagination"></div>
+    </div>
+  </div>
+
+  <!-- TRAINERS -->
+  <div class="section" id="sec-trainers">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Trainers</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addTrainerModal')"><i class="fas fa-plus"></i> Add Trainer</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Specialization</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="trainersTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- B-SCHOOLS -->
+  <div class="section" id="sec-bschools">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">B-Schools</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addBschoolModal')"><i class="fas fa-plus"></i> Add B-School</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Contact Person</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="bschoolsTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- COURSES -->
+  <div class="section" id="sec-courses">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Courses</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addCourseModal')"><i class="fas fa-plus"></i> Add Course</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Title</th><th>Category</th><th>Duration</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="coursesTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- BATCHES -->
+  <div class="section" id="sec-batches">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Batches</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addBatchModal')"><i class="fas fa-plus"></i> Add Batch</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Batch Name</th><th>Course</th><th>Trainer</th><th>B-School</th><th>Start Date</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="batchesTbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ATTENDANCE -->
+  <div class="section" id="sec-attendance">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Attendance Report</span>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <select id="attBatchFilter" style="padding:7px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;" onchange="loadAttendance()"><option value="">All Batches</option></select>
+          <input type="date" id="attDateFilter" style="padding:7px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;" onchange="loadAttendance()"/>
+        </div>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Student</th><th>Batch</th><th>Date</th><th>Status</th><th>Marked By</th></tr></thead>
+        <tbody id="attTbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">Select a batch to view attendance.</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- EXAMS -->
+  <div class="section" id="sec-exams">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Exams</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addExamModal')"><i class="fas fa-plus"></i> Create Exam</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Title</th><th>Course</th><th>Duration (min)</th><th>Pass %</th><th>Questions</th><th>Actions</th></tr></thead>
+        <tbody id="examsTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ASSIGNMENTS -->
+  <div class="section" id="sec-assignments">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Assignments</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addAssignmentModal')"><i class="fas fa-plus"></i> Create Assignment</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Title</th><th>Batch</th><th>Due Date</th><th>Submissions</th><th>Actions</th></tr></thead>
+        <tbody id="assignmentsTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- TIMETABLE -->
+  <div class="section" id="sec-timetable">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Timetable</span>
+        <div style="display:flex;gap:10px;">
+          <select id="ttBatchFilter" style="padding:7px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;"></select>
+          <button class="btn btn-primary btn-sm" onclick="openModal('addTimetableModal')"><i class="fas fa-plus"></i> Add Slot</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Day</th><th>Subject</th><th>Trainer</th><th>Time</th><th>Room/Link</th><th>Actions</th></tr></thead>
+        <tbody id="ttTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Select a batch to view timetable.</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- MATERIALS -->
+  <div class="section" id="sec-materials">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Course Materials</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addMaterialModal')"><i class="fas fa-upload"></i> Upload Material</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Module</th><th>Uploaded</th><th>Actions</th></tr></thead>
+        <tbody id="materialsTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- CERTIFICATES -->
+  <div class="section" id="sec-certificates">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Certificates</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('issueCertModal')"><i class="fas fa-certificate"></i> Issue Certificate</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Student</th><th>Course</th><th>Certificate No.</th><th>Issued On</th><th>Actions</th></tr></thead>
+        <tbody id="certsTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- SCORM PACKAGES -->
+  <div class="section" id="sec-scorm">
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-cube" style="color:var(--orange);margin-right:6px;"></i>SCORM Packages</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('uploadScormModal')"><i class="fas fa-upload"></i> Upload SCORM</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Package Name</th><th>SCORM Version</th><th>Module</th><th>Course</th><th>Uploaded On</th><th>Actions</th></tr></thead>
+        <tbody id="scormTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+    <!-- Tracking section -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Student SCORM Progress</span>
+        <select id="scormPkgFilter" onchange="loadScormTracking()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--brd);font-size:13px;">
+          <option value="">All Packages</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Student</th><th>Package</th><th>Status</th><th>Score</th><th>Time Spent</th><th>Last Access</th></tr></thead>
+        <tbody id="scormTrackTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Select a package to view progress</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- FEES -->
+  <div class="section" id="sec-fees">
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-icon ic-green"><i class="fas fa-check-circle"></i></div><div class="stat-info"><div class="num" id="feePaid">—</div><div class="lbl">Total Paid (₹)</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-orange"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><div class="num" id="feePending">—</div><div class="lbl">Pending (₹)</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-pink"><i class="fas fa-times-circle"></i></div><div class="stat-info"><div class="num" id="feeOverdue">—</div><div class="lbl">Overdue (₹)</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fee Records</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addFeeModal')"><i class="fas fa-plus"></i> Add Record</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Student</th><th>Amount (₹)</th><th>Due Date</th><th>Paid On</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="feesTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="section" id="sec-analytics">
+    <div class="charts-row">
+      <div class="chart-wrap">
+        <div class="card-header"><span class="card-title">Monthly Enrollments (12 mo)</span></div>
+        <canvas id="analyticsEnrollChart"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="card-header"><span class="card-title">Batch Distribution</span></div>
+        <canvas id="analyticsBatchChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-wrap" style="margin-bottom:20px;">
+      <div class="card-header"><span class="card-title">Course Distribution</span></div>
+      <canvas id="analyticsCourseChart" style="max-height:200px;"></canvas>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div class="section" id="sec-reports">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Generate Reports</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;padding:8px 0;">
+        <button class="btn btn-outline" onclick="exportReport('students')"><i class="fas fa-file-csv"></i> Student Report</button>
+        <button class="btn btn-outline" onclick="exportReport('fees')"><i class="fas fa-file-csv"></i> Fee Report</button>
+        <button class="btn btn-outline" onclick="exportReport('attendance')"><i class="fas fa-file-csv"></i> Attendance Report</button>
+        <button class="btn btn-outline" onclick="exportReport('certificates')"><i class="fas fa-file-csv"></i> Certificate Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="section" id="sec-notifications">
+    <div class="card" style="margin-bottom:18px;">
+      <div class="card-header"><span class="card-title">Broadcast Message</span></div>
+      <div class="alert" id="notifAlert"></div>
+      <div class="form-group"><label>Message</label><textarea id="broadcastMsg" rows="3" placeholder="Type your announcement…"></textarea></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" onclick="sendBroadcast('all')"><i class="fas fa-bullhorn"></i> Broadcast to All</button>
+        <button class="btn btn-outline" onclick="sendBroadcast('students')"><i class="fas fa-user-graduate"></i> Students Only</button>
+        <button class="btn btn-outline" onclick="sendBroadcast('trainers')"><i class="fas fa-chalkboard-user"></i> Trainers Only</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">All Notifications</span></div>
+      <div id="notifList" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align:center;color:var(--muted);padding:24px;">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SITE SETTINGS -->
+  <div class="section" id="sec-settings">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Site Settings (CMS)</span></div>
+      <div class="alert" id="settingsAlert" style="display:none;"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Organisation Name</label>
+          <input type="text" id="set-org" placeholder="Connecting Dot Consultancy Pvt. Ltd."/>
+        </div>
+        <div class="form-group">
+          <label>Site Tagline</label>
+          <input type="text" id="set-tagline" placeholder="Learning Management System"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Hero Title</label>
+          <input type="text" id="set-title" placeholder="Empower Your Learning Journey"/>
+        </div>
+        <div class="form-group">
+          <label>Copyright Text</label>
+          <input type="text" id="set-copyright" placeholder="© 2026 Connecting Dot…"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Hero Subtitle</label>
+        <input type="text" id="set-subtitle" placeholder="A unified modern platform…"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Facebook URL</label><input type="url" id="set-fb" placeholder="https://facebook.com/…"/></div>
+        <div class="form-group"><label>Instagram URL</label><input type="url" id="set-ig" placeholder="https://instagram.com/…"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>LinkedIn URL</label><input type="url" id="set-li" placeholder="https://linkedin.com/…"/></div>
+        <div class="form-group"><label>Twitter/X URL</label><input type="url" id="set-tw" placeholder="https://x.com/…"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>YouTube URL</label><input type="url" id="set-yt" placeholder="https://youtube.com/…"/></div>
+        <div class="form-group"><label>WhatsApp Number</label><input type="url" id="set-wa" placeholder="https://wa.me/91…"/></div>
+      </div>
+      <div class="form-group">
+        <label>Logo Upload</label>
+        <img id="logoPreview" src="logo.png" class="logo-preview" onerror="this.style.display='none'"/>
+        <input type="file" id="logoFile" accept="image/*" style="display:block;"/>
+        <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="uploadLogo()"><i class="fas fa-upload"></i> Upload Logo</button>
+      </div>
+      <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══ DASHBOARD FOOTER ═══ -->
+<footer style="margin-left:var(--sid-w);background:var(--navy);color:rgba(255,255,255,0.6);padding:16px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;font-size:12px;border-top:1px solid rgba(255,255,255,0.08);">
+  <span id="adminFooterCopy">© 2026 Connecting Dot Consultancy Pvt. Ltd. All rights reserved.</span>
+  <div id="adminFooterSocial" style="display:flex;gap:8px;">
+    <a id="adf-fb"  href="#" target="_blank" style="display:none;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);display:none;align-items:center;justify-content:center;color:rgba(255,255,255,0.75);text-decoration:none;font-size:13px;" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+    <a id="adf-ig"  href="#" target="_blank" style="display:none;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);display:none;align-items:center;justify-content:center;color:rgba(255,255,255,0.75);text-decoration:none;font-size:13px;" title="Instagram"><i class="fab fa-instagram"></i></a>
+    <a id="adf-li"  href="#" target="_blank" style="display:none;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);display:none;align-items:center;justify-content:center;color:rgba(255,255,255,0.75);text-decoration:none;font-size:13px;" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+    <a id="adf-tw"  href="#" target="_blank" style="display:none;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);display:none;align-items:center;justify-content:center;color:rgba(255,255,255,0.75);text-decoration:none;font-size:13px;" title="Twitter/X"><i class="fab fa-x-twitter"></i></a>
+    <a id="adf-yt"  href="#" target="_blank" style="display:none;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);display:none;align-items:center;justify-content:center;color:rgba(255,255,255,0.75);text-decoration:none;font-size:13px;" title="YouTube"><i class="fab fa-youtube"></i></a>
+    <a id="adf-wa"  href="#" target="_blank" style="display:none;width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);display:none;align-items:center;justify-content:center;color:rgba(255,255,255,0.75);text-decoration:none;font-size:13px;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+  </div>
+</footer>
+
+<!-- ═══ MODALS ═══ -->
+<div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <!-- Add Student -->
+  <div class="modal-box" id="addStudentModal" style="display:none;">
+    <div class="card" style="max-width:500px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title">Add Student</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="addStudentAlert"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Full Name</label><input type="text" id="as-name" placeholder="Full Name"/></div>
+        <div class="form-group"><label>Email</label><input type="email" id="as-email" placeholder="email@example.com"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone</label><input type="tel" id="as-phone" placeholder="+91…"/></div>
+        <div class="form-group"><label>Password</label><input type="password" id="as-password" placeholder="Min 8 chars"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="addStudent()"><i class="fas fa-save"></i> Create Student</button>
+    </div>
+  </div>
+  <!-- Add Trainer -->
+  <div class="modal-box" id="addTrainerModal" style="display:none;">
+    <div class="card" style="max-width:500px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title">Add Trainer</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="addTrainerAlert"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Full Name</label><input type="text" id="at-name" placeholder="Full Name"/></div>
+        <div class="form-group"><label>Email</label><input type="email" id="at-email" placeholder="email@example.com"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone</label><input type="tel" id="at-phone" placeholder="+91…"/></div>
+        <div class="form-group"><label>Password</label><input type="password" id="at-password" placeholder="Min 8 chars"/></div>
+      </div>
+      <div class="form-group"><label>Specialization</label><input type="text" id="at-spec" placeholder="e.g. Data Science"/></div>
+      <button class="btn btn-primary" onclick="addTrainer()"><i class="fas fa-save"></i> Create Trainer</button>
+    </div>
+  </div>
+  <!-- Add Course -->
+  <div class="modal-box" id="addCourseModal" style="display:none;">
+    <div class="card" style="max-width:500px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title">Add Course</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="addCourseAlert"></div>
+      <div class="form-group"><label>Course Title</label><input type="text" id="ac-title" placeholder="Course Title"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Category</label><input type="text" id="ac-category" placeholder="e.g. Finance"/></div>
+        <div class="form-group"><label>Duration (weeks)</label><input type="number" id="ac-duration" placeholder="12"/></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="ac-desc" placeholder="Course description…"></textarea></div>
+      <button class="btn btn-primary" onclick="addCourse()"><i class="fas fa-save"></i> Create Course</button>
+    </div>
+  </div>
+  <!-- Add Batch -->
+  <div class="modal-box" id="addBatchModal" style="display:none;">
+    <div class="card" style="max-width:500px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title">Add Batch</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="addBatchAlert"></div>
+      <div class="form-group"><label>Batch Name</label><input type="text" id="ab-name" placeholder="Batch Name"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Course</label><select id="ab-course"><option value="">Select Course</option></select></div>
+        <div class="form-group"><label>Trainer</label><select id="ab-trainer"><option value="">Select Trainer</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date</label><input type="date" id="ab-start"/></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="ab-end"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="addBatch()"><i class="fas fa-save"></i> Create Batch</button>
+    </div>
+  </div>
+  <!-- Issue Certificate -->
+  <div class="modal-box" id="issueCertModal" style="display:none;">
+    <div class="card" style="max-width:500px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title">Issue Certificate</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="issueCertAlert"></div>
+      <div class="form-group"><label>Student</label><select id="ic-student"><option value="">Select Student</option></select></div>
+      <div class="form-group"><label>Course</label><select id="ic-course"><option value="">Select Course</option></select></div>
+      <div class="form-group"><label>Issue Date</label><input type="date" id="ic-date"/></div>
+      <button class="btn btn-primary" onclick="issueCertificate()"><i class="fas fa-certificate"></i> Issue Certificate</button>
+    </div>
+  </div>
+  <!-- Upload SCORM -->
+  <div class="modal-box" id="uploadScormModal" style="display:none;">
+    <div class="card" style="max-width:560px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title"><i class="fas fa-cube" style="color:var(--orange);"></i> Upload SCORM Package</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="scormUploadAlert" style="display:none;"></div>
+      <div class="form-group"><label>Package Name <span style="color:red;">*</span></label><input type="text" id="su-name" placeholder="e.g. Python Basics Module 1"/></div>
+      <div class="form-group"><label>SCORM ZIP File <span style="color:red;">*</span></label><input type="file" id="su-file" accept=".zip" style="padding:8px;border:1px solid var(--brd);border-radius:6px;width:100%;"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>SCORM Version</label><select id="su-version"><option value="1.2">SCORM 1.2</option><option value="2004">SCORM 2004</option></select></div>
+        <div class="form-group"><label>Assign to Module (optional)</label><select id="su-module"><option value="">— None —</option></select></div>
+      </div>
+      <div id="scormUploadProgress" style="display:none;margin-bottom:12px;">
+        <div style="background:var(--brd);border-radius:4px;height:8px;overflow:hidden;">
+          <div id="scormProgressBar" style="background:var(--orange);height:100%;width:0%;transition:width .3s;"></div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:6px;" id="scormProgressText">Uploading…</p>
+      </div>
+      <button class="btn btn-primary" onclick="uploadScorm()" id="scormUploadBtn"><i class="fas fa-upload"></i> Upload & Extract</button>
+    </div>
+  </div>
+
+  <!-- Add Fee -->
+  <div class="modal-box" id="addFeeModal" style="display:none;">
+    <div class="card" style="max-width:500px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title">Add Fee Record</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="addFeeAlert"></div>
+      <div class="form-group"><label>Student</label><select id="af-student"><option value="">Select Student</option></select></div>
+      <div class="form-row">
+        <div class="form-group"><label>Amount (₹)</label><input type="number" id="af-amount" placeholder="10000"/></div>
+        <div class="form-group"><label>Due Date</label><input type="date" id="af-due"/></div>
+      </div>
+      <div class="form-group"><label>Status</label><select id="af-status"><option value="pending">Pending</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></div>
+      <button class="btn btn-primary" onclick="addFee()"><i class="fas fa-save"></i> Save Record</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  #modalOverlay.open{display:flex!important;}
+  .modal-box{max-height:90vh;overflow-y:auto;}
+</style>
+
+<script>
+const TOKEN = ()=>localStorage.getItem('lms_token');
+const API = (p)=>'/api/v1'+p;
+async function api(method,path,body=null){
+  try{
+    const h={'Content-Type':'application/json','Authorization':'Bearer '+TOKEN()};
+    const opts={method,headers:h};
+    if(body) opts.body=JSON.stringify(body);
+    const r=await fetch(API(path),opts);
+    return r.json();
+  }catch(e){
+    console.error('API Error ['+method+' '+path+']:', e.message);
+    return {success:false, error:'Network error - make sure server is running on localhost:3001'};
+  }
+}
+
+// Auth guard
+(()=>{
+  try{
+    const token=localStorage.getItem('lms_token');
+    const raw=localStorage.getItem('lms_user');
+    if(!token){window.location.href='admin-login.html';return;}
+    if(!raw||raw==='undefined'||raw==='null'){window.location.href='admin-login.html';return;}
+    let u;
+    try{u=JSON.parse(raw);}catch(pe){console.error('Auth: bad lms_user JSON',pe);window.location.href='admin-login.html';return;}
+    if(!u||u.role!=='admin'){console.warn('Auth: not admin, role=',u&&u.role);window.location.href='admin-login.html';return;}
+    const nameEl=document.getElementById('sbUserName');
+    const avatarEl=document.getElementById('sbAvatar');
+    if(nameEl)nameEl.textContent=u.name||'Admin';
+    if(avatarEl)avatarEl.textContent=(u.name||'A')[0].toUpperCase();
+  }catch(e){console.error('Auth guard error:',e);window.location.href='admin-login.html';}
+})();
+
+function logout(){localStorage.clear();window.location.href='admin-login.html';}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+function openModal(id){
+  document.getElementById('modalOverlay').classList.add('open');
+  document.querySelectorAll('.modal-box').forEach(m=>m.style.display='none');
+  document.getElementById(id).style.display='block';
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+const sectionTitles={overview:'Overview',students:'Students',trainers:'Trainers',bschools:'B-Schools',courses:'Courses',batches:'Batches',attendance:'Attendance',exams:'Exams',assignments:'Assignments',timetable:'Timetable',materials:'Materials',certificates:'Certificates',fees:'Fee Management',analytics:'Analytics',reports:'Reports',notifications:'Notifications',settings:'Site Settings',scorm:'SCORM Packages'};
+function showSection(name){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  document.getElementById('pageTitle').textContent=sectionTitles[name]||name;
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.textContent.trim().toLowerCase().includes(sectionTitles[name]?.toLowerCase().split(' ')[0]||''))n.classList.add('active');});
+  if(name==='overview')loadOverview();
+  if(name==='students')loadStudents();
+  if(name==='trainers')loadTrainers();
+  if(name==='bschools')loadBschools();
+  if(name==='courses')loadCourses();
+  if(name==='batches')loadBatches();
+  if(name==='attendance')loadAttendance();
+  if(name==='fees')loadFees();
+  if(name==='analytics')loadAnalytics();
+  if(name==='certificates')loadCertificates();
+  if(name==='notifications')loadNotifications();
+  if(name==='settings')loadSettings();
+  if(name==='scorm')loadScormPackages();
+  if(window.innerWidth<768)document.getElementById('sidebar').classList.remove('open');
+}
+
+function fmt(v){return v===null||v===undefined?'—':v;}
+function dateFmt(d){if(!d)return'—';return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function statusBadge(s){const m={active:'active',pending:'pending',approved:'active',inactive:'inactive',paid:'active',overdue:'inactive',present:'active',absent:'inactive'};return`<span class="badge ${m[s]||'pending'}">${s}</span>`;}
+
+// ─ OVERVIEW ─
+let enrollChartInst,courseChartInst;
+async function loadOverview(){
+  try{
+    const [statsR,trendsR,studR]=await Promise.all([
+      api('GET','/analytics/overview'),
+      api('GET','/analytics/trends'),
+      api('GET','/students?limit=5')
+    ]);
+    if(statsR.success){
+      const d=statsR.data;
+      document.getElementById('st-students').textContent=(d.students||0).toLocaleString();
+      document.getElementById('st-trainers').textContent=(d.trainers||0).toLocaleString();
+      document.getElementById('st-courses').textContent=(d.courses||0).toLocaleString();
+      document.getElementById('st-batches').textContent=(d.batches||0).toLocaleString();
+      document.getElementById('st-revenue').textContent='₹'+(d.revenue||0).toLocaleString();
+      document.getElementById('st-certs').textContent=(d.certificates||0).toLocaleString();
+    }
+    if(trendsR.success){
+      const t=trendsR.data;
+      const months=t.monthly?.map(m=>m.month)||[];
+      const counts=t.monthly?.map(m=>m.count)||[];
+      if(enrollChartInst)enrollChartInst.destroy();
+      enrollChartInst=new Chart(document.getElementById('enrollChart'),{type:'bar',data:{labels:months,datasets:[{label:'Enrollments',data:counts,backgroundColor:'rgba(26,35,126,0.75)',borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+      const cd=t.courseDist||[];
+      if(courseChartInst)courseChartInst.destroy();
+      courseChartInst=new Chart(document.getElementById('courseChart'),{type:'doughnut',data:{labels:cd.map(c=>c.name),datasets:[{data:cd.map(c=>c.count),backgroundColor:['#1a237e','#1565c0','#ff6b35','#e91e8c','#7c4dff','#43a047','#00bcd4']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
+    }
+    if(studR.success){
+      const rows=studR.data?.students||studR.data||[];
+      document.getElementById('recentStudentsTbody').innerHTML=rows.length?rows.map((s,i)=>`<tr><td>${i+1}</td><td>${fmt(s.name)}</td><td>${fmt(s.email)}</td><td>${fmt(s.batch_name||'—')}</td><td>${statusBadge(s.status||'pending')}</td><td>${dateFmt(s.created_at)}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;">No students yet.</td></tr>';
+    }
+  }catch(e){console.error(e);}
+}
+
+// ─ STUDENTS ─
+async function loadStudents(){
+  const r=await api('GET','/students?limit=50');
+  if(!r.success){document.getElementById('studentsTbody').innerHTML='<tr><td colspan="7" style="text-align:center;color:red;padding:18px;">Error loading students.</td></tr>';return;}
+  const rows=r.data?.students||r.data||[];
+  document.getElementById('studentsTbody').innerHTML=rows.length?rows.map((s,i)=>`<tr><td>${i+1}</td><td>${fmt(s.name)}</td><td>${fmt(s.email)}</td><td>${fmt(s.phone)}</td><td>${fmt(s.batch_name||'—')}</td><td>${statusBadge(s.status||'pending')}</td><td><button class="btn btn-sm btn-outline" onclick="approveStudent(${s.id})" title="Approve"><i class="fas fa-check"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})" title="Delete"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No students found.</td></tr>';
+}
+async function approveStudent(id){if(!confirm('Approve this student?'))return;const r=await api('PUT',`/students/${id}/approve`);if(r.success)loadStudents();}
+async function deleteStudent(id){if(!confirm('Delete this student?'))return;const r=await api('DELETE',`/students/${id}`);if(r.success)loadStudents();}
+async function addStudent(){
+  const name=document.getElementById('as-name').value.trim(),email=document.getElementById('as-email').value.trim(),phone=document.getElementById('as-phone').value.trim(),password=document.getElementById('as-password').value;
+  if(!name||!email||!password){showFormAlert('addStudentAlert','Please fill all required fields.');return;}
+  const r=await api('POST','/auth/register',{name,email,phone,password,role:'student'});
+  if(r.success){closeModal();loadStudents();}else showFormAlert('addStudentAlert',r.error||'Error');
+}
+
+// ─ TRAINERS ─
+async function loadTrainers(){
+  const r=await api('GET','/trainers');
+  if(!r.success)return;
+  const rows=r.data||[];
+  document.getElementById('trainersTbody').innerHTML=rows.length?rows.map((t,i)=>`<tr><td>${i+1}</td><td>${fmt(t.name)}</td><td>${fmt(t.email)}</td><td>${fmt(t.phone)}</td><td>${fmt(t.specialization||'—')}</td><td>${statusBadge(t.status||'active')}</td><td><button class="btn btn-sm btn-danger" onclick="deleteUser(${t.id},'trainer')"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No trainers found.</td></tr>';
+}
+async function addTrainer(){
+  const name=document.getElementById('at-name').value.trim(),email=document.getElementById('at-email').value.trim(),phone=document.getElementById('at-phone').value.trim(),password=document.getElementById('at-password').value,specialization=document.getElementById('at-spec').value.trim();
+  if(!name||!email||!password){showFormAlert('addTrainerAlert','Please fill all required fields.');return;}
+  const r=await api('POST','/auth/register',{name,email,phone,password,role:'trainer',specialization});
+  if(r.success){closeModal();loadTrainers();}else showFormAlert('addTrainerAlert',r.error||'Error');
+}
+
+// ─ B-SCHOOLS ─
+async function loadBschools(){
+  const r=await api('GET','/bschools');
+  if(!r.success)return;
+  const rows=r.data||[];
+  document.getElementById('bschoolsTbody').innerHTML=rows.length?rows.map((b,i)=>`<tr><td>${i+1}</td><td>${fmt(b.name)}</td><td>${fmt(b.email)}</td><td>${fmt(b.contact_person||'—')}</td><td>${statusBadge(b.status||'active')}</td><td><button class="btn btn-sm btn-danger" onclick="deleteUser(${b.id},'bschool')"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;">No B-Schools found.</td></tr>';
+}
+async function deleteUser(id,role){if(!confirm('Delete this '+role+'?'))return;const r=await api('DELETE',`/users/${id}?role=${role}`);if(r.success){if(role==='trainer')loadTrainers();else loadBschools();}}
+
+// ─ COURSES ─
+async function loadCourses(){
+  const r=await api('GET','/courses');
+  if(!r.success)return;
+  const rows=r.data||[];
+  document.getElementById('coursesTbody').innerHTML=rows.length?rows.map((c,i)=>`<tr><td>${i+1}</td><td>${fmt(c.title)}</td><td>${fmt(c.category||'—')}</td><td>${fmt(c.duration_weeks||'—')} wks</td><td>${fmt(c.student_count||0)}</td><td>${statusBadge(c.status||'active')}</td><td><button class="btn btn-sm btn-danger" onclick="deleteCourse(${c.id})"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No courses found.</td></tr>';
+  // populate selects
+  const sel=[document.getElementById('ab-course'),document.getElementById('ic-course')];
+  sel.forEach(s=>{if(s){s.innerHTML='<option value="">Select Course</option>'+rows.map(c=>`<option value="${c.id}">${c.title}</option>`).join('');}});
+}
+async function addCourse(){
+  const title=document.getElementById('ac-title').value.trim(),category=document.getElementById('ac-category').value.trim(),duration_weeks=document.getElementById('ac-duration').value,description=document.getElementById('ac-desc').value.trim();
+  if(!title){showFormAlert('addCourseAlert','Course title is required.');return;}
+  const r=await api('POST','/courses',{title,category,duration_weeks:+duration_weeks,description});
+  if(r.success){closeModal();loadCourses();}else showFormAlert('addCourseAlert',r.error||'Error');
+}
+async function deleteCourse(id){if(!confirm('Delete this course?'))return;const r=await api('DELETE',`/courses/${id}`);if(r.success)loadCourses();}
+
+// ─ BATCHES ─
+async function loadBatches(){
+  const r=await api('GET','/batches');
+  if(!r.success)return;
+  const rows=r.data||[];
+  document.getElementById('batchesTbody').innerHTML=rows.length?rows.map((b,i)=>`<tr><td>${i+1}</td><td>${fmt(b.name)}</td><td>${fmt(b.course_title||'—')}</td><td>${fmt(b.trainer_name||'—')}</td><td>${fmt(b.bschool_name||'—')}</td><td>${dateFmt(b.start_date)}</td><td>${statusBadge(b.status||'active')}</td><td><button class="btn btn-sm btn-danger" onclick="deleteBatch(${b.id})"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px;">No batches found.</td></tr>';
+  // populate batch filter selects
+  [document.getElementById('attBatchFilter'),document.getElementById('ttBatchFilter')].forEach(s=>{
+    if(s){const old=s.value;s.innerHTML='<option value="">All Batches</option>'+rows.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');s.value=old;}
+  });
+}
+async function addBatch(){
+  const name=document.getElementById('ab-name').value.trim(),course_id=document.getElementById('ab-course').value,trainer_id=document.getElementById('ab-trainer').value,start_date=document.getElementById('ab-start').value,end_date=document.getElementById('ab-end').value;
+  if(!name||!course_id){showFormAlert('addBatchAlert','Batch name and course are required.');return;}
+  const r=await api('POST','/batches',{name,course_id:+course_id,trainer_id:trainer_id?+trainer_id:null,start_date,end_date});
+  if(r.success){closeModal();loadBatches();}else showFormAlert('addBatchAlert',r.error||'Error');
+}
+async function deleteBatch(id){if(!confirm('Delete this batch?'))return;const r=await api('DELETE',`/batches/${id}`);if(r.success)loadBatches();}
+
+// ─ ATTENDANCE ─
+async function loadAttendance(){
+  const batchId=document.getElementById('attBatchFilter')?.value;
+  const date=document.getElementById('attDateFilter')?.value;
+  if(!batchId&&!date){document.getElementById('attTbody').innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">Select a batch or date to view attendance.</td></tr>';return;}
+  const path=batchId?`/attendance/batch/${batchId}`:`/attendance/date/${date}`;
+  const r=await api('GET',path);
+  const rows=r.data||[];
+  document.getElementById('attTbody').innerHTML=rows.length?rows.map(a=>`<tr><td>${fmt(a.student_name)}</td><td>${fmt(a.batch_name||'—')}</td><td>${dateFmt(a.date)}</td><td>${statusBadge(a.status)}</td><td>${fmt(a.marked_by_name||'—')}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px;">No records found.</td></tr>';
+}
+
+// ─ FEES ─
+async function loadFees(){
+  const r=await api('GET','/fees/report');
+  if(r.success){
+    const d=r.data;
+    document.getElementById('feePaid').textContent='₹'+(d.paid_total||0).toLocaleString();
+    document.getElementById('feePending').textContent='₹'+(d.pending_total||0).toLocaleString();
+    document.getElementById('feeOverdue').textContent='₹'+(d.overdue_total||0).toLocaleString();
+  }
+  const fr=await api('GET','/fees');
+  const rows=fr.data||[];
+  document.getElementById('feesTbody').innerHTML=rows.length?rows.map((f,i)=>`<tr><td>${i+1}</td><td>${fmt(f.student_name)}</td><td>₹${Number(f.amount).toLocaleString()}</td><td>${dateFmt(f.due_date)}</td><td>${dateFmt(f.paid_on)}</td><td>${statusBadge(f.status)}</td><td><button class="btn btn-sm btn-outline" onclick="markFeePaid(${f.id})"><i class="fas fa-check"></i></button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No fee records.</td></tr>';
+}
+async function markFeePaid(id){const r=await api('PUT',`/fees/${id}`,{status:'paid',paid_on:new Date().toISOString().slice(0,10)});if(r.success)loadFees();}
+async function addFee(){
+  const student_id=document.getElementById('af-student').value,amount=document.getElementById('af-amount').value,due_date=document.getElementById('af-due').value,status=document.getElementById('af-status').value;
+  if(!student_id||!amount){showFormAlert('addFeeAlert','Student and amount are required.');return;}
+  const r=await api('POST','/fees',{student_id:+student_id,amount:+amount,due_date,status});
+  if(r.success){closeModal();loadFees();}else showFormAlert('addFeeAlert',r.error||'Error');
+}
+
+// ─ CERTIFICATES ─
+async function loadCertificates(){
+  const r=await api('GET','/certificates');
+  const rows=r.data||[];
+  document.getElementById('certsTbody').innerHTML=rows.length?rows.map((c,i)=>`<tr><td>${i+1}</td><td>${fmt(c.student_name)}</td><td>${fmt(c.course_title)}</td><td>${fmt(c.certificate_number||'—')}</td><td>${dateFmt(c.issued_on)}</td><td><a href="${c.file_url||'#'}" target="_blank" class="btn btn-sm btn-outline"><i class="fas fa-download"></i></a></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;">No certificates issued.</td></tr>';
+}
+async function issueCertificate(){
+  const student_id=document.getElementById('ic-student').value,course_id=document.getElementById('ic-course').value,issued_on=document.getElementById('ic-date').value;
+  if(!student_id||!course_id){showFormAlert('issueCertAlert','Student and course are required.');return;}
+  const r=await api('POST','/certificates/issue',{student_id:+student_id,course_id:+course_id,issued_on});
+  if(r.success){closeModal();loadCertificates();}else showFormAlert('issueCertAlert',r.error||'Error');
+}
+
+// ─ ANALYTICS ─
+let aE,aB,aC;
+async function loadAnalytics(){
+  const r=await api('GET','/analytics/trends');
+  if(!r.success)return;
+  const t=r.data;
+  const months=t.monthly?.map(m=>m.month)||[];
+  const counts=t.monthly?.map(m=>m.count)||[];
+  if(aE)aE.destroy();
+  aE=new Chart(document.getElementById('analyticsEnrollChart'),{type:'line',data:{labels:months,datasets:[{label:'Enrollments',data:counts,borderColor:'#1a237e',backgroundColor:'rgba(26,35,126,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#1a237e'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+  const bd=t.batchDist||[];
+  if(aB)aB.destroy();
+  aB=new Chart(document.getElementById('analyticsBatchChart'),{type:'bar',data:{labels:bd.map(b=>b.name),datasets:[{label:'Students',data:bd.map(b=>b.count),backgroundColor:'rgba(255,107,53,0.8)',borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}}}});
+  const cd=t.courseDist||[];
+  if(aC)aC.destroy();
+  aC=new Chart(document.getElementById('analyticsCourseChart'),{type:'bar',data:{labels:cd.map(c=>c.name),datasets:[{label:'Students',data:cd.map(c=>c.count),backgroundColor:'rgba(21,101,192,0.8)',borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},indexAxis:'y'}});
+}
+
+// ─ NOTIFICATIONS ─
+async function loadNotifications(){
+  const r=await api('GET','/notifications');
+  const list=r.data||[];
+  document.getElementById('notifList').innerHTML=list.length?list.map(n=>`<div style="padding:12px 14px;background:var(--bg);border-radius:10px;border-left:3px solid var(--navy);"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px;">${fmt(n.title||n.message)}</div><div style="font-size:12px;color:var(--muted);">${dateFmt(n.created_at)}</div></div>`).join(''):'<div style="text-align:center;color:var(--muted);padding:24px;">No notifications.</div>';
+}
+async function sendBroadcast(target){
+  const msg=document.getElementById('broadcastMsg').value.trim();
+  if(!msg){showFormAlert('notifAlert','Please enter a message.');return;}
+  const r=await api('POST','/notifications/broadcast',{message:msg,target});
+  if(r.success){document.getElementById('broadcastMsg').value='';showFormAlert('notifAlert','Broadcast sent!','success');loadNotifications();}
+  else showFormAlert('notifAlert',r.error||'Error');
+}
+function showFormAlert(id,msg,type='error'){const el=document.getElementById(id);if(!el)return;el.textContent=msg;el.className='alert '+type;el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
+
+// ─ SETTINGS ─
+async function loadSettings(){
+  const r=await api('GET','/settings');
+  if(!r.success)return;
+  const d=r.data||{};
+  document.getElementById('set-org').value=d.org_name||'';
+  document.getElementById('set-tagline').value=d.site_tagline||'';
+  document.getElementById('set-title').value=d.site_title||'';
+  document.getElementById('set-subtitle').value=d.site_subtitle||'';
+  document.getElementById('set-copyright').value=d.copyright_text||'';
+  document.getElementById('set-fb').value=d.social_facebook||'';
+  document.getElementById('set-ig').value=d.social_instagram||'';
+  document.getElementById('set-li').value=d.social_linkedin||'';
+  document.getElementById('set-tw').value=d.social_twitter||'';
+  document.getElementById('set-yt').value=d.social_youtube||'';
+  document.getElementById('set-wa').value=d.social_whatsapp||'';
+  if(d.logo_url)document.getElementById('logoPreview').src=d.logo_url;
+  // Update footer copyright & social
+  if(d.copyright_text)document.getElementById('adminFooterCopy').textContent=d.copyright_text;
+  const sfm={facebook:'adf-fb',instagram:'adf-ig',linkedin:'adf-li',twitter:'adf-tw',youtube:'adf-yt',whatsapp:'adf-wa'};
+  Object.entries(sfm).forEach(([key,id])=>{const el=document.getElementById(id);if(el&&d['social_'+key]){el.href=d['social_'+key];el.style.display='inline-flex';}});
+}
+async function saveSettings(){
+  const body={org_name:document.getElementById('set-org').value,site_tagline:document.getElementById('set-tagline').value,site_title:document.getElementById('set-title').value,site_subtitle:document.getElementById('set-subtitle').value,copyright_text:document.getElementById('set-copyright').value,social_facebook:document.getElementById('set-fb').value,social_instagram:document.getElementById('set-ig').value,social_linkedin:document.getElementById('set-li').value,social_twitter:document.getElementById('set-tw').value,social_youtube:document.getElementById('set-yt').value,social_whatsapp:document.getElementById('set-wa').value};
+  const r=await api('PUT','/settings',body);
+  showFormAlert('settingsAlert',r.success?'Settings saved successfully!':'Failed: '+(r.error||''),r.success?'success':'error');
+}
+async function uploadLogo(){
+  const file=document.getElementById('logoFile').files[0];
+  if(!file){showFormAlert('settingsAlert','Please select an image file.');return;}
+  const fd=new FormData();fd.append('logo',file);
+  const r=await fetch(API('/settings/logo'),{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
+  const d=await r.json();
+  if(d.success){document.getElementById('logoPreview').src=d.data.logo_url;document.getElementById('sbLogo').src=d.data.logo_url;showFormAlert('settingsAlert','Logo updated!','success');}
+  else showFormAlert('settingsAlert',d.error||'Upload failed.');
+}
+
+function exportReport(type){window.open(API(`/reports/${type}`)+'?token='+TOKEN(),'_blank');}
+
+// ─ SCORM ─
+async function loadScormPackages(){
+  const r=await api('GET','/scorm/packages');
+  if(!r.success)return;
+  const pkgs=r.data||[];
+  // Populate filter
+  const f=document.getElementById('scormPkgFilter');
+  f.innerHTML='<option value="">All Packages</option>'+pkgs.map(p=>`<option value="${p.id}">${fmt(p.package_name)}</option>`).join('');
+  document.getElementById('scormTbody').innerHTML=pkgs.length?pkgs.map((p,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${fmt(p.package_name)}</strong></td>
+      <td><span class="badge pending">${p.scorm_version||'1.2'}</span></td>
+      <td>${fmt(p.module_name||'—')}</td>
+      <td>${fmt(p.course_name||'—')}</td>
+      <td>${dateFmt(p.created_at)}</td>
+      <td>
+        <a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" target="_blank" class="btn btn-sm btn-primary" title="Preview"><i class="fas fa-play"></i></a>
+        <button class="btn btn-sm btn-danger" onclick="deleteScorm(${p.id})" title="Delete"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No SCORM packages uploaded yet.</td></tr>';
+}
+async function loadScormTracking(){
+  const pkgId=document.getElementById('scormPkgFilter').value;
+  const url='/scorm/tracking-all'+(pkgId?'?package_id='+pkgId:'');
+  const r=await api('GET',url);
+  const rows=r.data||r||[];
+  const statusColor={passed:'active',completed:'active',incomplete:'pending',failed:'inactive','not attempted':'pending'};
+  document.getElementById('scormTrackTbody').innerHTML=Array.isArray(rows)&&rows.length?rows.map((t,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${fmt(t.student_name)}</td>
+      <td>${fmt(t.package_name)}</td>
+      <td><span class="badge ${statusColor[t.completion_status]||'pending'}">${t.completion_status||'—'}</span></td>
+      <td>${t.score_raw||0} / ${t.score_max||100}</td>
+      <td>${fmt(t.total_time||'—')}</td>
+      <td>${dateFmt(t.last_accessed)}</td>
+    </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No tracking data yet.</td></tr>';
+}
+async function deleteScorm(id){
+  if(!confirm('Delete this SCORM package? All student progress will also be deleted.'))return;
+  const r=await api('DELETE','/scorm/packages/'+id);
+  if(r.success)loadScormPackages();else alert(r.error||'Delete failed');
+}
+async function uploadScorm(){
+  const name=document.getElementById('su-name').value.trim();
+  const file=document.getElementById('su-file').files[0];
+  const version=document.getElementById('su-version').value;
+  const moduleId=document.getElementById('su-module').value;
+  if(!name||!file){showFormAlert('scormUploadAlert','Please enter a name and select a ZIP file.');return;}
+  const btn=document.getElementById('scormUploadBtn');
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Uploading…';
+  document.getElementById('scormUploadProgress').style.display='block';
+  document.getElementById('scormProgressBar').style.width='30%';
+  document.getElementById('scormProgressText').textContent='Uploading ZIP file…';
+  try{
+    const fd=new FormData();
+    fd.append('scorm',file);
+    fd.append('package_name',name);
+    fd.append('scorm_version',version);
+    if(moduleId)fd.append('module_id',moduleId);
+    const h={'Authorization':'Bearer '+TOKEN()};
+    document.getElementById('scormProgressBar').style.width='60%';
+    document.getElementById('scormProgressText').textContent='Extracting package…';
+    const resp=await fetch(API('/scorm/upload'),{method:'POST',headers:h,body:fd});
+    const d=await resp.json();
+    document.getElementById('scormProgressBar').style.width='100%';
+    if(d.success){
+      document.getElementById('scormProgressText').textContent='Done! Package extracted successfully.';
+      document.getElementById('scormProgressBar').style.background='#43a047';
+      setTimeout(()=>{closeModal();loadScormPackages();},1200);
+    }else{
+      showFormAlert('scormUploadAlert',d.error||'Upload failed');
+      document.getElementById('scormUploadProgress').style.display='none';
+    }
+  }catch(e){showFormAlert('scormUploadAlert','Upload failed: '+e.message);}
+  btn.disabled=false;btn.innerHTML='<i class="fas fa-upload"></i> Upload & Extract';
+}
+
+// ─ Init ─
+(async()=>{
+  await Promise.all([loadCourses(),loadBatches()]);
+  // populate student selects
+  const sr=await api('GET','/students?limit=200');
+  const students=sr.data?.students||sr.data||[];
+  [document.getElementById('af-student'),document.getElementById('ic-student')].forEach(s=>{
+    if(s)s.innerHTML='<option value="">Select Student</option>'+students.map(st=>`<option value="${st.id}">${st.name}</option>`).join('');
+  });
+  // populate trainer select in batch modal
+  const tr=await api('GET','/trainers');
+  const trainers=tr.data||[];
+  const tsel=document.getElementById('ab-trainer');
+  if(tsel)tsel.innerHTML='<option value="">Select Trainer</option>'+trainers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  // populate module select for SCORM upload
+  const mods=await api('GET','/courses');
+  const modSel=document.getElementById('su-module');
+  if(modSel&&mods.success){
+    const courses=mods.data?.courses||mods.data||[];
+    let opts='<option value="">— None —</option>';
+    courses.forEach(c=>{opts+=`<optgroup label="${c.name||c.title}"></optgroup>`;});
+    modSel.innerHTML=opts;
+  }
+  loadOverview();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SCORM Player – Smart LMS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── TOP BAR ── */
+.topbar{
+  background:#1a237e;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;height:52px;flex-shrink:0;border-bottom:2px solid #ff6b35;
+  box-shadow:0 2px 12px rgba(0,0,0,0.4);
+}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.tb-logo{font-size:15px;font-weight:700;color:#fff;letter-spacing:.5px;}
+.tb-logo span{color:#ff6b35;}
+.tb-title{font-size:14px;color:rgba(255,255,255,0.8);max-width:400px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-right{display:flex;align-items:center;gap:10px;}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none;}
+.btn-back{background:rgba(255,255,255,0.12);color:#fff;}
+.btn-back:hover{background:rgba(255,255,255,0.22);}
+.btn-exit{background:#ff6b35;color:#fff;}
+.btn-exit:hover{background:#e55a2b;}
+
+/* ── STATUS BAR ── */
+.statusbar{
+  background:#111b60;display:flex;align-items:center;gap:20px;
+  padding:0 18px;height:38px;flex-shrink:0;font-size:12px;
+}
+.status-item{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.7);}
+.status-item i{font-size:11px;}
+.status-val{color:#fff;font-weight:600;}
+.status-badge{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.badge-green{background:#1b5e20;color:#81c784;}
+.badge-orange{background:#e65100;color:#ffcc80;}
+.badge-blue{background:#1565c0;color:#90caf9;}
+.badge-gray{background:#263238;color:#90a4ae;}
+
+/* ── IFRAME WRAPPER ── */
+.player-wrap{flex:1;position:relative;overflow:hidden;}
+#scormFrame{width:100%;height:100%;border:none;background:#fff;}
+
+/* ── OVERLAY / LOADING ── */
+.overlay{
+  position:absolute;inset:0;background:#0f1117;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;z-index:100;transition:opacity .3s;
+}
+.overlay.hidden{opacity:0;pointer-events:none;}
+.spin{width:48px;height:48px;border:4px solid rgba(255,255,255,0.1);border-top-color:#ff6b35;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.overlay h3{font-size:16px;color:rgba(255,255,255,0.8);}
+.overlay p{font-size:13px;color:rgba(255,255,255,0.4);}
+
+/* ── ERROR STATE ── */
+.error-box{
+  position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;background:#0f1117;z-index:200;
+}
+.error-box.show{display:flex;}
+.error-icon{font-size:48px;color:#ef5350;}
+.error-box h3{font-size:18px;}
+.error-box p{font-size:13px;color:rgba(255,255,255,0.5);text-align:center;max-width:400px;}
+
+/* ── COMPLETION BANNER ── */
+.completion{
+  position:fixed;top:60px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;
+  padding:12px 24px;border-radius:12px;display:none;align-items:center;gap:10px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);z-index:300;font-size:13px;font-weight:600;
+  animation:slideDown .3s ease;
+}
+.completion.show{display:flex;}
+@keyframes slideDown{from{transform:translateX(-50%) translateY(-20px);opacity:0;}to{transform:translateX(-50%) translateY(0);opacity:1;}}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="tb-left">
+    <span class="tb-logo">Smart<span>LMS</span></span>
+    <span style="color:rgba(255,255,255,0.3);">|</span>
+    <span class="tb-title" id="pkgTitle">Loading SCORM Content…</span>
+  </div>
+  <div class="tb-right">
+    <button class="btn btn-back" onclick="goBack()"><i class="fas fa-arrow-left"></i> Back</button>
+    <button class="btn btn-exit" onclick="exitSCORM()"><i class="fas fa-sign-out-alt"></i> Exit</button>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="status-item"><i class="fas fa-circle-check"></i>Status: <span class="status-badge badge-gray status-val" id="statusBadge">Not Started</span></div>
+  <div class="status-item"><i class="fas fa-star"></i>Score: <span class="status-val" id="scoreDisplay">—</span></div>
+  <div class="status-item"><i class="fas fa-clock"></i>Time: <span class="status-val" id="timeDisplay">00:00</span></div>
+  <div class="status-item" style="margin-left:auto;"><i class="fas fa-wifi"></i><span id="syncStatus" style="color:#81c784;">Saved</span></div>
+</div>
+
+<!-- PLAYER -->
+<div class="player-wrap">
+  <div class="overlay" id="loadingOverlay">
+    <div class="spin"></div>
+    <h3>Loading SCORM Content…</h3>
+    <p>Please wait while the content is being prepared</p>
+  </div>
+  <div class="error-box" id="errorBox">
+    <i class="fas fa-triangle-exclamation error-icon"></i>
+    <h3>Content Not Available</h3>
+    <p id="errorMsg">Unable to load SCORM content. Please contact your administrator.</p>
+    <button class="btn btn-exit" onclick="goBack()" style="margin-top:8px;"><i class="fas fa-arrow-left"></i> Go Back</button>
+  </div>
+  <iframe id="scormFrame" title="SCORM Content" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe>
+</div>
+
+<!-- COMPLETION BANNER -->
+<div class="completion" id="completionBanner">
+  <i class="fas fa-trophy" style="color:#ffd700;font-size:20px;"></i>
+  <span>Congratulations! You have completed this module.</span>
+  <button class="btn" style="background:rgba(255,255,255,0.2);color:#fff;padding:4px 10px;" onclick="document.getElementById('completionBanner').classList.remove('show')">✕</button>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  SCORM PLAYER — Smart LMS
+//  Implements SCORM 1.2 API + SCORM 2004 (API_1484_11) bridge
+// ════════════════════════════════════════════════════════════════════
+
+const TOKEN = () => localStorage.getItem('lms_token') || '';
+const BASE  = '/api/v1';
+
+// Get params from URL
+const params   = new URLSearchParams(location.search);
+const PKG_ID   = params.get('pkg');
+const PKG_NAME = decodeURIComponent(params.get('name') || 'SCORM Content');
+const ROLE     = (() => { try { return JSON.parse(localStorage.getItem('lms_user') || '{}').role; } catch { return 'student'; } })();
+
+document.getElementById('pkgTitle').textContent = PKG_NAME;
+
+// ── SCORM DATA MODEL ──────────────────────────────────────────────
+const CMI = {
+  'cmi.core.lesson_status':   'not attempted',
+  'cmi.core.student_name':    '',
+  'cmi.core.student_id':      '',
+  'cmi.core.lesson_location': '',
+  'cmi.core.score.raw':       '',
+  'cmi.core.score.max':       '100',
+  'cmi.core.score.min':       '0',
+  'cmi.core.session_time':    '0000:00:00.00',
+  'cmi.core.total_time':      '0000:00:00.00',
+  'cmi.core.credit':          'credit',
+  'cmi.core.entry':           'ab-initio',
+  'cmi.core.exit':            '',
+  'cmi.suspend_data':         '',
+  'cmi.launch_data':          '',
+  'cmi.comments':             '',
+  'cmi.comments_from_lms':    '',
+  'cmi.student_preference.audio': '0',
+  'cmi.student_preference.language': '',
+  'cmi.student_preference.speed': '0',
+  'cmi.student_preference.text': '0',
+};
+
+// Readonly elements
+const CMI_READONLY = new Set([
+  'cmi.core.student_name','cmi.core.student_id','cmi.core.credit',
+  'cmi.core.entry','cmi.core.total_time','cmi.launch_data','cmi.comments_from_lms'
+]);
+
+// Writeonly elements
+const CMI_WRITEONLY = new Set(['cmi.core.session_time']);
+
+let initialized = false;
+let dirty = false;
+let sessionStart = Date.now();
+let saveTimer = null;
+
+// ── TIMER ─────────────────────────────────────────────────────────
+function getSessionTime() {
+  const secs = Math.floor((Date.now() - sessionStart) / 1000);
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  return String(h).padStart(4,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.00';
+}
+
+// Update status bar
+function updateStatusBar() {
+  const status = CMI['cmi.core.lesson_status'] || 'not attempted';
+  const badge = document.getElementById('statusBadge');
+  badge.textContent = status.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  badge.className = 'status-badge status-val ' + ({
+    'passed':'badge-green','completed':'badge-green',
+    'incomplete':'badge-orange','failed':'badge-orange',
+    'browsed':'badge-blue','not attempted':'badge-gray'
+  }[status] || 'badge-gray');
+
+  const raw = CMI['cmi.core.score.raw'];
+  const max = CMI['cmi.core.score.max'] || 100;
+  document.getElementById('scoreDisplay').textContent = raw ? `${raw} / ${max}` : '—';
+}
+
+// Live timer
+setInterval(() => {
+  const secs = Math.floor((Date.now() - sessionStart) / 1000);
+  const m = Math.floor(secs / 60), s = secs % 60;
+  document.getElementById('timeDisplay').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}, 1000);
+
+// ── SCORM 1.2 API ─────────────────────────────────────────────────
+window.API = {
+  LMSInitialize: function(s) {
+    if (initialized) return 'true';
+    initialized = true;
+    // Pre-fill student info
+    try {
+      const u = JSON.parse(localStorage.getItem('lms_user') || '{}');
+      CMI['cmi.core.student_id'] = String(u.id || '');
+      CMI['cmi.core.student_name'] = u.name || '';
+    } catch(e) {}
+    return 'true';
+  },
+
+  LMSFinish: function(s) {
+    CMI['cmi.core.session_time'] = getSessionTime();
+    saveTracking(true);
+    initialized = false;
+    return 'true';
+  },
+
+  LMSGetValue: function(element) {
+    if (CMI_WRITEONLY.has(element)) return '';
+    const val = CMI[element];
+    return val !== undefined ? String(val) : '';
+  },
+
+  LMSSetValue: function(element, value) {
+    if (!initialized) return 'false';
+    if (CMI_READONLY.has(element)) return 'false';
+    CMI[element] = value;
+    dirty = true;
+    // Trigger auto-save after 3s of inactivity
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveTracking(false), 3000);
+    updateStatusBar();
+    // Show completion banner
+    if (element === 'cmi.core.lesson_status' && (value === 'passed' || value === 'completed')) {
+      document.getElementById('completionBanner').classList.add('show');
+      setTimeout(() => document.getElementById('completionBanner').classList.remove('show'), 5000);
+    }
+    return 'true';
+  },
+
+  LMSCommit: function(s) {
+    CMI['cmi.core.session_time'] = getSessionTime();
+    saveTracking(false);
+    return 'true';
+  },
+
+  LMSGetLastError: function() { return '0'; },
+  LMSGetErrorString: function(n) { return ''; },
+  LMSGetDiagnostic: function(n) { return ''; }
+};
+
+// ── SCORM 2004 API BRIDGE ─────────────────────────────────────────
+window.API_1484_11 = {
+  Initialize:    s => (window.API.LMSInitialize(s), 'true'),
+  Terminate:     s => (window.API.LMSFinish(s), 'true'),
+  GetValue:      e => {
+    // Map SCORM 2004 -> 1.2 keys
+    const map = {
+      'cmi.completion_status': 'cmi.core.lesson_status',
+      'cmi.success_status':    'cmi.core.lesson_status',
+      'cmi.score.raw':         'cmi.core.score.raw',
+      'cmi.score.max':         'cmi.core.score.max',
+      'cmi.score.min':         'cmi.core.score.min',
+      'cmi.location':          'cmi.core.lesson_location',
+      'cmi.suspend_data':      'cmi.suspend_data',
+      'cmi.learner_name':      'cmi.core.student_name',
+      'cmi.learner_id':        'cmi.core.student_id',
+      'cmi.session_time':      'cmi.core.session_time',
+      'cmi.total_time':        'cmi.core.total_time',
+    };
+    return window.API.LMSGetValue(map[e] || e);
+  },
+  SetValue:      (e, v) => {
+    const map = {
+      'cmi.completion_status': 'cmi.core.lesson_status',
+      'cmi.success_status':    'cmi.core.lesson_status',
+      'cmi.score.raw':         'cmi.core.score.raw',
+      'cmi.score.max':         'cmi.core.score.max',
+      'cmi.score.min':         'cmi.core.score.min',
+      'cmi.location':          'cmi.core.lesson_location',
+      'cmi.suspend_data':      'cmi.suspend_data',
+    };
+    return window.API.LMSSetValue(map[e] || e, v);
+  },
+  Commit:        s => window.API.LMSCommit(s),
+  GetLastError:  ()  => '0',
+  GetErrorString:n   => '',
+  GetDiagnostic: n   => '',
+};
+
+// ── SAVE TO BACKEND ───────────────────────────────────────────────
+async function saveTracking(final) {
+  if (!PKG_ID) return;
+  document.getElementById('syncStatus').textContent = '⟳ Saving…';
+  document.getElementById('syncStatus').style.color = '#ffcc80';
+  try {
+    const r = await fetch(BASE+'/scorm/tracking', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+TOKEN() },
+      body: JSON.stringify({
+        package_id:       PKG_ID,
+        completion_status:CMI['cmi.core.lesson_status'],
+        score_raw:        CMI['cmi.core.score.raw'] || 0,
+        score_max:        CMI['cmi.core.score.max'] || 100,
+        total_time:       CMI['cmi.core.total_time'] || getSessionTime(),
+        suspend_data:     CMI['cmi.suspend_data'] || '',
+        lesson_location:  CMI['cmi.core.lesson_location'] || '',
+      })
+    });
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('syncStatus').textContent = '✓ Saved';
+      document.getElementById('syncStatus').style.color = '#81c784';
+      dirty = false;
+    } else {
+      document.getElementById('syncStatus').textContent = '⚠ Save failed';
+      document.getElementById('syncStatus').style.color = '#ef9a9a';
+    }
+  } catch(e) {
+    document.getElementById('syncStatus').textContent = '⚠ Offline';
+    document.getElementById('syncStatus').style.color = '#ef9a9a';
+  }
+}
+
+// ── LOAD EXISTING TRACKING ────────────────────────────────────────
+async function loadTracking() {
+  if (!PKG_ID) return;
+  try {
+    const r = await fetch(BASE+'/scorm/tracking/'+PKG_ID, {
+      headers: { 'Authorization':'Bearer '+TOKEN() }
+    });
+    const d = await r.json();
+    if (d.success && d.data) {
+      const t = d.data;
+      CMI['cmi.core.lesson_status']   = t.completion_status || 'not attempted';
+      CMI['cmi.core.score.raw']       = String(t.score_raw || '');
+      CMI['cmi.core.score.max']       = String(t.score_max || 100);
+      CMI['cmi.core.total_time']      = t.total_time || '0000:00:00.00';
+      CMI['cmi.suspend_data']         = t.suspend_data || '';
+      CMI['cmi.core.entry']           = (t.completion_status && t.completion_status !== 'not attempted') ? 'resume' : 'ab-initio';
+    }
+  } catch(e) {}
+  updateStatusBar();
+}
+
+// ── LOAD SCORM CONTENT ────────────────────────────────────────────
+async function loadContent() {
+  if (!PKG_ID) {
+    showError('No SCORM package specified. Please go back and try again.');
+    return;
+  }
+  try {
+    const r = await fetch(BASE+'/scorm/packages/'+PKG_ID, {
+      headers: { 'Authorization':'Bearer '+TOKEN() }
+    });
+    const d = await r.json();
+    if (!d.success || !d.data) { showError('Package not found.'); return; }
+    const pkg = d.data;
+    document.getElementById('pkgTitle').textContent = pkg.package_name || PKG_NAME;
+    document.title = (pkg.package_name || 'SCORM') + ' – Smart LMS';
+    // Load prior tracking
+    await loadTracking();
+    // Launch iframe
+    const frame = document.getElementById('scormFrame');
+    frame.onload = () => {
+      document.getElementById('loadingOverlay').classList.add('hidden');
+    };
+    frame.onerror = () => showError('Failed to load content. The SCORM package may be corrupted.');
+    frame.src = pkg.upload_path;
+    // Fallback hide loader after 6s
+    setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 6000);
+  } catch(e) {
+    showError('Error loading content: ' + e.message);
+  }
+}
+
+function showError(msg) {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorBox').classList.add('show');
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────
+function goBack() {
+  // Auto-save before leaving
+  if (dirty) {
+    CMI['cmi.core.session_time'] = getSessionTime();
+    saveTracking(false).then(() => history.back());
+  } else {
+    history.back();
+  }
+}
+
+function exitSCORM() {
+  CMI['cmi.core.session_time'] = getSessionTime();
+  window.API.LMSFinish('');
+  const role = ROLE;
+  setTimeout(() => {
+    if (role === 'student') window.location.href = 'student-dashboard.html';
+    else if (role === 'trainer') window.location.href = 'trainer-dashboard.html';
+    else window.location.href = 'admin-dashboard.html';
+  }, 300);
+}
+
+// Warn on unload if dirty
+window.addEventListener('beforeunload', e => {
+  if (dirty) {
+    CMI['cmi.core.session_time'] = getSessionTime();
+    saveTracking(false);
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// ── INIT ──────────────────────────────────────────────────────────
+loadContent();
+</script>
+</body>
+</html>

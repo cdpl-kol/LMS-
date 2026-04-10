@@ -1,0 +1,75 @@
+============================================================
+   SMART LMS - BACKEND SETUP GUIDE
+   Connecting Dot Pvt. Ltd.
+============================================================
+
+REQUIREMENTS:
+  - Node.js (v16+) : https://nodejs.org
+  - PostgreSQL      : https://www.postgresql.org/download/
+
+------------------------------------------------------------
+STEP 1: PostgreSQL Database Setup
+------------------------------------------------------------
+1. PostgreSQL install karo (agar nahi hai)
+2. PostgreSQL open karo aur ek database banao:
+
+   Windows (pgAdmin use karo) ya Command Prompt mein:
+   > psql -U postgres
+   > CREATE DATABASE lms_db;
+   > \q
+
+------------------------------------------------------------
+STEP 2: .env file configure karo
+------------------------------------------------------------
+backend/.env file mein apna PostgreSQL password daalo:
+
+   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/lms_db
+
+   Example: agar password "1234" hai:
+   DATABASE_URL=postgresql://postgres:1234@localhost:5432/lms_db
+
+------------------------------------------------------------
+STEP 3: Dependencies install karo
+------------------------------------------------------------
+Command Prompt / Terminal mein:
+
+   cd LMS/backend
+   npm install
+
+------------------------------------------------------------
+STEP 4: Server start karo
+------------------------------------------------------------
+   node server.js
+
+   Aapko yeh message aayega:
+   ✅ Database initialized successfully
+   🚀 LMS Backend running at: http://localhost:3001
+
+------------------------------------------------------------
+STEP 5: Browser mein kholो
+------------------------------------------------------------
+   http://localhost:3001
+
+------------------------------------------------------------
+DEFAULT LOGIN CREDENTIALS
+------------------------------------------------------------
+  Admin:    username=admin     | password=admin123
+  B-School: email=bschool@cdpl.in | password=bschool123
+  Trainer:  email=trainer@cdpl.in | password=trainer123
+  Students: Jab admin student add kare, default password=student@123
+            (ya jo password admin set kare woh)
+
+------------------------------------------------------------
+DATA SAVE HONE KA PROCESS
+------------------------------------------------------------
+  - Kuch bhi add/edit/delete karo - sab PostgreSQL database
+    mein save hoga permanently
+  - Server band karo, dobara start karo - data safe rahega
+  - Sirf DELETE karne par data jayega
+
+------------------------------------------------------------
+BACKEND BAND KARNA
+------------------------------------------------------------
+  Terminal mein Ctrl+C press karo
+
+============================================================

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Registration – Smart LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root{--navy:#1a237e;--pink:#e91e8c;--purple:#9c27b0;--white:#fff;--gray:#f4f6fb;--text:#263238;--muted:#78909c;--red:#e53935;}
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;min-height:100vh;background:linear-gradient(135deg,#880e4f 0%,#e91e8c 40%,#9c27b0 100%);display:flex;align-items:center;justify-content:center;padding:24px 16px;position:relative;overflow:hidden;}
+    body::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='80' height='92' viewBox='0 0 80 92' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='40,5 70,22 70,56 40,73 10,56 10,22' fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='1.5'/%3E%3C/svg%3E") repeat;}
+    .card{position:relative;z-index:10;background:#fff;border-radius:24px;padding:36px;width:100%;max-width:500px;box-shadow:0 24px 60px rgba(0,0,0,0.22);}
+    .back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);text-decoration:none;margin-bottom:20px;transition:color 0.2s;}
+    .back-link:hover{color:var(--navy);}
+    .card-header{text-align:center;margin-bottom:24px;}
+    .role-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#e91e8c,#9c27b0);color:#fff;font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;margin-bottom:12px;}
+    .card-title{font-family:'Poppins',sans-serif;font-size:24px;font-weight:700;color:var(--navy);}
+    .card-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .form-group{margin-bottom:16px;}
+    .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:7px;}
+    .input-wrap{position:relative;}
+    .input-wrap i.ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;}
+    .input-wrap input,.input-wrap select{width:100%;padding:11px 14px 11px 38px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);background:#fafafa;outline:none;transition:border-color 0.2s;}
+    .input-wrap input:focus,.input-wrap select:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(233,30,140,0.1);background:#fff;}
+    .btn-register{width:100%;padding:13px;background:linear-gradient(135deg,#e91e8c,#9c27b0);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:opacity 0.2s,transform 0.15s;margin-top:8px;}
+    .btn-register:hover{opacity:0.92;transform:translateY(-1px);}
+    .btn-register:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+    .msg{padding:11px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;}
+    .msg.error{background:#fdecea;color:var(--red);border:1px solid #f5c6c6;}
+    .msg.success{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+    .login-link{text-align:center;font-size:13px;color:var(--muted);margin-top:16px;}
+    .login-link a{color:var(--pink);text-decoration:none;font-weight:600;}
+    .login-link a:hover{text-decoration:underline;}
+    .footer-copy{text-align:center;font-size:11px;color:var(--muted);margin-top:16px;}
+    @media(max-width:480px){.row2{grid-template-columns:1fr;}.card{padding:28px 20px;}}
+  </style>
+</head>
+<body>
+<div class="card">
+  <a href="student-login.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Login</a>
+  <div class="card-header">
+    <div class="role-badge"><i class="fas fa-user-plus"></i>&nbsp;New Registration</div>
+    <div class="card-title">Student Registration</div>
+    <div class="card-sub">Create your account to access courses and more</div>
+  </div>
+  <div class="msg" id="msgBox"></div>
+  <form id="regForm" novalidate>
+    <div class="row2">
+      <div class="form-group">
+        <label for="fname">First Name</label>
+        <div class="input-wrap"><i class="fas fa-user ico"></i><input type="text" id="fname" placeholder="John" required/></div>
+      </div>
+      <div class="form-group">
+        <label for="lname">Last Name</label>
+        <div class="input-wrap"><i class="fas fa-user ico"></i><input type="text" id="lname" placeholder="Doe" required/></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <div class="input-wrap"><i class="fas fa-envelope ico"></i><input type="email" id="email" placeholder="you@example.com" required/></div>
+    </div>
+    <div class="form-group">
+      <label for="phone">Phone Number</label>
+      <div class="input-wrap"><i class="fas fa-phone ico"></i><input type="tel" id="phone" placeholder="+91 98765 43210"/></div>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <div class="input-wrap"><i class="fas fa-lock ico"></i><input type="password" id="password" placeholder="Min. 8 characters" required/></div>
+    </div>
+    <div class="form-group">
+      <label for="confirmpw">Confirm Password</label>
+      <div class="input-wrap"><i class="fas fa-lock ico"></i><input type="password" id="confirmpw" placeholder="Repeat password" required/></div>
+    </div>
+    <button type="submit" class="btn-register" id="regBtn"><i class="fas fa-user-plus"></i>&nbsp; Create Account</button>
+  </form>
+  <div class="login-link">Already have an account? <a href="student-login.html">Sign In</a></div>
+  <div class="footer-copy">© 2026 Connecting Dot Consultancy Pvt. Ltd. All rights reserved.</div>
+</div>
+<script>
+  function showMsg(m,t='error'){const b=document.getElementById('msgBox');b.textContent=m;b.className='msg '+t;b.style.display='block';}
+  document.getElementById('regForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    document.getElementById('msgBox').style.display='none';
+    const fname=document.getElementById('fname').value.trim();
+    const lname=document.getElementById('lname').value.trim();
+    const email=document.getElementById('email').value.trim();
+    const phone=document.getElementById('phone').value.trim();
+    const password=document.getElementById('password').value;
+    const confirm=document.getElementById('confirmpw').value;
+    if(!fname||!lname||!email||!password){showMsg('Please fill in all required fields.');return;}
+    if(password.length<8){showMsg('Password must be at least 8 characters.');return;}
+    if(password!==confirm){showMsg('Passwords do not match.');return;}
+    const btn=document.getElementById('regBtn');
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>&nbsp; Creating account…';
+    try{
+      const r=await fetch('/api/v1/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fname+' '+lname,email,phone,password,role:'student'})});
+      const d=await r.json();
+      if(r.ok&&d.success){
+        showMsg('Registration successful! Your account is pending admin approval. You will receive an email once approved.','success');
+        setTimeout(()=>{window.location.href='student-login.html';},2500);
+      }else{showMsg(d.error||'Registration failed. Please try again.');}
+    }catch(err){showMsg('Network error. Please try again.');}
+    btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i>&nbsp; Create Account';
+  });
+</script>
+</body>
+</html>
