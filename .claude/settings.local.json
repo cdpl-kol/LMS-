@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(findstr /n \"corporateTbody\\\\|loadCorporate\\\\|renderCorp\\\\|corporate.*Tbody\" \"C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\admin-dashboard.html\")",
+      "Bash(findstr /n \"corporateTbody\" \"C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\admin-dashboard.html\")",
+      "Bash(findstr /n \"corporateTbody\" admin-dashboard.html)",
+      "Bash(node -e ':*)",
+      "Bash(curl -s http://localhost:3001/api/v1/corporate/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"sbi@company.com\\\\\",\\\\\"password\\\\\":\\\\\"\\\\\"}\")",
+      "Bash(curl -s http://localhost:3001/api/v1/auth/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"admin@example.com\\\\\",\\\\\"password\\\\\":\\\\\"admin123\\\\\"}\")",
+      "Bash(curl -s http://localhost:3001/api/v1/auth/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"admin@example.com\\\\\",\\\\\"password\\\\\":\\\\\"admin123\\\\\",\\\\\"role\\\\\":\\\\\"admin\\\\\"}\")",
+      "Bash(curl -s http://localhost:3001/api/v1/auth/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"admin\\\\\",\\\\\"password\\\\\":\\\\\"admin123\\\\\",\\\\\"role\\\\\":\\\\\"admin\\\\\"}\")",
+      "Bash(curl -s http://localhost:3001/api/v1/corporate/list -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4')",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s 'http://localhost:3001/api/v1/corporate/participants?corporate_id=2' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4')",
+      "Bash(curl -s http://localhost:3001/api/v1/corporate/participants -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4')",
+      "Bash(curl -s http://localhost:3001/api/v1/corporate/2/allowed-courses -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4')",
+      "Bash(curl -s -X POST http://localhost:3001/api/v1/corporate/participants/4/assign-course -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4' -H 'Content-Type: application/json' -d '{\"course_id\":31,\"corporate_id\":2}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/v1/corporate/participants/4/assign-course -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4' -H 'Content-Type: application/json' -d '{\"course_id\":34,\"corporate_id\":2}')",
+      "Bash(node -e \"console.log\\('Server file OK'\\)\")"
+    ]
+  }
+}

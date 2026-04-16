@@ -147,13 +147,17 @@ tr:hover td{background:#f8f9ff;}
   <button class="nav-item" onclick="showSection('batches')"><i class="fas fa-layer-group"></i>My Batches</button>
   <button class="nav-item" onclick="showSection('students')"><i class="fas fa-user-graduate"></i>My Students</button>
   <span class="sb-section">Academic</span>
+  <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Courses</button>
   <button class="nav-item" onclick="showSection('attendance')"><i class="fas fa-calendar-check"></i>Mark Attendance</button>
   <button class="nav-item" onclick="showSection('assignments')"><i class="fas fa-tasks"></i>Assignments</button>
   <button class="nav-item" onclick="showSection('timetable')"><i class="fas fa-clock"></i>Timetable</button>
   <button class="nav-item" onclick="showSection('materials')"><i class="fas fa-folder-open"></i>Study Materials</button>
+  <button class="nav-item" onclick="showSection('elearning')"><i class="fas fa-cube"></i>E-Learning</button>
   <span class="sb-section">Reports</span>
   <button class="nav-item" onclick="showSection('results')"><i class="fas fa-chart-bar"></i>Exam Results</button>
   <button class="nav-item" onclick="showSection('reports')"><i class="fas fa-file-chart-pie"></i>Batch Reports</button>
+  <button class="nav-item" onclick="showSection('queries')"><i class="fas fa-question-circle"></i>Student Queries</button>
+  <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-line"></i>Student Progress</button>
   <span class="sb-section">Account</span>
   <button class="nav-item" onclick="showSection('notifications')"><i class="fas fa-bell"></i>Notifications</button>
   <button class="nav-item" onclick="showSection('profile')"><i class="fas fa-user"></i>My Profile</button>
@@ -321,6 +325,33 @@ tr:hover td{background:#f8f9ff;}
     </div>
   </div>
 
+  <!-- COURSES -->
+  <div class="section" id="sec-courses">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-book-open" style="color:var(--orange);margin-right:6px;"></i>All Courses</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>#</th><th>Course Name</th><th>Category</th><th>Duration</th><th>Status</th><th>Intro Video</th></tr></thead>
+          <tbody id="trainerCoursesTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- E-LEARNING (SCORM + VIDEO) -->
+  <div class="section" id="sec-elearning">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-cube" style="color:var(--orange);margin-right:6px;"></i>E-Learning Content</span>
+      </div>
+      <div id="trainerElearningGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;padding:4px 0;">
+        <div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- EXAM RESULTS -->
   <div class="section" id="sec-results">
     <div class="card">
@@ -347,6 +378,56 @@ tr:hover td{background:#f8f9ff;}
         </select>
       </div>
       <div id="batchReportContent" style="text-align:center;padding:32px;color:var(--muted);">Select a batch to view its report.</div>
+    </div>
+  </div>
+
+  <!-- STUDENT QUERIES -->
+  <div class="section" id="sec-queries">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Student Queries</span>
+        <button class="btn btn-outline btn-sm" onclick="loadTrainerQueries()"><i class="fas fa-rotate-right"></i> Refresh</button>
+      </div>
+      <div id="trainerQueriesList"><div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></div></div>
+    </div>
+    <!-- Respond Modal inline -->
+    <div id="respondQueryBox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;" onclick="closeRespondBox(event)">
+      <div style="background:#fff;border-radius:16px;padding:24px;max-width:520px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <span style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);">Respond to Query</span>
+          <button onclick="document.getElementById('respondQueryBox').style.display='none';" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
+        </div>
+        <div id="respondQueryText" style="background:#f8faff;border-radius:8px;padding:12px;font-size:13px;color:var(--text);margin-bottom:14px;"></div>
+        <div class="alert" id="respondAlert"></div>
+        <input type="hidden" id="respondQueryId"/>
+        <label style="font-size:13px;font-weight:600;margin-bottom:6px;display:block;">Your Answer <span style="color:red;">*</span></label>
+        <textarea id="respondAnswer" placeholder="Type your detailed response here..." style="width:100%;padding:10px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;font-family:inherit;min-height:100px;resize:vertical;outline:none;margin-bottom:14px;"></textarea>
+        <button class="btn btn-primary" onclick="submitQueryResponse()"><i class="fas fa-paper-plane"></i> Send Response</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT PROGRESS -->
+  <div class="section" id="sec-progress">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Student Progress Tracking</span>
+        <button class="btn btn-outline btn-sm" onclick="loadTrainerProgress()"><i class="fas fa-rotate-right"></i> Refresh</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Student</th><th>Course</th><th>Batch</th><th>Modules Done</th><th>Progress</th><th>Time Spent</th><th>Last Active</th><th>Actions</th></tr></thead>
+        <tbody id="trainerProgressTbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i></td></tr></tbody>
+      </table></div>
+    </div>
+    <!-- Student Detail Modal -->
+    <div id="studentDetailBox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;" onclick="closeStudentDetail(event)">
+      <div style="background:#fff;border-radius:16px;padding:24px;max-width:680px;width:94%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <span style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);" id="detailStudentName">Student Details</span>
+          <button onclick="document.getElementById('studentDetailBox').style.display='none';" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
+        </div>
+        <div id="studentDetailContent"></div>
+      </div>
     </div>
   </div>
 
@@ -379,7 +460,16 @@ tr:hover td{background:#f8f9ff;}
           <div class="pf-field"><div class="pf-label">Specialization</div><div class="pf-val" id="profileSpec">—</div></div>
           <div class="pf-field"><div class="pf-label">Joined</div><div class="pf-val" id="profileJoined">—</div></div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
+        <!-- Trainer Bio section -->
+        <div id="profileBioSection" style="margin-top:16px;padding:16px;background:#f0f4ff;border-radius:12px;border:1px solid var(--brd);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:700;color:var(--navy);"><i class="fas fa-id-card" style="margin-right:6px;color:var(--orange);"></i>My Bio / Description</div>
+            <button class="btn btn-outline btn-sm" onclick="openModal('editBioModal')" style="font-size:11px;padding:4px 10px;"><i class="fas fa-edit"></i> Edit Bio</button>
+          </div>
+          <div id="profileBioText" style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-line;">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px;"><i class="fas fa-info-circle"></i> This bio is shown to students and participants on all course pages.</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="openModal('editProfileModal')"><i class="fas fa-edit"></i> Edit Profile</button>
           <button class="btn btn-outline" onclick="openModal('changePwModal')"><i class="fas fa-lock"></i> Change Password</button>
         </div>
@@ -493,6 +583,25 @@ tr:hover td{background:#f8f9ff;}
       <button class="btn btn-primary" onclick="changePassword()"><i class="fas fa-lock"></i> Update Password</button>
     </div>
   </div>
+  <!-- Edit Bio -->
+  <div class="modal-box" id="editBioModal" style="display:none;max-width:520px;">
+    <div class="modal-header">
+      <span class="modal-title"><i class="fas fa-id-card" style="color:var(--orange);margin-right:6px;"></i>Edit My Bio</span>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert" id="editBioAlert"></div>
+      <div class="form-group">
+        <label>Specialization / Expertise</label>
+        <input type="text" id="bio-spec" placeholder="e.g. Python, Data Science, Machine Learning"/>
+      </div>
+      <div class="form-group">
+        <label>Bio / Description <small style="color:var(--muted);">Shown to students on all course pages</small></label>
+        <textarea id="bio-text" placeholder="Write about your experience, achievements, teaching style…" style="min-height:130px;resize:vertical;width:100%;padding:10px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;font-family:inherit;outline:none;"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveBio()"><i class="fas fa-save"></i> Save Bio</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -526,15 +635,82 @@ if(u.name){document.getElementById('welcomeName').textContent=u.name.split(' ')[
 // Today's date for attendance
 document.getElementById('attDate').value=new Date().toISOString().split('T')[0];
 
-const sectionTitles={overview:'Dashboard',batches:'My Batches',students:'My Students',attendance:'Mark Attendance',assignments:'Assignments',timetable:'Timetable',materials:'Study Materials',results:'Exam Results',reports:'Batch Reports',notifications:'Notifications',profile:'My Profile'};
+const sectionTitles={overview:'Dashboard',batches:'My Batches',students:'My Students',courses:'Courses',attendance:'Mark Attendance',assignments:'Assignments',timetable:'Timetable',materials:'Study Materials',elearning:'E-Learning',results:'Exam Results',reports:'Batch Reports',queries:'Student Queries',progress:'Student Progress',notifications:'Notifications',profile:'My Profile'};
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const sec=document.getElementById('sec-'+name);if(sec)sec.classList.add('active');
   document.getElementById('pageTitle').textContent=sectionTitles[name]||name;
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.textContent.trim()===sectionTitles[name])n.classList.add('active');});
-  const loaders={overview:loadOverview,batches:loadBatches,students:loadStudents,attendance:loadAttHistory,assignments:loadAssignments,timetable:loadTimetable,materials:loadMaterials,results:loadResults,reports:()=>{},notifications:loadNotifications,profile:loadProfile};
+  const loaders={overview:loadOverview,batches:loadBatches,students:loadStudents,courses:loadTrainerCourses,attendance:loadAttHistory,assignments:loadAssignments,timetable:loadTimetable,materials:loadMaterials,elearning:loadElearning,results:loadResults,reports:()=>{},queries:loadTrainerQueries,progress:loadTrainerProgress,notifications:loadNotifications,profile:loadProfile};
   if(loaders[name])loaders[name]();
+}
+
+// ─ COURSES ─
+function openTrainerIntroVideo(url, title) {
+  if (!url) return;
+  const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
+  const w = window.open('', '_blank', 'width=860,height=520');
+  w.document.write(`<html><head><title>Intro: ${title}</title><style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;}</style></head><body>
+    ${isYoutube
+      ? `<iframe width="840" height="480" src="${url}" frameborder="0" allow="autoplay;fullscreen" allowfullscreen></iframe>`
+      : `<video controls autoplay style="max-width:100%;max-height:100vh;"><source src="${url}"/></video>`}
+  </body></html>`);
+}
+
+async function loadTrainerCourses(){
+  const tbody=document.getElementById('trainerCoursesTbody');
+  tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  try{
+    const r=await api('GET','/courses');
+    const rows=r.data||[];
+    tbody.innerHTML=rows.length?rows.map((c,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td><strong>${fmt(c.name||c.title)}</strong>${c.description?`<div style="font-size:12px;color:var(--muted);margin-top:2px;">${fmt(c.description).substring(0,60)}…</div>`:''}</td>
+        <td>${fmt(c.category||'—')}</td>
+        <td>${fmt(c.duration||'—')}</td>
+        <td><span class="badge ${(c.status||'active').toLowerCase()==='active'?'active':'inactive'}">${c.status||'Active'}</span></td>
+        <td>${(c.intro_video||c.demo_video_path)?`<button class="btn btn-outline btn-sm" onclick="openTrainerIntroVideo('${c.intro_video||c.demo_video_path}','${(c.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-play-circle"></i> Intro</button>`:'<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
+      </tr>`).join('')
+      :'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No courses available.</td></tr>';
+  }catch(e){
+    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:#e53935;padding:18px;">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ─ E-LEARNING ─
+async function loadElearning(){
+  const grid=document.getElementById('trainerElearningGrid');
+  grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  const r=await api('GET','/scorm/packages');
+  const pkgs=r.data||[];
+  if(!pkgs.length){
+    grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-cube" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>No E-Learning content available yet.</div>';
+    return;
+  }
+  grid.innerHTML=pkgs.map(p=>{
+    const isVideo=(p.content_type||'scorm')==='video';
+    const iconBg=isVideo?'linear-gradient(135deg,#e91e8c,#f06292)':'linear-gradient(135deg,#e91e8c,#9c27b0)';
+    const iconClass=isVideo?'fa-video':'fa-cube';
+    const typeTag=isVideo?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:1px 6px;font-weight:600;">VIDEO</span>`:`<span style="font-size:10px;background:#9c27b020;color:#9c27b0;border-radius:4px;padding:1px 6px;font-weight:600;">SCORM</span>`;
+    const actionBtn=isVideo
+      ?`<a href="${p.upload_path}" target="_blank" class="btn btn-primary" style="text-align:center;justify-content:center;"><i class="fas fa-play"></i> Watch</a>`
+      :`<a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" target="_blank" class="btn btn-primary" style="text-align:center;justify-content:center;"><i class="fas fa-play"></i> Launch</a>`;
+    return`<div style="background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border:1.5px solid var(--brd);display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas ${iconClass}" style="color:#fff;font-size:16px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          ${typeTag}
+          <div style="font-weight:700;font-size:13px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${p.package_name||'Module'}</div>
+          <div style="font-size:11px;color:var(--muted);">${p.course_name||'—'}${p.module_name?' • '+p.module_name:''}</div>
+        </div>
+      </div>
+      ${actionBtn}
+    </div>`;
+  }).join('');
 }
 
 let batchList=[];
@@ -728,12 +904,40 @@ async function loadProfile(){
     document.getElementById('profileAvatar').textContent=d.name[0]?.toUpperCase()||'T';
     document.getElementById('profileEmail').textContent=d.email||'—';
     document.getElementById('profilePhone').textContent=d.contact||d.phone||'—';
-    document.getElementById('profileSpec').textContent=d.specialization||'—';
+    document.getElementById('profileSpec').textContent=d.expertise||d.specialization||'—';
     document.getElementById('profileJoined').textContent=dateFmt(d.created_at);
     document.getElementById('ep-name').value=d.name||'';
     document.getElementById('ep-phone').value=d.contact||d.phone||'';
-    document.getElementById('ep-spec').value=d.specialization||'';
+    document.getElementById('ep-spec').value=d.expertise||d.specialization||'';
+    // Bio
+    const bioText = d.bio||'';
+    document.getElementById('profileBioText').textContent = bioText||'No bio added yet. Click "Edit Bio" to add your introduction.';
+    document.getElementById('profileBioText').style.color = bioText ? 'var(--text)' : 'var(--muted)';
+    document.getElementById('bio-spec').value = d.expertise||d.specialization||'';
+    document.getElementById('bio-text').value = bioText;
+    // Profile photo
+    if(d.profile_photo){
+      const av=document.getElementById('profileAvatar');
+      av.style.backgroundImage=`url(${d.profile_photo})`;
+      av.style.backgroundSize='cover';
+      av.style.backgroundPosition='center';
+      av.textContent='';
+    }
   }
+}
+async function saveBio(){
+  const bio=document.getElementById('bio-text').value.trim();
+  const expertise=document.getElementById('bio-spec').value.trim();
+  if(!bio){showAlert('editBioAlert','Please write your bio.','error');return;}
+  const r=await api('PUT','/me',{
+    name:document.getElementById('ep-name').value||USER().name,
+    contact:document.getElementById('ep-phone').value||'',
+    expertise,bio
+  });
+  if(r.success){
+    showAlert('editBioAlert','Bio saved successfully!','success');
+    setTimeout(()=>{closeModal();loadProfile();},800);
+  } else showAlert('editBioAlert',r.error||'Failed to save bio','error');
 }
 async function saveProfile(){
   const name=document.getElementById('ep-name').value.trim(),phone=document.getElementById('ep-phone').value.trim(),specialization=document.getElementById('ep-spec').value.trim();
@@ -765,6 +969,108 @@ async function loadSiteSettings(){
     const courses=await api('GET','/courses');(courses.data||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.title;document.getElementById('mat-course').appendChild(o);});
   }catch{}
 }
+
+// ─ STUDENT QUERIES ─
+async function loadTrainerQueries(){
+  const el=document.getElementById('trainerQueriesList');
+  el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+  const r=await api('GET','/queries/trainer');
+  const queries=r.data||[];
+  if(!queries.length){
+    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);">No student queries assigned to you yet.</div>';
+    return;
+  }
+  el.innerHTML=queries.map(q=>`
+    <div style="border:1px solid ${q.status==='answered'?'#a5d6a7':'var(--brd)'};border-radius:12px;padding:16px;margin-bottom:12px;background:${q.status==='answered'?'#f1fdf4':'#fff'};">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--navy);">${q.student_name} <span style="font-weight:400;color:var(--muted);font-size:12px;">&lt;${q.student_email||''}&gt;</span></div>
+          <div style="font-size:11px;color:var(--muted);">${q.course_name?'📚 '+q.course_name+' · ':''} 🕐 ${q.created_at?new Date(q.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):''}</div>
+        </div>
+        <span class="badge ${q.status==='answered'?'active':'pending'}">${q.status||'pending'}</span>
+      </div>
+      <div style="background:#f8faff;border-radius:8px;padding:10px;font-size:13px;color:var(--text);margin-bottom:10px;">${q.question}</div>
+      ${q.answer?`<div style="background:#f0fdf4;border-left:3px solid var(--green);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;color:#1b5e20;margin-bottom:8px;"><strong>Your Response:</strong><br>${q.answer}</div>`:''}
+      ${q.status!=='answered'?`<button class="btn btn-primary btn-sm" onclick="openRespondQuery(${q.id},'${q.question.replace(/'/g,"\\'")}')"><i class="fas fa-reply"></i> Respond</button>`:`<button class="btn btn-outline btn-sm" onclick="openRespondQuery(${q.id},'${q.question.replace(/'/g,"\\'")}')"><i class="fas fa-edit"></i> Update Response</button>`}
+    </div>`).join('');
+}
+function openRespondQuery(queryId,question){
+  document.getElementById('respondQueryId').value=queryId;
+  document.getElementById('respondQueryText').textContent=question;
+  document.getElementById('respondAnswer').value='';
+  document.getElementById('respondQueryBox').style.display='flex';
+}
+function closeRespondBox(e){if(e.target===document.getElementById('respondQueryBox'))document.getElementById('respondQueryBox').style.display='none';}
+async function submitQueryResponse(){
+  const id=document.getElementById('respondQueryId').value;
+  const answer=document.getElementById('respondAnswer').value.trim();
+  if(!answer){showAlert('respondAlert','Please enter your response.');return;}
+  const r=await api('PUT',`/queries/${id}/respond`,{answer});
+  if(r.success){
+    document.getElementById('respondQueryBox').style.display='none';
+    showToast('✅ Response sent to student!','success');
+    loadTrainerQueries();
+  }else showAlert('respondAlert',r.error||'Failed to send response');
+}
+
+// ─ STUDENT PROGRESS TRACKING ─
+async function loadTrainerProgress(){
+  const tbody=document.getElementById('trainerProgressTbody');
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:18px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  const r=await api('GET','/progress/all');
+  const rows=r.data||[];
+  tbody.innerHTML=rows.length?rows.map(s=>{
+    const total=parseInt(s.total_modules)||0;
+    const done=parseInt(s.modules_completed)||0;
+    const pct=total>0?Math.round(done/total*100):0;
+    const hrs=Math.floor((parseInt(s.total_time_seconds)||0)/3600);
+    const mins=Math.floor(((parseInt(s.total_time_seconds)||0)%3600)/60);
+    return`<tr>
+      <td><strong>${s.name||'—'}</strong><br><small style="color:var(--muted);">${s.email||''}</small></td>
+      <td>${s.course_name||'—'}</td>
+      <td>${s.batch_name||'—'}</td>
+      <td>${done}/${total}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:#eee;border-radius:8px;height:8px;flex:1;overflow:hidden;"><div style="height:100%;border-radius:8px;background:${pct>=80?'var(--green)':pct>=40?'var(--orange)':'var(--pink)'};width:${pct}%;transition:width 0.4s;"></div></div>
+          <span style="font-size:12px;font-weight:600;">${pct}%</span>
+        </div>
+      </td>
+      <td>${hrs}h ${mins}m</td>
+      <td>${s.last_active?new Date(s.last_active).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'Never'}</td>
+      <td><button class="btn btn-sm" style="background:var(--navy);color:#fff;padding:4px 10px;font-size:11px;" onclick="viewStudentDetail(${s.id},'${(s.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-eye"></i> View</button></td>
+    </tr>`}).join('')
+  :'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">No progress data yet.</td></tr>';
+}
+async function viewStudentDetail(studentId,studentName){
+  document.getElementById('detailStudentName').textContent=studentName+' – Detailed Progress';
+  document.getElementById('studentDetailContent').innerHTML='<p style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</p>';
+  document.getElementById('studentDetailBox').style.display='flex';
+  const r=await api('GET',`/progress/student/${studentId}`);
+  if(!r.success){document.getElementById('studentDetailContent').innerHTML='<p style="color:#e53935;padding:20px;">Failed to load.</p>';return;}
+  const {progress,summary}=r.data;
+  const hrs=Math.floor((parseInt(summary.total_time_seconds)||0)/3600);
+  const mins=Math.floor(((parseInt(summary.total_time_seconds)||0)%3600)/60);
+  document.getElementById('studentDetailContent').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px;background:#f8faff;border-radius:10px;margin-bottom:16px;">
+      <div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--navy);">${summary.modules_completed||0}</div><div style="font-size:12px;color:var(--muted);">Completed</div></div>
+      <div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--orange);">${hrs}h ${mins}m</div><div style="font-size:12px;color:var(--muted);">Total Time</div></div>
+      <div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--green);">${summary.modules_touched||0}</div><div style="font-size:12px;color:var(--muted);">Accessed</div></div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table><thead><tr><th>Module</th><th>Course</th><th>Status</th><th>Time Spent</th><th>Last Accessed</th></tr></thead>
+      <tbody>${progress.map(p=>{
+        const mSecs=parseInt(p.time_spent_seconds)||0;
+        const mH=Math.floor(mSecs/3600);const mM=Math.floor((mSecs%3600)/60);
+        return`<tr><td>${p.module_name}</td><td>${p.course_name}</td>
+          <td>${p.completed?'<span class="badge active">Done</span>':'<span class="badge pending">In Progress</span>'}</td>
+          <td>${mH>0?mH+'h ':''} ${mM}m</td>
+          <td>${p.last_accessed?new Date(p.last_accessed).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—'}</td>
+        </tr>`}).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted);">No module data yet</td></tr>'}
+      </tbody></table>
+    </div>`;
+}
+function closeStudentDetail(e){if(e.target===document.getElementById('studentDetailBox'))document.getElementById('studentDetailBox').style.display='none';}
 
 // ─ INIT ─
 (async()=>{await loadSiteSettings();loadOverview();})();

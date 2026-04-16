@@ -342,6 +342,14 @@
     <i class="fas fa-clock"></i> Timetable
   </a>
 
+  <div class="sb-section">Content</div>
+  <a class="nav-item" onclick="showSec('courses')">
+    <i class="fas fa-book-open"></i> Courses
+  </a>
+  <a class="nav-item" onclick="showSec('elearning')">
+    <i class="fas fa-cube"></i> E-Learning
+  </a>
+
   <div class="sb-section">Insights</div>
   <a class="nav-item" onclick="showSec('analytics')">
     <i class="fas fa-chart-bar"></i> Reports & Analytics
@@ -713,6 +721,39 @@
     </div>
   </div>
 
+  <!-- ── COURSES ── -->
+  <div class="sec" id="sec-courses">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">All Courses</div>
+        <div class="pg-bread">B-School Portal / Courses</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>#</th><th>Course Name</th><th>Category</th><th>Duration</th><th>Students</th><th>Status</th></tr></thead>
+          <tbody id="bschoolCoursesTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── E-LEARNING ── -->
+  <div class="sec" id="sec-elearning">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">E-Learning Content</div>
+        <div class="pg-bread">B-School Portal / E-Learning</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid var(--border);">
+      <div id="bschoolElearningGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;padding:4px 0;">
+        <div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── ANALYTICS ── -->
   <div class="sec" id="sec-analytics">
     <div class="pg-head">
@@ -886,7 +927,7 @@ document.addEventListener('click',e=>{
 const SEC_TITLES={
   overview:'Overview',students:'My Students',batches:'Batches',
   attendance:'Attendance Reports',exams:'Exam Results',timetable:'Timetable',
-  analytics:'Reports & Analytics',notifications:'Notifications',profile:'My Profile'
+  courses:'All Courses',elearning:'E-Learning',analytics:'Reports & Analytics',notifications:'Notifications',profile:'My Profile'
 };
 function showSec(id){
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
@@ -898,9 +939,73 @@ function showSec(id){
   const loaders={
     overview:loadOverview,students:loadStudents,batches:loadBatches,
     attendance:loadAttendanceInit,exams:loadExamResultsInit,timetable:loadTimetableInit,
-    analytics:loadAnalytics,notifications:loadNotifications,profile:loadProfile
+    courses:loadBschoolCourses,elearning:loadBschoolElearning,analytics:loadAnalytics,notifications:loadNotifications,profile:loadProfile
   };
   if(loaders[id])loaders[id]();
+}
+
+// ── COURSES ──
+async function loadBschoolCourses(){
+  const tbody=document.getElementById('bschoolCoursesTbody');
+  tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  try{
+    const resp=await api('/courses');
+    const r=await resp.json();
+    const rows=r.data||[];
+    tbody.innerHTML=rows.length?rows.map((c,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td><strong>${fmt(c.name||c.title)}</strong>${c.description?`<div style="font-size:12px;color:var(--muted);margin-top:2px;">${String(c.description).substring(0,60)}…</div>`:''}</td>
+        <td>${fmt(c.category||'—')}</td>
+        <td>${fmt(c.duration||'—')}</td>
+        <td>${fmt(c.student_count||0)}</td>
+        <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:${(c.status||'').toLowerCase()==='active'?'#e8f5e9':'#fce4ec'};color:${(c.status||'').toLowerCase()==='active'?'#2e7d32':'#c62828'};">${c.status||'Active'}</span></td>
+      </tr>`).join('')
+      :'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No courses available yet.</td></tr>';
+  }catch(e){
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:#e53935;padding:18px;">Error loading courses: ${e.message}</td></tr>`;
+  }
+}
+
+// ── E-LEARNING ──
+async function loadBschoolElearning(){
+  const grid=document.getElementById('bschoolElearningGrid');
+  grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  try{
+    const resp=await api('/scorm/packages');
+    const r=await resp.json();
+    const pkgs=(r.data||[]);
+    if(!pkgs.length){
+      grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-cube" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>No E-Learning content available yet.</div>';
+      return;
+    }
+    grid.innerHTML=pkgs.map(p=>{
+      const isVideo=(p.content_type||'scorm')==='video';
+      const iconBg=isVideo?'linear-gradient(135deg,#e91e8c,#f06292)':'linear-gradient(135deg,var(--purple),var(--purple2))';
+      const iconClass=isVideo?'fa-video':'fa-cube';
+      const typeTag=isVideo
+        ?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:1px 6px;font-weight:600;">VIDEO</span>`
+        :`<span style="font-size:10px;background:#7c4dff20;color:var(--purple);border-radius:4px;padding:1px 6px;font-weight:600;">SCORM</span>`;
+      const actionBtn=isVideo
+        ?`<a href="${p.upload_path}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#e91e8c,#f06292);color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;"><i class="fas fa-play"></i> Watch Video</a>`
+        :`<a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;"><i class="fas fa-play"></i> Launch SCORM</a>`;
+      return`<div style="background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border:1px solid var(--border);display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas ${iconClass}" style="color:#fff;font-size:16px;"></i>
+          </div>
+          <div style="flex:1;min-width:0;">
+            ${typeTag}
+            <div style="font-weight:700;font-size:13px;color:#1a237e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${p.package_name||'Module'}</div>
+            <div style="font-size:11px;color:var(--muted);">${p.course_name||'—'}${p.module_name?' • '+p.module_name:''}</div>
+          </div>
+        </div>
+        ${actionBtn}
+      </div>`;
+    }).join('');
+  }catch(e){
+    grid.innerHTML='<div style="text-align:center;color:#e53935;padding:40px;grid-column:1/-1;">Failed to load content. Please try again.</div>';
+  }
 }
 
 // ── LOGOUT ──

@@ -122,6 +122,12 @@
       gap:14px;
       width:100%;
     }
+    /* Last card (Participant Login) centered alone at bottom */
+    .portals-grid .portal-card:last-child {
+      grid-column: 1 / -1;
+      max-width: calc(50% - 7px);
+      margin: 0 auto;
+    }
     .portal-card {
       background:rgba(255,255,255,0.10);
       border:1.5px solid rgba(255,255,255,0.18);
@@ -329,6 +335,7 @@
     /* ── RESPONSIVE ── */
     @media(max-width:540px){
       .portals-grid { grid-template-columns:1fr; }
+      .portals-grid .portal-card:last-child { max-width:100%; }
       .hero-inner { max-width:100%; }
       .stats-strip { gap:18px; }
       .footer-inner { flex-direction:column; }
@@ -373,15 +380,20 @@
         <span class="card-label">Student Portal</span>
         <span class="card-desc">Access courses, exams & results</span>
       </a>
-      <a href="bschool-login.html" class="portal-card">
-        <div class="icon-wrap ic-bschool"><i class="fas fa-building-columns"></i></div>
-        <span class="card-label">B‑School Portal</span>
-        <span class="card-desc">Track batches & student progress</span>
-      </a>
       <a href="trainer-login.html" class="portal-card">
         <div class="icon-wrap ic-trainer"><i class="fas fa-chalkboard-user"></i></div>
         <span class="card-label">Trainer Portal</span>
         <span class="card-desc">Manage attendance & assignments</span>
+      </a>
+      <a href="corporate-login.html" class="portal-card">
+        <div class="icon-wrap" style="background:linear-gradient(135deg,#00897b,#004d40);"><i class="fas fa-building"></i></div>
+        <span class="card-label">Corporate / B‑School Portal</span>
+        <span class="card-desc">Manage company participants & training</span>
+      </a>
+      <a href="participant-login.html" class="portal-card">
+        <div class="icon-wrap" style="background:linear-gradient(135deg,#1565c0,#00897b);"><i class="fas fa-id-badge"></i></div>
+        <span class="card-label">Participant Login</span>
+        <span class="card-desc">Access your corporate training courses</span>
       </a>
     </div>
 
@@ -455,8 +467,9 @@
       <ul>
         <li><a href="admin-login.html"><i class="fas fa-chevron-right fa-xs"></i> Admin</a></li>
         <li><a href="student-login.html"><i class="fas fa-chevron-right fa-xs"></i> Student</a></li>
-        <li><a href="bschool-login.html"><i class="fas fa-chevron-right fa-xs"></i> B‑School</a></li>
         <li><a href="trainer-login.html"><i class="fas fa-chevron-right fa-xs"></i> Trainer</a></li>
+        <li><a href="corporate-login.html"><i class="fas fa-chevron-right fa-xs"></i> Corporate / B‑School</a></li>
+        <li><a href="participant-login.html"><i class="fas fa-chevron-right fa-xs"></i> Participant</a></li>
       </ul>
     </div>
 

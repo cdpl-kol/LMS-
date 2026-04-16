@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Admin Dashboard – Smart LMS</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<title>Super Admin Dashboard – Smart LMS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
@@ -162,7 +165,7 @@ tr:hover td{background:#f8f9ff;}
 <aside class="sidebar" id="sidebar">
   <div class="sb-header">
     <img src="logo.png" alt="Logo" id="sbLogo" onerror="this.style.display='none'"/>
-    <span class="sb-name">Admin Panel</span>
+    <span class="sb-name">Super Admin</span>
   </div>
 
   <span class="sb-section">Main</span>
@@ -173,6 +176,7 @@ tr:hover td{background:#f8f9ff;}
   <button class="nav-item" onclick="showSection('trainers')"><i class="fas fa-chalkboard-user"></i>Trainers</button>
   <button class="nav-item" onclick="showSection('bschools')"><i class="fas fa-building-columns"></i>B-Schools</button>
   <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Courses</button>
+  <button class="nav-item" onclick="showSection('categories')"><i class="fas fa-tags"></i>Categories</button>
   <button class="nav-item" onclick="showSection('batches')"><i class="fas fa-layer-group"></i>Batches</button>
 
   <span class="sb-section">Academic</span>
@@ -190,6 +194,9 @@ tr:hover td{background:#f8f9ff;}
 
   <span class="sb-section">E-Learning</span>
   <button class="nav-item" onclick="showSection('scorm')"><i class="fas fa-cube"></i>SCORM Packages</button>
+  <button class="nav-item" onclick="showSection('corporate')"><i class="fas fa-building"></i>Corporate Clients</button>
+  <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-bar"></i>Student Progress</button>
+  <button class="nav-item" onclick="showSection('queries')"><i class="fas fa-question-circle"></i>Queries</button>
 
   <span class="sb-section">System</span>
   <button class="nav-item" onclick="showSection('notifications')"><i class="fas fa-bell"></i>Notifications</button>
@@ -264,8 +271,8 @@ tr:hover td{background:#f8f9ff;}
         </div>
       </div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Batch</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="studentsTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Course</th><th>Batch</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="studentsTbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
       </table></div>
       <div class="pagination" id="studentPagination"></div>
     </div>
@@ -279,8 +286,8 @@ tr:hover td{background:#f8f9ff;}
         <button class="btn btn-primary btn-sm" onclick="openModal('addTrainerModal')"><i class="fas fa-plus"></i> Add Trainer</button>
       </div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Specialization</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="trainersTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Specialization</th><th>Bio / Description</th><th>Courses</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="trainersTbody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
       </table></div>
     </div>
   </div>
@@ -304,11 +311,187 @@ tr:hover td{background:#f8f9ff;}
     <div class="card">
       <div class="card-header">
         <span class="card-title">Courses</span>
-        <button class="btn btn-primary btn-sm" onclick="openModal('addCourseModal')"><i class="fas fa-plus"></i> Add Course</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="loadCourses()" title="Refresh"><i class="fas fa-rotate-right"></i> Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('addCourseModal')"><i class="fas fa-plus"></i> Add Course</button>
+        </div>
       </div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Title</th><th>Category</th><th>Duration</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="coursesTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        <thead><tr><th>#</th><th>Title</th><th>Category</th><th>Price</th><th>Duration</th><th>Rating</th><th>Cert. Validity</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="coursesTbody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- CORPORATE CLIENTS -->
+  <div class="section" id="sec-corporate">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Corporate Clients</span>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addCorporateModal')"><i class="fas fa-plus"></i> Add Corporate Client</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Company Name</th><th>Company Group</th><th>Email</th><th>Password</th><th>Contact</th><th>Participants</th><th>Allowed Courses</th><th>Total Courses Taken</th><th>Total Price (₹)</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="corporateTbody"><tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- Edit Corporate Modal -->
+  <div class="modal-box" id="editCorporateModal" style="display:none;">
+    <div class="card" style="margin:0;box-shadow:none;">
+      <div class="card-header"><span class="card-title">Edit Corporate Client</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="editCorporateAlert"></div>
+      <input type="hidden" id="edit-corp-id"/>
+      <div style="padding:16px;display:grid;gap:12px;">
+        <div class="form-group"><label>Company Name <span style="color:red;">*</span></label><input type="text" id="edit-corp-name" placeholder="Company name"/></div>
+        <div class="form-group"><label>Company Group <span style="color:var(--muted);font-size:11px;">(e.g. Yes Bank Group A)</span></label><input type="text" id="edit-corp-group" placeholder="e.g. Yes Bank Group A, B, C"/></div>
+        <div class="form-group"><label>Email <span style="color:red;">*</span></label><input type="email" id="edit-corp-email" placeholder="Login email"/></div>
+        <div class="form-group"><label>Contact</label><input type="text" id="edit-corp-contact" placeholder="Phone number"/></div>
+        <div class="form-group"><label>Address</label><input type="text" id="edit-corp-address" placeholder="Address"/></div>
+        <div class="form-group"><label>Status</label>
+          <select id="edit-corp-status" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>New Password <span style="color:var(--muted);font-size:12px;">(leave blank to keep current)</span></label>
+          <div style="position:relative;">
+            <input type="password" id="edit-corp-password" placeholder="Enter new password to change" style="padding-right:40px;"/>
+            <span onclick="togglePwdEdit()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);"><i class="fas fa-eye" id="editPwdEyeIcon"></i></span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:0 16px 16px;"><button class="btn btn-primary" onclick="updateCorporate()"><i class="fas fa-save"></i> Save Changes</button></div>
+    </div>
+  </div>
+
+  <!-- Manage Allowed Courses Modal -->
+  <div class="modal-box" id="manageCourseModal" style="display:none;">
+    <div class="card" style="margin:0;box-shadow:none;">
+      <div class="card-header"><span class="card-title" id="manageCourseTitle">Manage Allowed Courses</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="manageCourseAlert"></div>
+      <input type="hidden" id="manage-corp-id"/>
+      <div style="padding:12px 16px;color:var(--muted);font-size:13px;">
+        <i class="fas fa-info-circle"></i> Only the courses you check here will be visible to this Corporate client. If no course is selected, the client will see no courses.
+      </div>
+      <div style="padding:0 16px 16px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button class="btn btn-outline btn-sm" onclick="selectAllCourses(true)"><i class="fas fa-check-square"></i> Select All</button>
+          <button class="btn btn-outline btn-sm" onclick="selectAllCourses(false)"><i class="fas fa-square"></i> Deselect All</button>
+        </div>
+        <div id="manageCourseCheckboxes" style="border:1px solid var(--brd);border-radius:8px;padding:12px;max-height:300px;overflow-y:auto;">
+          <p style="color:var(--muted);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading courses...</p>
+        </div>
+      </div>
+      <div style="padding:0 16px 16px;"><button class="btn btn-primary" onclick="saveAllowedCourses()"><i class="fas fa-save"></i> Save Allowed Courses</button></div>
+    </div>
+  </div>
+
+
+  <!-- Duplicate Corporate Modal -->
+  <div class="modal-box" id="duplicateCorporateModal" style="display:none;">
+    <div class="card" style="max-width:600px;width:100%;margin:0;max-height:93vh;overflow-y:auto;">
+
+      <!-- Header -->
+      <div class="card-header" style="border-bottom:2px solid var(--brd);">
+        <span class="card-title" id="dupCorpTitle"><i class="fas fa-copy" style="color:var(--orange);margin-right:8px;"></i>Duplicate Corporate Client</span>
+        <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);">&times;</button>
+      </div>
+      <div class="alert" id="dupCorpAlert"></div>
+      <input type="hidden" id="dup-corp-source-id"/>
+
+      <!-- Mode Toggle Tabs -->
+      <div style="padding:14px 16px 0;display:flex;gap:8px;">
+        <button id="dup-mode-new-btn"
+          style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid var(--navy);background:var(--navy);color:#fff;font-weight:700;cursor:default;font-size:13px;">
+          <i class="fas fa-plus-circle"></i> Create New Client
+        </button>
+      </div>
+
+      <div style="padding:14px 16px;display:grid;gap:13px;">
+
+        <!-- Info Box -->
+        <div id="dup-info-box" style="padding:10px 14px;background:#fff8f0;border:1px solid #ffd0a0;border-radius:8px;font-size:13px;color:#b45309;line-height:1.5;">
+          <i class="fas fa-info-circle"></i> All <strong>allowed courses of this client will be pre-checked</strong>. Add or remove courses to create the new client. Participants start from 0.
+        </div>
+
+        <!-- ── MODE 1: Create New Client ── -->
+        <div id="dup-new-section">
+          <div style="display:grid;gap:11px;">
+            <div class="form-group" style="margin:0;"><label>New Company Name <span style="color:red;">*</span></label><input type="text" id="dup-corp-name" placeholder="e.g. PNB Group D"/></div>
+            <div class="form-group" style="margin:0;"><label>New Company Group <small style="color:var(--muted);font-weight:400;">(optional)</small></label><input type="text" id="dup-corp-group" placeholder="e.g. Group D"/></div>
+            <div class="form-row" style="margin:0;">
+              <div class="form-group" style="margin:0;"><label>New Email <span style="color:red;">*</span></label><input type="email" id="dup-corp-email" placeholder="New login email"/></div>
+              <div class="form-group" style="margin:0;"><label>New Password <span style="color:red;">*</span></label><input type="password" id="dup-corp-password" placeholder="Set password"/></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── MODE 2: Copy FROM existing client INTO this client ── -->
+        <div id="dup-existing-section" style="display:none;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-weight:700;font-size:13px;">
+              📥 Copy Courses FROM <span style="color:red;">*</span>
+            </label>
+            <select id="dup-source-client" onchange="onDupSourceClientChange()"
+              style="width:100%;padding:10px 12px;border:1px solid var(--brd);border-radius:8px;font-size:14px;background:#fff;margin-top:4px;">
+              <option value="">-- Select source client to copy courses from --</option>
+            </select>
+            <small style="color:#1565c0;font-size:12px;margin-top:5px;display:block;background:#e3f2fd;border-radius:6px;padding:6px 10px;">
+              <i class="fas fa-info-circle"></i> The selected source client's courses will be <strong>pre-checked</strong>. Check/uncheck to decide what to copy. <strong>Participants will not change.</strong>
+            </small>
+          </div>
+        </div>
+
+        <!-- Course Checkboxes (shared for both modes) -->
+        <div class="form-group" style="margin:0;">
+          <label style="font-weight:700;font-size:13px;">
+            Courses to Copy
+            <small style="color:var(--muted);font-weight:400;"> — ✅ checked = will be copied | unchecked = will not be copied</small>
+          </label>
+          <div id="dupCourseCheckboxes" style="border:1px solid var(--brd);border-radius:10px;padding:12px;max-height:340px;overflow-y:auto;margin-top:6px;">
+            <p style="color:var(--muted);font-size:13px;text-align:center;padding:12px;"><i class="fas fa-spinner fa-spin"></i> Loading courses...</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:0 16px 16px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--brd);padding-top:12px;">
+        <button class="btn btn-primary" id="dup-submit-btn" onclick="submitDuplicateCorporate()">
+          <i class="fas fa-plus-circle"></i> Create New Client
+        </button>
+        <span id="dupCourseSummary" style="font-size:13px;color:var(--muted);"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT PROGRESS TRACKING -->
+  <div class="section" id="sec-progress">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Student Progress Tracking</span>
+        <button class="btn btn-outline btn-sm" onclick="loadProgressReport()"><i class="fas fa-rotate-right"></i> Refresh</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Student</th><th>Course</th><th>Batch</th><th>Modules Done</th><th>Progress</th><th>Time Spent</th><th>Last Active</th><th>Actions</th></tr></thead>
+        <tbody id="progressTbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- QUERIES MANAGEMENT -->
+  <div class="section" id="sec-queries">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Student Queries</span>
+        <button class="btn btn-outline btn-sm" onclick="loadAdminQueries()"><i class="fas fa-rotate-right"></i> Refresh</button>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>#</th><th>Student</th><th>Trainer</th><th>Course</th><th>Question</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody id="queriesTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
       </table></div>
     </div>
   </div>
@@ -405,15 +588,65 @@ tr:hover td{background:#f8f9ff;}
 
   <!-- CERTIFICATES -->
   <div class="section" id="sec-certificates">
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px;" id="certStatsRow">
+      <div class="stat-card"><div class="stat-icon ic-orange"><i class="fas fa-certificate"></i></div><div class="stat-info"><div class="num" id="cert-stat-total">—</div><div class="lbl">Total Issued</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-blue"><i class="fas fa-calendar-check"></i></div><div class="stat-info"><div class="num" id="cert-stat-month">—</div><div class="lbl">This Month</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-green"><i class="fas fa-users"></i></div><div class="stat-info"><div class="num" id="cert-stat-participants">—</div><div class="lbl">Unique Participants</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-purple"><i class="fas fa-book-open"></i></div><div class="stat-info"><div class="num" id="cert-stat-courses">—</div><div class="lbl">Courses with Certs</div></div></div>
+    </div>
+
+    <!-- Certificate sample preview banner -->
+    <div style="background:linear-gradient(135deg,var(--navy),#1565c0);border-radius:14px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:18px;">
+      <div style="width:56px;height:56px;background:rgba(255,255,255,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fas fa-certificate" style="font-size:26px;color:#ffd700;"></i>
+      </div>
+      <div style="flex:1;">
+        <div style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;color:#fff;">Certificate of Completion</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:3px;">Automatically issued when a participant completes a course. Certificate includes participant name, course name, date, and unique certificate number.</div>
+      </div>
+      <button onclick="previewSampleCert()" class="btn" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);white-space:nowrap;flex-shrink:0;"><i class="fas fa-eye"></i> Preview Sample</button>
+    </div>
+
+    <!-- Issued Certificates table -->
     <div class="card">
       <div class="card-header">
-        <span class="card-title">Certificates</span>
-        <button class="btn btn-primary btn-sm" onclick="openModal('issueCertModal')"><i class="fas fa-certificate"></i> Issue Certificate</button>
+        <span class="card-title"><i class="fas fa-certificate" style="margin-right:6px;color:var(--orange);"></i>Issued Certificates</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="certSearchInput" placeholder="Search participant / course…" oninput="filterCertTable()" style="padding:6px 12px;border:1px solid var(--brd);border-radius:8px;font-size:12px;width:200px;"/>
+          <button class="btn btn-outline btn-sm" onclick="loadCertificates()"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
       </div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Student</th><th>Course</th><th>Certificate No.</th><th>Issued On</th><th>Actions</th></tr></thead>
-        <tbody id="certsTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        <thead><tr><th>#</th><th>Participant</th><th>Corporate</th><th>Course</th><th>Certificate No.</th><th>Issued On</th><th>Actions</th></tr></thead>
+        <tbody id="participantCertsTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
       </table></div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div class="section" id="sec-categories">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-tags" style="color:var(--teal);margin-right:6px;"></i>Course Categories</span>
+        <button class="btn btn-primary btn-sm" onclick="openAddCategoryModal()"><i class="fas fa-plus"></i> Add New Category</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">#</th>
+              <th>Category Name</th>
+              <th>Status</th>
+              <th>Courses</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="categoryTbody">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -422,11 +655,11 @@ tr:hover td{background:#f8f9ff;}
     <div class="card" style="margin-bottom:20px;">
       <div class="card-header">
         <span class="card-title"><i class="fas fa-cube" style="color:var(--orange);margin-right:6px;"></i>SCORM Packages</span>
-        <button class="btn btn-primary btn-sm" onclick="openModal('uploadScormModal')"><i class="fas fa-upload"></i> Upload SCORM</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal('uploadScormModal')"><i class="fas fa-upload"></i> Upload SCORM / Video</button>
       </div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Package Name</th><th>SCORM Version</th><th>Module</th><th>Course</th><th>Uploaded On</th><th>Actions</th></tr></thead>
-        <tbody id="scormTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        <thead><tr><th>#</th><th>Name</th><th>Type</th><th>SCORM Version</th><th>Module</th><th>Course</th><th>Uploaded On</th><th>Actions</th></tr></thead>
+        <tbody id="scormTbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
       </table></div>
     </div>
     <!-- Tracking section -->
@@ -556,10 +789,14 @@ tr:hover td{background:#f8f9ff;}
         <div class="form-group"><label>WhatsApp Number</label><input type="url" id="set-wa" placeholder="https://wa.me/91…"/></div>
       </div>
       <div class="form-group">
-        <label>Logo Upload</label>
-        <img id="logoPreview" src="logo.png" class="logo-preview" onerror="this.style.display='none'"/>
-        <input type="file" id="logoFile" accept="image/*" style="display:block;"/>
-        <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="uploadLogo()"><i class="fas fa-upload"></i> Upload Logo</button>
+        <label>Logo Upload <small style="font-weight:400;color:var(--muted);">(appears on site &amp; certificates)</small></label>
+        <img id="logoPreview" src="logo.png" class="logo-preview" onerror="this.style.display='none'" style="max-height:64px;border:1.5px solid var(--brd);border-radius:8px;padding:4px;margin-bottom:8px;display:block;"/>
+        <input type="file" id="logoFile" accept="image/*" style="display:block;margin-bottom:8px;"/>
+        <button class="btn btn-outline btn-sm" onclick="uploadLogo()"><i class="fas fa-upload"></i> Upload Logo</button>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted);background:#f0f4ff;border-radius:6px;padding:7px 10px;">
+          <i class="fas fa-certificate" style="color:var(--blue);margin-right:4px;"></i>
+          This logo will appear on the right side of all issued certificates, next to <strong>CERTIFIED LEARNING MANAGEMENT PROFESSIONAL DEVELOPMENT</strong>.
+        </div>
       </div>
       <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
     </div>
@@ -595,6 +832,20 @@ tr:hover td{background:#f8f9ff;}
         <div class="form-group"><label>Phone</label><input type="tel" id="as-phone" placeholder="+91…"/></div>
         <div class="form-group"><label>Password</label><input type="password" id="as-password" placeholder="Min 8 chars"/></div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Course <span style="color:red;">*</span></label>
+          <select id="as-course" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;">
+            <option value="">— Select Course —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Batch</label>
+          <select id="as-batch" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;">
+            <option value="">— Select Batch —</option>
+          </select>
+        </div>
+      </div>
       <button class="btn btn-primary" onclick="addStudent()"><i class="fas fa-save"></i> Create Student</button>
     </div>
   </div>
@@ -611,22 +862,328 @@ tr:hover td{background:#f8f9ff;}
         <div class="form-group"><label>Phone</label><input type="tel" id="at-phone" placeholder="+91…"/></div>
         <div class="form-group"><label>Password</label><input type="password" id="at-password" placeholder="Min 8 chars"/></div>
       </div>
-      <div class="form-group"><label>Specialization</label><input type="text" id="at-spec" placeholder="e.g. Data Science"/></div>
+      <div class="form-group"><label>Specialization / Expertise</label><input type="text" id="at-spec" placeholder="e.g. Data Science, Python, Machine Learning"/></div>
+      <div class="form-group">
+        <label>Trainer Bio / Description <small style="color:var(--muted);">Shown to students, participants, and all portals on course pages</small></label>
+        <textarea id="at-bio" placeholder="e.g. 10+ years of industry experience in Data Science and AI. Worked with Fortune 500 companies. Passionate about making complex topics simple…" style="min-height:90px;resize:vertical;"></textarea>
+      </div>
       <button class="btn btn-primary" onclick="addTrainer()"><i class="fas fa-save"></i> Create Trainer</button>
     </div>
   </div>
+  <!-- Edit Trainer Bio -->
+  <div class="modal-box" id="editTrainerBioModal" style="display:none;max-width:520px;">
+    <div class="card" style="max-width:520px;width:100%;margin:0;">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-user-tie" style="color:var(--orange);margin-right:6px;"></i>Trainer Bio / Description</span>
+        <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button>
+      </div>
+      <div class="alert" id="editTrainerBioAlert"></div>
+      <input type="hidden" id="etb-id"/>
+      <div class="form-group">
+        <label>Trainer Name</label>
+        <input type="text" id="etb-name" placeholder="Full Name" readonly style="background:#f8f9ff;color:var(--muted);"/>
+      </div>
+      <div class="form-group">
+        <label>Specialization / Expertise</label>
+        <input type="text" id="etb-expertise" placeholder="e.g. Data Science, Python"/>
+      </div>
+      <div class="form-group">
+        <label>Bio / Description <span style="color:red;">*</span> <small style="color:var(--muted);">Visible to students, participants & all portals on course pages</small></label>
+        <textarea id="etb-bio" placeholder="Write a short introduction about the trainer — experience, achievements, teaching style…" style="min-height:120px;resize:vertical;"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveTrainerBio()"><i class="fas fa-save"></i> Save Bio</button>
+    </div>
+  </div>
+
   <!-- Add Course -->
   <div class="modal-box" id="addCourseModal" style="display:none;">
-    <div class="card" style="max-width:500px;width:100%;margin:0;">
+    <div class="card" style="max-width:580px;width:100%;margin:0;max-height:90vh;overflow-y:auto;">
       <div class="card-header"><span class="card-title">Add Course</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
       <div class="alert" id="addCourseAlert"></div>
-      <div class="form-group"><label>Course Title</label><input type="text" id="ac-title" placeholder="Course Title"/></div>
+      <div class="form-group">
+        <label>Course Title <span style="color:red;">*</span></label>
+        <input type="text" id="ac-title" placeholder="e.g. Data Science Fundamentals"/>
+      </div>
       <div class="form-row">
-        <div class="form-group"><label>Category</label><input type="text" id="ac-category" placeholder="e.g. Finance"/></div>
-        <div class="form-group"><label>Duration (weeks)</label><input type="number" id="ac-duration" placeholder="12"/></div>
+        <div class="form-group">
+          <label>Category <span style="color:red;">*</span></label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <select id="ac-category" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;flex:1;font-size:14px;">
+              <option value="">— Select Category —</option>
+            </select>
+            <button type="button" title="Add New Category" onclick="openQuickAddCategory()" style="padding:7px 11px;background:var(--teal);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;flex-shrink:0;"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Duration <span style="font-size:11px;color:var(--muted);font-weight:400;">(hr)</span></label>
+          <input type="text" id="ac-duration" placeholder="e.g. 40"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Price (₹) <small style="color:var(--muted);">0 = Free</small></label>
+          <input type="number" id="ac-price" placeholder="e.g. 4999" min="0" step="1" value="0"/>
+        </div>
+        <div class="form-group">
+          <label>Certificate Validity (Days) <small style="color:var(--muted);">0 = Lifetime</small></label>
+          <input type="number" id="ac-cert-validity" placeholder="e.g. 365" min="0" value="0"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Linked Trainer</label>
+          <select id="ac-trainer" onchange="onCourseTrainerChange()" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;">
+            <option value="">— No Trainer —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="ac-status" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Trainer Info Preview (appears when trainer is selected) -->
+      <div id="ac-trainer-preview" style="display:none;margin-bottom:14px;border:1.5px solid #c7d7ff;border-radius:12px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,var(--navy),#1565c0);padding:12px 16px;display:flex;align-items:center;gap:12px;">
+          <div id="ac-tp-avatar" style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+            <i class="fas fa-user-tie" style="color:#fff;font-size:18px;"></i>
+          </div>
+          <div style="flex:1;">
+            <div id="ac-tp-name" style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:#fff;"></div>
+            <div id="ac-tp-expertise" style="font-size:11px;color:rgba(255,255,255,0.75);margin-top:2px;"></div>
+          </div>
+          <button onclick="openEditTrainerBioFromCourse()" title="Edit trainer bio" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;"><i class="fas fa-edit"></i> Edit Bio</button>
+        </div>
+        <div style="padding:12px 16px;background:#f8faff;">
+          <div id="ac-tp-bio" style="font-size:12px;color:var(--text);line-height:1.65;white-space:pre-line;"></div>
+          <div id="ac-tp-no-bio" style="display:none;font-size:12px;color:var(--muted);font-style:italic;">No bio added yet. <button onclick="openEditTrainerBioFromCourse()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;text-decoration:underline;">+ Add Bio</button></div>
+          <!-- Inline bio editor -->
+          <div id="ac-tp-bio-editor" style="display:none;margin-top:10px;">
+            <textarea id="ac-tp-bio-input" placeholder="Write trainer bio/description…" style="width:100%;padding:8px 10px;border:1.5px solid var(--brd);border-radius:8px;font-size:12px;font-family:inherit;min-height:80px;resize:vertical;outline:none;"></textarea>
+            <div style="display:flex;gap:8px;margin-top:6px;">
+              <button onclick="saveCourseTrainerBio()" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Save Bio</button>
+              <button onclick="document.getElementById('ac-tp-bio-editor').style.display='none'" class="btn btn-outline btn-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Demo Video URL <small style="color:var(--muted);">(YouTube embed URL or /uploads/... path)</small></label>
+        <input type="text" id="ac-demo-video" placeholder="https://www.youtube.com/embed/xxxxx"/>
+      </div>
+      <div class="form-group">
+        <label>Short Intro Video <small style="color:var(--muted);">Upload video file (MP4/WebM, max 500MB) — shown to all students before enrolling</small></label>
+        <input type="file" id="ac-intro-video-file" accept=".mp4,.webm,.mov,.m4v,.ogg,.ogv" style="padding:6px;border:1.5px solid var(--brd);border-radius:8px;width:100%;font-size:13px;"/>
+        <div id="ac-intro-video-progress" style="display:none;margin-top:8px;">
+          <div style="background:#eee;border-radius:6px;height:8px;overflow:hidden;">
+            <div id="ac-intro-video-bar" style="height:100%;background:linear-gradient(135deg,#e91e8c,#9c27b0);width:0%;transition:width 0.3s;border-radius:6px;"></div>
+          </div>
+          <div id="ac-intro-video-status" style="font-size:12px;color:var(--muted);margin-top:4px;">Uploading video…</div>
+        </div>
       </div>
       <div class="form-group"><label>Description</label><textarea id="ac-desc" placeholder="Course description…"></textarea></div>
+
+      <!-- ── Upload Type: MP4 or SCORM ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <label id="pt-mp4" onclick="selectPrimaryType('mp4')" style="border:2px solid var(--blue);border-radius:12px;padding:14px 16px;cursor:pointer;text-align:center;transition:all 0.2s;background:#e3f2fd;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <i class="fas fa-film" style="font-size:24px;color:#1565c0;"></i>
+          <div style="font-size:13px;font-weight:700;color:var(--navy);">MP4 Video</div>
+        </label>
+        <label id="pt-scorm" onclick="selectPrimaryType('scorm')" style="border:2px solid var(--brd);border-radius:12px;padding:14px 16px;cursor:pointer;text-align:center;transition:all 0.2s;background:#fff;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <i class="fas fa-cube" style="font-size:24px;color:#7b1fa2;"></i>
+          <div style="font-size:13px;font-weight:700;color:var(--navy);">SCORM Package</div>
+        </label>
+      </div>
+      <input type="hidden" id="ac-primary-type-val" value="mp4"/>
+
+      <!-- MP4 Upload -->
+      <div id="ac-mp4-upload" style="border:1.5px dashed #b0bec5;border-radius:10px;padding:14px;margin-bottom:14px;background:#f8faff;">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;"><i class="fas fa-film" style="margin-right:6px;color:#1565c0;"></i>Upload MP4 Video <small style="font-weight:400;color:var(--muted);">(MP4, WebM, MOV)</small></div>
+        <input type="file" id="ac-content-file" accept=".mp4,.webm,.mov,.m4v" style="padding:6px;border:1.5px solid var(--brd);border-radius:8px;width:100%;font-size:13px;"/>
+        <div id="ac-content-progress" style="display:none;margin-top:8px;">
+          <div style="background:#eee;border-radius:6px;height:8px;overflow:hidden;"><div id="ac-content-bar" style="height:100%;background:linear-gradient(135deg,#1565c0,#1a237e);width:0%;transition:width 0.3s;border-radius:6px;"></div></div>
+          <div id="ac-content-status" style="font-size:12px;color:var(--muted);margin-top:4px;">Uploading…</div>
+        </div>
+      </div>
+
+      <!-- SCORM Upload -->
+      <div id="ac-scorm-upload" style="display:none;border:1.5px dashed #b0bec5;border-radius:10px;padding:14px;margin-bottom:14px;background:#f8faff;">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;"><i class="fas fa-cube" style="margin-right:6px;color:#7b1fa2;"></i>Upload SCORM Package <small style="font-weight:400;color:var(--muted);">(ZIP file)</small></div>
+        <input type="file" id="ac-scorm-file" accept=".zip" style="padding:6px;border:1.5px solid var(--brd);border-radius:8px;width:100%;font-size:13px;"/>
+        <div id="ac-scorm-progress" style="display:none;margin-top:8px;">
+          <div style="background:#eee;border-radius:6px;height:8px;overflow:hidden;"><div id="ac-scorm-bar" style="height:100%;background:linear-gradient(135deg,#7b1fa2,#4a148c);width:0%;transition:width 0.3s;border-radius:6px;"></div></div>
+          <div id="ac-scorm-status" style="font-size:12px;color:var(--muted);margin-top:4px;">Uploading SCORM…</div>
+        </div>
+      </div>
+
+      <!-- Has Assignment Toggle (always visible) -->
+      <div style="margin-bottom:14px;">
+        <label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;padding:10px 16px;background:#f0f4ff;border:1.5px solid #c7d7ff;border-radius:10px;font-size:13px;font-weight:600;color:var(--navy);transition:all 0.2s;" id="ac-has-assignments-label">
+          <input type="checkbox" id="ac-has-assignments" style="width:16px;height:16px;accent-color:var(--blue);" onchange="toggleAssignmentsSection(this.checked)"/>
+          <i class="fas fa-tasks" style="color:var(--blue);"></i> Has Assignment
+        </label>
+      </div>
+
+      <!-- Assignment Options (shown when Has Assignment is checked) -->
+      <div id="ct-assignments-container" style="display:none;">
+
+        <!-- 3 Assignment Type Options -->
+        <div style="border:2px solid #c7d7ff;border-radius:12px;padding:16px;margin-bottom:14px;background:#f8faff;">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px;"><i class="fas fa-tasks" style="margin-right:6px;color:var(--blue);"></i>Assignment Type <span style="color:red;">*</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <label id="ct-opt1" onclick="selectCourseType('scorm_assignments')" style="border:2px solid var(--blue);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:all 0.2s;background:#e3f2fd;">
+              <input type="radio" name="ac-course-type" value="scorm_assignments" id="ac-ct-type1" style="display:none;"/>
+              <i class="fas fa-check-circle" style="font-size:22px;color:#1565c0;display:block;margin-bottom:6px;"></i>
+              <div style="font-size:12px;font-weight:700;color:var(--navy);">Option 1</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">Already in Course</div>
+            </label>
+            <label id="ct-opt2" onclick="selectCourseType('scorm_pdf')" style="border:2px solid var(--brd);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:all 0.2s;background:#fff;">
+              <input type="radio" name="ac-course-type" value="scorm_pdf" id="ac-ct-type2" style="display:none;"/>
+              <i class="fas fa-file-upload" style="font-size:22px;color:#e53935;display:block;margin-bottom:6px;"></i>
+              <div style="font-size:12px;font-weight:700;color:var(--navy);">Option 2</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">File Upload</div>
+            </label>
+            <label id="ct-opt3" onclick="selectCourseType('custom_quiz')" style="border:2px solid var(--brd);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:all 0.2s;background:#fff;">
+              <input type="radio" name="ac-course-type" value="custom_quiz" id="ac-ct-type3" style="display:none;"/>
+              <i class="fas fa-question-circle" style="font-size:22px;color:#43a047;display:block;margin-bottom:6px;"></i>
+              <div style="font-size:12px;font-weight:700;color:var(--navy);">Option 3</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;">Custom Quiz / MCQ</div>
+            </label>
+          </div>
+          <input type="hidden" id="ac-course-type-val" value="scorm_assignments"/>
+        </div>
+
+        <!-- Option 1 info -->
+        <div id="ct-scorm-assign-info" style="background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#1565c0;display:block;">
+          <i class="fas fa-info-circle"></i> <strong>Option 1:</strong> Assignment is already embedded in the course — no additional file needed. Progress is tracked automatically.
+        </div>
+
+        <!-- Option 2: File Upload (SCORM or PDF) -->
+        <div id="ct-scorm-section" style="display:none;border:1.5px dashed #b0bec5;border-radius:10px;padding:14px;margin-bottom:14px;background:#f8faff;">
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;"><i class="fas fa-file-upload" style="margin-right:6px;"></i>Upload Assignment File</div>
+          <div style="display:flex;gap:10px;margin-bottom:12px;">
+            <label id="assign-sub-opt1" onclick="selectAssignmentFileType('scorm')" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1.5px solid var(--blue);border-radius:8px;flex:1;background:#e3f2fd;transition:all 0.2s;">
+              <input type="radio" name="ac-assign-file-type" value="scorm" checked style="width:14px;height:14px;"/>
+              <i class="fas fa-cube" style="color:#7b1fa2;font-size:16px;"></i>
+              <div><div style="font-size:12px;font-weight:700;color:var(--navy);">2.1 SCORM File</div><div style="font-size:11px;color:var(--muted);">Assignment only</div></div>
+            </label>
+            <label id="assign-sub-opt2" onclick="selectAssignmentFileType('pdf')" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1.5px solid var(--brd);border-radius:8px;flex:1;background:#fff;transition:all 0.2s;">
+              <input type="radio" name="ac-assign-file-type" value="pdf" style="width:14px;height:14px;"/>
+              <i class="fas fa-file-pdf" style="color:#e53935;font-size:16px;"></i>
+              <div><div style="font-size:12px;font-weight:700;color:var(--navy);">2.2 PDF File</div><div style="font-size:11px;color:var(--muted);">Assignment only</div></div>
+            </label>
+          </div>
+          <div id="ct-assign-scorm">
+            <input type="file" id="ac-assign-scorm-file" accept=".zip" style="padding:6px;border:1.5px solid var(--brd);border-radius:8px;width:100%;font-size:13px;"/>
+            <div id="ac-assign-scorm-progress" style="display:none;margin-top:8px;">
+              <div style="background:#eee;border-radius:6px;height:8px;overflow:hidden;"><div id="ac-assign-scorm-bar" style="height:100%;background:linear-gradient(135deg,#7b1fa2,#4a148c);width:0%;transition:width 0.3s;border-radius:6px;"></div></div>
+              <div id="ac-assign-scorm-status" style="font-size:12px;color:var(--muted);margin-top:4px;">Uploading SCORM…</div>
+            </div>
+          </div>
+          <div id="ct-assign-pdf" style="display:none;">
+            <input type="file" id="ac-pdf-file" accept=".pdf" style="padding:6px;border:1.5px solid var(--brd);border-radius:8px;width:100%;font-size:13px;"/>
+            <div id="ac-pdf-progress" style="display:none;margin-top:8px;">
+              <div style="background:#eee;border-radius:6px;height:8px;overflow:hidden;"><div id="ac-pdf-bar" style="height:100%;background:linear-gradient(135deg,#e53935,#b71c1c);width:0%;transition:width 0.3s;border-radius:6px;"></div></div>
+              <div id="ac-pdf-status" style="font-size:12px;color:var(--muted);margin-top:4px;">Uploading PDF…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Option 3 info -->
+        <div id="ct-quiz-info" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#2e7d32;display:none;">
+          <i class="fas fa-info-circle"></i> <strong>Option 3:</strong> Participant pehle course content complete karega, uske baad Custom Quiz show hoga. MCQ questions aur correct answers set kar sakte ho.
+        </div>
+
+        <!-- Option 3: Custom Quiz Builder -->
+        <div id="ct-quiz-section" style="display:none;margin-bottom:14px;">
+          <div style="border:1.5px solid #a5d6a7;border-radius:12px;padding:14px;background:#f1f8f1;">
+            <div style="font-size:13px;font-weight:700;color:#2e7d32;margin-bottom:12px;"><i class="fas fa-question-circle" style="margin-right:6px;"></i>Custom Quiz Builder</div>
+            <div id="quiz-questions-list"></div>
+            <button type="button" onclick="addQuizQuestion()" class="btn btn-sm" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;margin-top:8px;"><i class="fas fa-plus"></i> Add Question</button>
+          </div>
+        </div>
+
+        <!-- Passing Criteria (shown for options 1 and 3) -->
+        <div id="ct-passing-section" style="border:1.5px solid #ffe0b2;border-radius:10px;padding:14px;margin-bottom:14px;background:#fffde7;">
+          <div style="font-size:13px;font-weight:700;color:#e65100;margin-bottom:10px;"><i class="fas fa-trophy" style="margin-right:6px;"></i>Passing Criteria</div>
+          <div class="form-row">
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:12px;">Passing Percentage (%)</label>
+              <input type="number" id="ac-passing-pct" placeholder="e.g. 60" min="0" max="100" value="60" style="padding:8px 10px;border:1.5px solid var(--brd);border-radius:8px;width:100%;font-size:13px;"/>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:12px;">Passing Marks (optional)</label>
+              <input type="number" id="ac-passing-marks" placeholder="e.g. 60 out of 100" min="0" value="0" style="padding:8px 10px;border:1.5px solid var(--brd);border-radius:8px;width:100%;font-size:13px;"/>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /ct-assignments-container -->
+
+      <!-- Certificate info (dynamic based on assignment toggle) -->
+      <div id="ac-cert-logic-info" style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#795548;">
+        <i class="fas fa-certificate" style="color:#f9a825;margin-right:6px;"></i>
+        <span id="ac-cert-logic-text">Certificate will be generated automatically when the video / SCORM content is completed.</span>
+      </div>
+
+      <div class="form-row" style="gap:16px;margin-bottom:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="ac-has-chapters" checked style="width:16px;height:16px;"/>
+          <span>Has Chapters / Modules</span>
+        </label>
+      </div>
       <button class="btn btn-primary" onclick="addCourse()"><i class="fas fa-save"></i> Create Course</button>
+    </div>
+  </div>
+
+  <!-- Clone Course Modal -->
+  <div class="modal-box" id="cloneCourseModal" style="display:none;">
+    <div class="card" style="max-width:500px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title">Clone Course</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="cloneCourseAlert"></div>
+      <input type="hidden" id="clone-course-id"/>
+      <div class="form-group"><label>New Course Name</label><input type="text" id="clone-course-name" placeholder="Leave empty to use default name"/></div>
+      <div class="form-group">
+        <label>Modules to Clone</label>
+        <div id="clone-modules-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--brd);border-radius:8px;padding:10px;">
+          <p style="color:var(--muted);font-size:13px;">Loading modules...</p>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px;cursor:pointer;">
+          <input type="checkbox" id="clone-all-modules" checked onchange="toggleCloneModules(this)"/>
+          <span>Select All Modules</span>
+        </label>
+      </div>
+      <button class="btn btn-primary" onclick="submitCloneCourse()"><i class="fas fa-copy"></i> Clone Course</button>
+    </div>
+  </div>
+
+  <!-- Student Progress Modal -->
+  <div class="modal-box" id="studentProgressModal" style="display:none;">
+    <div class="card" style="max-width:700px;width:100%;margin:0;max-height:85vh;overflow-y:auto;">
+      <div class="card-header"><span class="card-title" id="progressModalTitle">Student Progress</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div id="progressModalContent"></div>
+    </div>
+  </div>
+
+  <!-- Corporate Client Modal -->
+  <div class="modal-box" id="addCorporateModal" style="display:none;">
+    <div class="card" style="max-width:500px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title">Add Corporate Client</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="addCorporateAlert"></div>
+      <div class="form-group"><label>Company Name <span style="color:red;">*</span></label><input type="text" id="corp-name" placeholder="Acme Corp Pvt. Ltd."/></div>
+      <div class="form-group"><label>Company Group <span style="color:var(--muted);font-size:11px;">(e.g. Yes Bank Group A)</span></label><input type="text" id="corp-group" placeholder="e.g. Yes Bank Group A, SBI Group B"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Email <span style="color:red;">*</span></label><input type="email" id="corp-email" placeholder="hr@company.com"/></div>
+        <div class="form-group"><label>Password <span style="color:red;">*</span></label><input type="password" id="corp-password" placeholder="Min 6 chars"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Contact</label><input type="text" id="corp-contact" placeholder="+91 98765..."/></div>
+      </div>
+      <div class="form-group"><label>Address</label><textarea id="corp-address" placeholder="Company address..." style="height:80px;"></textarea></div>
+      <button class="btn btn-primary" onclick="addCorporate()"><i class="fas fa-save"></i> Create Corporate Client</button>
     </div>
   </div>
   <!-- Add Batch -->
@@ -646,6 +1203,7 @@ tr:hover td{background:#f8f9ff;}
       <button class="btn btn-primary" onclick="addBatch()"><i class="fas fa-save"></i> Create Batch</button>
     </div>
   </div>
+  <!-- Certificate Template Modal -->
   <!-- Issue Certificate -->
   <div class="modal-box" id="issueCertModal" style="display:none;">
     <div class="card" style="max-width:500px;width:100%;margin:0;">
@@ -657,17 +1215,40 @@ tr:hover td{background:#f8f9ff;}
       <button class="btn btn-primary" onclick="issueCertificate()"><i class="fas fa-certificate"></i> Issue Certificate</button>
     </div>
   </div>
-  <!-- Upload SCORM -->
+  <!-- Upload SCORM / Video -->
   <div class="modal-box" id="uploadScormModal" style="display:none;">
-    <div class="card" style="max-width:560px;width:100%;margin:0;">
-      <div class="card-header"><span class="card-title"><i class="fas fa-cube" style="color:var(--orange);"></i> Upload SCORM Package</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+    <div class="card" style="max-width:580px;width:100%;margin:0;">
+      <div class="card-header"><span class="card-title"><i class="fas fa-cube" style="color:var(--orange);"></i> Upload Content</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
       <div class="alert" id="scormUploadAlert" style="display:none;"></div>
-      <div class="form-group"><label>Package Name <span style="color:red;">*</span></label><input type="text" id="su-name" placeholder="e.g. Python Basics Module 1"/></div>
-      <div class="form-group"><label>SCORM ZIP File <span style="color:red;">*</span></label><input type="file" id="su-file" accept=".zip" style="padding:8px;border:1px solid var(--brd);border-radius:6px;width:100%;"/></div>
+      <div class="form-group"><label>Package / Video Name <span style="color:red;">*</span></label><input type="text" id="su-name" placeholder="e.g. Python Basics Module 1"/></div>
+
+      <!-- Content Type Toggle -->
+      <div class="form-group">
+        <label>Content Type <span style="color:red;">*</span></label>
+        <div style="display:flex;gap:10px;margin-top:6px;">
+          <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid var(--orange);border-radius:8px;cursor:pointer;background:#fff8f4;">
+            <input type="radio" name="su-ctype" value="scorm" checked onchange="toggleScormType(this.value)" style="accent-color:var(--orange);">
+            <span><i class="fas fa-cube" style="color:var(--orange);margin-right:4px;"></i><strong>SCORM Package</strong><br><small style="color:var(--muted);">Upload ZIP file</small></span>
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:2px solid var(--brd);border-radius:8px;cursor:pointer;">
+            <input type="radio" name="su-ctype" value="video" onchange="toggleScormType(this.value)" style="accent-color:var(--orange);">
+            <span><i class="fas fa-video" style="color:#e91e8c;margin-right:4px;"></i><strong>Video</strong><br><small style="color:var(--muted);">Upload MP4 / WebM</small></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- File input (changes accept based on type) -->
+      <div class="form-group">
+        <label id="su-file-label">SCORM ZIP File <span style="color:red;">*</span></label>
+        <input type="file" id="su-file" accept=".zip" style="padding:8px;border:1px solid var(--brd);border-radius:6px;width:100%;"/>
+        <small id="su-file-hint" style="color:var(--muted);">Supported: .zip (SCORM package)</small>
+      </div>
+
       <div class="form-row">
-        <div class="form-group"><label>SCORM Version</label><select id="su-version"><option value="1.2">SCORM 1.2</option><option value="2004">SCORM 2004</option></select></div>
+        <div class="form-group" id="su-version-group"><label>SCORM Version</label><select id="su-version"><option value="1.2">SCORM 1.2</option><option value="2004">SCORM 2004</option></select></div>
         <div class="form-group"><label>Assign to Module (optional)</label><select id="su-module"><option value="">— None —</option></select></div>
       </div>
+
       <div id="scormUploadProgress" style="display:none;margin-bottom:12px;">
         <div style="background:var(--brd);border-radius:4px;height:8px;overflow:hidden;">
           <div id="scormProgressBar" style="background:var(--orange);height:100%;width:0%;transition:width .3s;"></div>
@@ -692,6 +1273,154 @@ tr:hover td{background:#f8f9ff;}
       <button class="btn btn-primary" onclick="addFee()"><i class="fas fa-save"></i> Save Record</button>
     </div>
   </div>
+
+  <!-- Add Category Modal -->
+  <div class="modal-box" id="addCategoryModal" style="display:none;">
+    <div class="card" style="max-width:420px;width:100%;margin:0;">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-plus-circle" style="color:var(--teal);margin-right:8px;"></i>Add New Category</span>
+        <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button>
+      </div>
+      <div class="alert" id="addCatAlert"></div>
+      <div style="padding:16px;display:grid;gap:12px;">
+        <div class="form-group">
+          <label>Category Name <span style="color:red;">*</span></label>
+          <input type="text" id="cat-name" placeholder="e.g. Data Science, MBA, Programming"/>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="cat-status" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div style="padding:0 16px 16px;">
+        <button class="btn btn-primary" onclick="submitAddCategory()"><i class="fas fa-save"></i> Save Category</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Category Modal -->
+  <div class="modal-box" id="editCategoryModal" style="display:none;">
+    <div class="card" style="max-width:420px;width:100%;margin:0;">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-edit" style="color:var(--orange);margin-right:8px;"></i>Edit Category</span>
+        <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button>
+      </div>
+      <div class="alert" id="editCatAlert"></div>
+      <input type="hidden" id="edit-cat-id"/>
+      <div style="padding:16px;display:grid;gap:12px;">
+        <div class="form-group">
+          <label>Category Name <span style="color:red;">*</span></label>
+          <input type="text" id="edit-cat-name" placeholder="Category name"/>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="edit-cat-status" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div style="padding:0 16px 16px;">
+        <button class="btn btn-primary" onclick="submitEditCategory()"><i class="fas fa-save"></i> Update Category</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Course Modal (inside overlay so it renders on top) -->
+  <div class="modal-box" id="editCourseModal" style="display:none;">
+    <div class="card" style="max-width:560px;width:100%;margin:0;max-height:90vh;overflow-y:auto;">
+      <div class="card-header"><span class="card-title"><i class="fas fa-edit" style="color:var(--orange);margin-right:8px;"></i>Edit Course</span><button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);">&times;</button></div>
+      <div class="alert" id="editCourseAlert"></div>
+      <input type="hidden" id="edit-course-id"/>
+      <div style="padding:16px;display:grid;gap:12px;">
+        <div class="form-group"><label>Course Title <span style="color:red;">*</span></label><input type="text" id="ec-title" placeholder="Course title"/></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="ec-category" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;flex:1;font-size:14px;">
+                <option value="">— Select Category —</option>
+              </select>
+              <button type="button" title="Add New Category" onclick="openQuickAddCategory()" style="padding:7px 11px;background:var(--teal);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;flex-shrink:0;"><i class="fas fa-plus"></i></button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Duration <span style="font-size:11px;color:var(--muted);font-weight:400;">(hr)</span></label>
+            <input type="text" id="ec-duration" placeholder="e.g. 40"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Price (₹)</label><input type="number" id="ec-price" min="0" placeholder="0 for free"/></div>
+          <div class="form-group"><label>Status</label>
+            <select id="ec-status" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Draft">Draft</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Description</label><textarea id="ec-desc" placeholder="Course description…"></textarea></div>
+        <div class="form-group"><label>Certificate Validity (days)</label><input type="number" id="ec-cert-validity" min="0" placeholder="0 = Lifetime"/></div>
+        <div class="form-group"><label>Demo Video URL</label><input type="text" id="ec-demo-video" placeholder="YouTube URL or video path"/></div>
+      </div>
+
+      <!-- ── Replace / Add Content ── -->
+      <div style="padding:0 16px 16px;">
+        <div style="border:1.5px dashed #b0bec5;border-radius:12px;padding:16px;background:#f8faff;">
+          <div style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-upload" style="color:var(--teal);"></i> Replace / Add Course Content
+          </div>
+
+          <!-- SCORM Replace -->
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;"><i class="fas fa-laptop-code" style="color:#1565c0;"></i> SCORM / Video File</label>
+            <input type="file" id="ec-scorm-file" accept=".zip,.mp4,.webm,.mov" style="font-size:12px;width:100%;padding:6px;border:1px solid var(--brd);border-radius:6px;background:#fff;"/>
+            <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+              <div style="flex:1;background:#e3e8f0;border-radius:4px;height:6px;overflow:hidden;"><div id="ec-scorm-bar" style="height:100%;background:var(--teal);width:0%;transition:width 0.3s;"></div></div>
+              <span id="ec-scorm-status" style="font-size:11px;color:var(--muted);min-width:90px;"></span>
+            </div>
+          </div>
+
+          <!-- PDF Replace -->
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;"><i class="fas fa-file-pdf" style="color:#e53935;"></i> PDF File</label>
+            <input type="file" id="ec-pdf-file" accept=".pdf" style="font-size:12px;width:100%;padding:6px;border:1px solid var(--brd);border-radius:6px;background:#fff;"/>
+            <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+              <div style="flex:1;background:#e3e8f0;border-radius:4px;height:6px;overflow:hidden;"><div id="ec-pdf-bar" style="height:100%;background:#e53935;width:0%;transition:width 0.3s;"></div></div>
+              <span id="ec-pdf-status" style="font-size:11px;color:var(--muted);min-width:90px;"></span>
+            </div>
+          </div>
+
+          <!-- Current content list -->
+          <div id="ec-current-content" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <div style="padding:0 16px 16px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="updateCourse()"><i class="fas fa-save"></i> Save Changes</button>
+        <button class="btn" style="background:#e8f5e9;color:#2e7d32;border:1.5px solid #c8e6c9;" onclick="uploadEditContent()"><i class="fas fa-upload"></i> Upload Files</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Course Progress Modal -->
+  <div class="modal-box" id="courseProgressModal" style="display:none;">
+    <div class="card" style="max-width:760px;width:100%;margin:0;max-height:88vh;overflow-y:auto;">
+      <div class="card-header" style="border-bottom:2px solid var(--brd);">
+        <span class="card-title" id="courseProgressTitle"><i class="fas fa-chart-line" style="color:var(--green);margin-right:8px;"></i>Course Progress</span>
+        <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);">&times;</button>
+      </div>
+      <!-- Summary bar -->
+      <div id="courseProgressSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px;background:#f8faff;border-bottom:1px solid var(--brd);"></div>
+      <div style="padding:0 16px 16px;">
+        <div id="courseProgressBody" style="margin-top:14px;"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <style>
@@ -704,8 +1433,8 @@ const TOKEN = ()=>localStorage.getItem('lms_token');
 const API = (p)=>'/api/v1'+p;
 async function api(method,path,body=null){
   try{
-    const h={'Content-Type':'application/json','Authorization':'Bearer '+TOKEN()};
-    const opts={method,headers:h};
+    const h={'Content-Type':'application/json','Authorization':'Bearer '+TOKEN(),'Cache-Control':'no-store'};
+    const opts={method,headers:h,cache:'no-store'};
     if(body) opts.body=JSON.stringify(body);
     const r=await fetch(API(path),opts);
     return r.json();
@@ -738,11 +1467,24 @@ function openModal(id){
   document.getElementById('modalOverlay').classList.add('open');
   document.querySelectorAll('.modal-box').forEach(m=>m.style.display='none');
   document.getElementById(id).style.display='block';
+  // Load category dropdown when Add Course modal opens
+  if(id==='addCourseModal'){
+    loadCategoryOptions(); _quizQuestions=[]; renderQuizQuestions();
+    selectPrimaryType('mp4');
+    selectCourseType('scorm_assignments');
+    const hasCb=document.getElementById('ac-has-assignments');
+    if(hasCb){hasCb.checked=false;toggleAssignmentsSection(false);}
+  }
+  // Load courses & batches when Add Student modal opens
+  if(id==='addStudentModal'){
+    loadCourses(); // populates as-course dropdown
+    loadBatchesForStudent(); // populates as-batch dropdown
+  }
 }
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
 document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
-const sectionTitles={overview:'Overview',students:'Students',trainers:'Trainers',bschools:'B-Schools',courses:'Courses',batches:'Batches',attendance:'Attendance',exams:'Exams',assignments:'Assignments',timetable:'Timetable',materials:'Materials',certificates:'Certificates',fees:'Fee Management',analytics:'Analytics',reports:'Reports',notifications:'Notifications',settings:'Site Settings',scorm:'SCORM Packages'};
+const sectionTitles={overview:'Overview',students:'Students',trainers:'Trainers',bschools:'B-Schools',courses:'Courses',categories:'Categories',batches:'Batches',attendance:'Attendance',exams:'Exams',assignments:'Assignments',timetable:'Timetable',materials:'Materials',certificates:'Certificates',fees:'Fee Management',analytics:'Analytics',reports:'Reports',notifications:'Notifications',settings:'Site Settings',scorm:'SCORM Packages',corporate:'Corporate Clients – Super Admin',progress:'Student Progress',queries:'Queries'};
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -762,6 +1504,10 @@ function showSection(name){
   if(name==='notifications')loadNotifications();
   if(name==='settings')loadSettings();
   if(name==='scorm')loadScormPackages();
+  if(name==='corporate')loadCorporate();
+  if(name==='progress')loadProgressReport();
+  if(name==='categories')loadCategories();
+  if(name==='queries')loadAdminQueries();
   if(window.innerWidth<768)document.getElementById('sidebar').classList.remove('open');
 }
 
@@ -807,16 +1553,19 @@ async function loadOverview(){
 // ─ STUDENTS ─
 async function loadStudents(){
   const r=await api('GET','/students?limit=50');
-  if(!r.success){document.getElementById('studentsTbody').innerHTML='<tr><td colspan="7" style="text-align:center;color:red;padding:18px;">Error loading students.</td></tr>';return;}
+  if(!r.success){document.getElementById('studentsTbody').innerHTML='<tr><td colspan="8" style="text-align:center;color:red;padding:18px;">Error loading students.</td></tr>';return;}
   const rows=r.data?.students||r.data||[];
-  document.getElementById('studentsTbody').innerHTML=rows.length?rows.map((s,i)=>`<tr><td>${i+1}</td><td>${fmt(s.name)}</td><td>${fmt(s.email)}</td><td>${fmt(s.phone)}</td><td>${fmt(s.batch_name||'—')}</td><td>${statusBadge(s.status||'pending')}</td><td><button class="btn btn-sm btn-outline" onclick="approveStudent(${s.id})" title="Approve"><i class="fas fa-check"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})" title="Delete"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No students found.</td></tr>';
+  document.getElementById('studentsTbody').innerHTML=rows.length?rows.map((s,i)=>`<tr><td>${i+1}</td><td>${fmt(s.name)}</td><td>${fmt(s.email)}</td><td>${fmt(s.phone)}</td><td>${fmt(s.course_title||s.course||'—')}</td><td>${fmt(s.batch_name||'—')}</td><td>${statusBadge(s.status||'pending')}</td><td><button class="btn btn-sm btn-outline" onclick="approveStudent(${s.id})" title="Approve"><i class="fas fa-check"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})" title="Delete"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px;">No students found.</td></tr>';
 }
 async function approveStudent(id){if(!confirm('Approve this student?'))return;const r=await api('PUT',`/students/${id}/approve`);if(r.success)loadStudents();}
 async function deleteStudent(id){if(!confirm('Delete this student?'))return;const r=await api('DELETE',`/students/${id}`);if(r.success)loadStudents();}
 async function addStudent(){
   const name=document.getElementById('as-name').value.trim(),email=document.getElementById('as-email').value.trim(),phone=document.getElementById('as-phone').value.trim(),password=document.getElementById('as-password').value;
+  const course_id=document.getElementById('as-course')?.value||null;
+  const batch_id=document.getElementById('as-batch')?.value||null;
   if(!name||!email||!password){showFormAlert('addStudentAlert','Please fill all required fields.');return;}
-  const r=await api('POST','/auth/register',{name,email,phone,password,role:'student'});
+  if(!course_id){showFormAlert('addStudentAlert','Please select a course.');return;}
+  const r=await api('POST','/auth/register',{name,email,contact:phone,phone,password,role:'student',course_id:course_id?+course_id:null,batch_id:batch_id?+batch_id:null});
   if(r.success){closeModal();loadStudents();}else showFormAlert('addStudentAlert',r.error||'Error');
 }
 
@@ -825,13 +1574,46 @@ async function loadTrainers(){
   const r=await api('GET','/trainers');
   if(!r.success)return;
   const rows=r.data||[];
-  document.getElementById('trainersTbody').innerHTML=rows.length?rows.map((t,i)=>`<tr><td>${i+1}</td><td>${fmt(t.name)}</td><td>${fmt(t.email)}</td><td>${fmt(t.phone)}</td><td>${fmt(t.specialization||'—')}</td><td>${statusBadge(t.status||'active')}</td><td><button class="btn btn-sm btn-danger" onclick="deleteUser(${t.id},'trainer')"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No trainers found.</td></tr>';
+  document.getElementById('trainersTbody').innerHTML=rows.length?rows.map((t,i)=>`<tr>
+    <td>${i+1}</td>
+    <td><strong>${fmt(t.name)}</strong>${t.profile_photo?`<br/><img src="${t.profile_photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-top:4px;" onerror="this.style.display='none'"/>`:''}
+    </td>
+    <td style="font-size:12px;">${fmt(t.email)}</td>
+    <td style="font-size:12px;">${fmt(t.phone||t.contact||'—')}</td>
+    <td style="font-size:12px;">${fmt(t.specialization||t.expertise||'—')}</td>
+    <td style="max-width:220px;">
+      ${t.bio
+        ? `<div style="font-size:12px;color:var(--text);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${t.bio}</div>
+           <button class="btn btn-sm btn-outline" style="font-size:11px;padding:3px 8px;margin-top:4px;" onclick="openEditTrainerBio(${t.id},'${(t.name||'').replace(/'/g,"\\'")}','${(t.expertise||'').replace(/'/g,"\\'")}',\`${(t.bio||'').replace(/`/g,'\\`')}\`)"><i class="fas fa-edit"></i> Edit Bio</button>`
+        : `<button class="btn btn-sm btn-outline" style="font-size:11px;padding:3px 8px;" onclick="openEditTrainerBio(${t.id},'${(t.name||'').replace(/'/g,"\\'")}','${(t.expertise||'').replace(/'/g,"\\'")}','')"><i class="fas fa-plus"></i> Add Bio</button>`
+      }
+    </td>
+    <td><small style="color:var(--muted)">${fmt(t.courses||'No batches yet')}</small></td>
+    <td>${statusBadge(t.status||'active')}</td>
+    <td>
+      <button class="btn btn-sm btn-outline" onclick="openEditTrainerBio(${t.id},'${(t.name||'').replace(/'/g,"\\'")}','${(t.expertise||'').replace(/'/g,"\\'")}',\`${(t.bio||'').replace(/`/g,'\\`')}\`)" title="Edit Bio"><i class="fas fa-user-edit"></i></button>
+      <button class="btn btn-sm btn-danger" onclick="deleteUser(${t.id},'trainer')" title="Delete"><i class="fas fa-trash"></i></button>
+    </td>
+  </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px;">No trainers found.</td></tr>';
 }
 async function addTrainer(){
-  const name=document.getElementById('at-name').value.trim(),email=document.getElementById('at-email').value.trim(),phone=document.getElementById('at-phone').value.trim(),password=document.getElementById('at-password').value,specialization=document.getElementById('at-spec').value.trim();
+  const name=document.getElementById('at-name').value.trim();
+  const email=document.getElementById('at-email').value.trim();
+  const phone=document.getElementById('at-phone').value.trim();
+  const password=document.getElementById('at-password').value;
+  const specialization=document.getElementById('at-spec').value.trim();
+  const bio=document.getElementById('at-bio').value.trim();
   if(!name||!email||!password){showFormAlert('addTrainerAlert','Please fill all required fields.');return;}
-  const r=await api('POST','/auth/register',{name,email,phone,password,role:'trainer',specialization});
-  if(r.success){closeModal();loadTrainers();}else showFormAlert('addTrainerAlert',r.error||'Error');
+  const r=await api('POST','/auth/register',{name,email,phone,password,role:'trainer',specialization,bio});
+  if(r.success){
+    // Also update bio via trainers PUT if needed (register may not save bio)
+    if(bio&&r.data?.id){
+      await api('PUT',`/trainers/${r.data.id}`,{name,email,contact:phone,expertise:specialization,bio,status:'Active'});
+    }
+    closeModal();
+    document.getElementById('at-bio').value='';
+    loadTrainers();
+  }else showFormAlert('addTrainerAlert',r.error||'Error');
 }
 
 // ─ B-SCHOOLS ─
@@ -843,23 +1625,1284 @@ async function loadBschools(){
 }
 async function deleteUser(id,role){if(!confirm('Delete this '+role+'?'))return;const r=await api('DELETE',`/users/${id}?role=${role}`);if(r.success){if(role==='trainer')loadTrainers();else loadBschools();}}
 
+function openEditTrainerBio(id, name, expertise, bio){
+  document.getElementById('etb-id').value = id;
+  document.getElementById('etb-name').value = name;
+  document.getElementById('etb-expertise').value = expertise;
+  document.getElementById('etb-bio').value = bio;
+  openModal('editTrainerBioModal');
+}
+async function saveTrainerBio(){
+  const id = document.getElementById('etb-id').value;
+  const expertise = document.getElementById('etb-expertise').value.trim();
+  const bio = document.getElementById('etb-bio').value.trim();
+  if(!bio){ showFormAlert('editTrainerBioAlert','Please enter a bio description.'); return; }
+  const r = await api('PATCH', `/trainers/${id}/bio`, {bio, expertise});
+  if(r.success){
+    showFormAlert('editTrainerBioAlert','Bio saved successfully!','success');
+    setTimeout(()=>{ closeModal(); loadTrainers(); }, 800);
+  } else showFormAlert('editTrainerBioAlert', r.error||'Failed to save bio');
+}
+
 // ─ COURSES ─
 async function loadCourses(){
-  const r=await api('GET','/courses');
-  if(!r.success)return;
-  const rows=r.data||[];
-  document.getElementById('coursesTbody').innerHTML=rows.length?rows.map((c,i)=>`<tr><td>${i+1}</td><td>${fmt(c.title)}</td><td>${fmt(c.category||'—')}</td><td>${fmt(c.duration_weeks||'—')} wks</td><td>${fmt(c.student_count||0)}</td><td>${statusBadge(c.status||'active')}</td><td><button class="btn btn-sm btn-danger" onclick="deleteCourse(${c.id})"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No courses found.</td></tr>';
-  // populate selects
-  const sel=[document.getElementById('ab-course'),document.getElementById('ic-course')];
-  sel.forEach(s=>{if(s){s.innerHTML='<option value="">Select Course</option>'+rows.map(c=>`<option value="${c.id}">${c.title}</option>`).join('');}});
+  const tbody=document.getElementById('coursesTbody');
+  tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  try{
+    const r=await api('GET','/courses');
+    if(!r.success){
+      tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#e53935;padding:18px;"><b>Server Error:</b> ${r.error||'Unable to load courses'}</td></tr>`;
+      return;
+    }
+    const rows=Array.isArray(r.data)?r.data:(Array.isArray(r)?r:[]);
+    tbody.innerHTML=rows.length?rows.map((c,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td><strong>${fmt(c.name||c.title)}</strong>${c.demo_video_path?'<i class="fas fa-video" style="color:var(--orange);margin-left:6px;" title="Has demo video"></i>':''}</td>
+        <td>${fmt(c.category_name||c.category||'—')}</td>
+        <td>${c.price>0?'<b>₹'+Number(c.price).toLocaleString()+'</b>':'<span class="badge active">Free</span>'}</td>
+        <td>${fmt(c.duration||'—')}</td>
+        <td>${c.avg_rating>0?`<span style="color:#f59e0b;">★${Number(c.avg_rating).toFixed(1)}</span>`:'—'}</td>
+        <td>${c.certificate_validity_days>0?c.certificate_validity_days+' days':'<span style="color:var(--green)">Lifetime</span>'}</td>
+        <td>${statusBadge((c.status||'Active').toLowerCase())}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-sm" style="background:var(--orange);color:#fff;margin-right:2px;" onclick="openEditCourse(${c.id})" title="Edit Course"><i class="fas fa-edit"></i> Edit</button>
+          <button class="btn btn-sm" style="background:#43a047;color:#fff;margin-right:2px;" onclick="openCourseProgress(${c.id},${JSON.stringify(c.name||'')})" title="View Student Progress"><i class="fas fa-chart-line"></i> Progress</button>
+          <button class="btn btn-sm" style="background:var(--teal);color:#fff;margin-right:2px;" onclick="openCloneCourse(${c.id},${JSON.stringify(c.name||'')})" title="Clone"><i class="fas fa-copy"></i></button>
+          <button class="btn btn-sm btn-danger" onclick="deleteCourse(${c.id})" title="Delete" style="background:#e53935;color:#fff;"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>`).join('')
+      :'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:18px;">No courses found. Click "+ Add Course" to create one.</td></tr>';
+    // populate selects in all forms (batch, certificate, student)
+    const courseOpts='<option value="">Select Course</option>'+rows.map(c=>`<option value="${c.id}">${c.name||c.title}</option>`).join('');
+    const sel=[document.getElementById('ab-course'),document.getElementById('ic-course'),document.getElementById('as-course')];
+    sel.forEach(s=>{if(s){s.innerHTML=courseOpts;}});
+  }catch(e){
+    console.error('[loadCourses] exception:', e);
+    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#e53935;padding:18px;">Error loading courses: ${e.message}</td></tr>`;
+  }
 }
 async function addCourse(){
-  const title=document.getElementById('ac-title').value.trim(),category=document.getElementById('ac-category').value.trim(),duration_weeks=document.getElementById('ac-duration').value,description=document.getElementById('ac-desc').value.trim();
-  if(!title){showFormAlert('addCourseAlert','Course title is required.');return;}
-  const r=await api('POST','/courses',{title,category,duration_weeks:+duration_weeks,description});
-  if(r.success){closeModal();loadCourses();}else showFormAlert('addCourseAlert',r.error||'Error');
+  const name=document.getElementById('ac-title').value.trim();
+  const category=document.getElementById('ac-category').value.trim();
+  const duration=document.getElementById('ac-duration').value.trim();
+  const description=document.getElementById('ac-desc').value.trim();
+  const status=document.getElementById('ac-status')?.value||'Active';
+  const price=parseFloat(document.getElementById('ac-price')?.value||0);
+  const certValidity=parseInt(document.getElementById('ac-cert-validity')?.value||0);
+  const demoVideo=document.getElementById('ac-demo-video')?.value.trim()||'';
+  const linkedTrainer=document.getElementById('ac-trainer')?.value||null;
+  const primaryType=document.getElementById('ac-primary-type-val')?.value||'mp4';
+  const hasChapters=document.getElementById('ac-has-chapters')?.checked!==false;
+  const hasAssignments=document.getElementById('ac-has-assignments')?.checked===true;
+  const courseType=document.getElementById('ac-course-type-val')?.value||'scorm_assignments';
+  const passingPct=parseInt(document.getElementById('ac-passing-pct')?.value||0);
+  const passingMarks=parseInt(document.getElementById('ac-passing-marks')?.value||0);
+  const certificateOn=hasAssignments?'assignment':'content';
+  if(!name){showFormAlert('addCourseAlert','Course title is required.');return;}
+  if(!category){showFormAlert('addCourseAlert','Please select a category.');return;}
+  // Validate quiz questions for option 3 (only when Has Assignments is checked)
+  if(hasAssignments && courseType==='custom_quiz'){
+    const validQs=_quizQuestions.filter(q=>q.question.trim()&&q.optA.trim()&&q.optB.trim());
+    if(!validQs.length){showFormAlert('addCourseAlert','Please add at least one quiz question for Option 3.');return;}
+  }
+  const r=await api('POST','/courses',{name,category,duration:duration||'—',status,description,price,certificate_validity_days:certValidity,demo_video_path:demoVideo,linked_trainer_id:linkedTrainer,has_chapters:hasChapters,has_assignments:hasAssignments,primary_type:primaryType,course_type:courseType,passing_marks:passingMarks,passing_percentage:passingPct,certificate_on_completion:certificateOn});
+  if(r.success){
+    const courseId = r.data?.id || r.id;
+    // Upload intro video if a file was selected
+    const videoFile = document.getElementById('ac-intro-video-file')?.files?.[0];
+    if(videoFile && courseId){
+      showFormAlert('addCourseAlert','Course created! Uploading intro video…','success');
+      const progressWrap = document.getElementById('ac-intro-video-progress');
+      const bar = document.getElementById('ac-intro-video-bar');
+      const statusTxt = document.getElementById('ac-intro-video-status');
+      progressWrap.style.display='block';
+      const fd = new FormData();
+      fd.append('intro_video', videoFile);
+      await new Promise((resolve)=>{
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/v1/courses/'+courseId+'/intro-video');
+        xhr.setRequestHeader('Authorization','Bearer '+TOKEN());
+        xhr.upload.onprogress = (e)=>{
+          if(e.lengthComputable){
+            const pct = Math.round((e.loaded/e.total)*100);
+            bar.style.width = pct+'%';
+            statusTxt.textContent = 'Uploading… '+pct+'%';
+          }
+        };
+        xhr.onload = ()=>{ statusTxt.textContent='Video uploaded!'; resolve(); };
+        xhr.onerror = ()=>{ statusTxt.textContent='Video upload failed (course still created)'; resolve(); };
+        xhr.send(fd);
+      });
+    }
+    // Upload MP4 content (primary type = mp4)
+    if(primaryType==='mp4'){
+      const contentFile = document.getElementById('ac-content-file')?.files?.[0];
+      if(contentFile && courseId){
+        showFormAlert('addCourseAlert','Course created! Uploading MP4 video…','success');
+        const cp=document.getElementById('ac-content-progress');
+        const cb=document.getElementById('ac-content-bar');
+        const cs=document.getElementById('ac-content-status');
+        cp.style.display='block';
+        const fd2=new FormData();
+        fd2.append('content', contentFile);
+        await new Promise((resolve)=>{
+          const xhr=new XMLHttpRequest();
+          xhr.open('POST','/api/v1/courses/'+courseId+'/upload-content');
+          xhr.setRequestHeader('Authorization','Bearer '+TOKEN());
+          xhr.upload.onprogress=(e)=>{if(e.lengthComputable){const pct=Math.round((e.loaded/e.total)*100);cb.style.width=pct+'%';cs.textContent='Uploading… '+pct+'%';}};
+          xhr.onload=()=>{cs.textContent='Video uploaded!';resolve();};
+          xhr.onerror=()=>{cs.textContent='Upload failed (course still created)';resolve();};
+          xhr.send(fd2);
+        });
+      }
+    }
+    // Upload SCORM package (primary type = scorm)
+    if(primaryType==='scorm'){
+      const scormFile = document.getElementById('ac-scorm-file')?.files?.[0];
+      if(scormFile && courseId){
+        showFormAlert('addCourseAlert','Course created! Uploading SCORM package…','success');
+        const sp=document.getElementById('ac-scorm-progress');
+        const sb=document.getElementById('ac-scorm-bar');
+        const ss=document.getElementById('ac-scorm-status');
+        sp.style.display='block';
+        const fd3=new FormData();
+        fd3.append('content', scormFile);
+        fd3.append('scorm_version','1.2');
+        await new Promise((resolve)=>{
+          const xhr=new XMLHttpRequest();
+          xhr.open('POST','/api/v1/courses/'+courseId+'/upload-content');
+          xhr.setRequestHeader('Authorization','Bearer '+TOKEN());
+          xhr.upload.onprogress=(e)=>{if(e.lengthComputable){const pct=Math.round((e.loaded/e.total)*100);sb.style.width=pct+'%';ss.textContent='Uploading… '+pct+'%';}};
+          xhr.onload=()=>{ss.textContent='SCORM uploaded!';resolve();};
+          xhr.onerror=()=>{ss.textContent='Upload failed (course still created)';resolve();};
+          xhr.send(fd3);
+        });
+      }
+    }
+    // Upload assignment files (option 2)
+    if(hasAssignments && courseType==='scorm_pdf'){
+      const assignFileType=document.querySelector('input[name="ac-assign-file-type"]:checked')?.value||'scorm';
+      if(assignFileType==='scorm'){
+        const assignScorm=document.getElementById('ac-assign-scorm-file')?.files?.[0];
+        if(assignScorm && courseId){
+          showFormAlert('addCourseAlert','Uploading assignment SCORM…','success');
+          const asp=document.getElementById('ac-assign-scorm-progress');
+          const asb=document.getElementById('ac-assign-scorm-bar');
+          const ass=document.getElementById('ac-assign-scorm-status');
+          asp.style.display='block';
+          const fd4=new FormData();
+          fd4.append('content', assignScorm);
+          fd4.append('scorm_version','1.2');
+          await new Promise((resolve)=>{
+            const xhr=new XMLHttpRequest();
+            xhr.open('POST','/api/v1/courses/'+courseId+'/upload-content');
+            xhr.setRequestHeader('Authorization','Bearer '+TOKEN());
+            xhr.upload.onprogress=(e)=>{if(e.lengthComputable){const pct=Math.round((e.loaded/e.total)*100);asb.style.width=pct+'%';ass.textContent='Uploading… '+pct+'%';}};
+            xhr.onload=()=>{ass.textContent='Assignment SCORM uploaded!';resolve();};
+            xhr.onerror=()=>{ass.textContent='Upload failed (course still created)';resolve();};
+            xhr.send(fd4);
+          });
+        }
+      } else {
+        const pdfFile=document.getElementById('ac-pdf-file')?.files?.[0];
+        if(pdfFile && courseId){
+          showFormAlert('addCourseAlert','Uploading assignment PDF…','success');
+          const pp=document.getElementById('ac-pdf-progress');
+          const pb=document.getElementById('ac-pdf-bar');
+          const ps=document.getElementById('ac-pdf-status');
+          pp.style.display='block';
+          const fd5=new FormData();
+          fd5.append('content', pdfFile);
+          await new Promise((resolve)=>{
+            const xhr=new XMLHttpRequest();
+            xhr.open('POST','/api/v1/courses/'+courseId+'/upload-content');
+            xhr.setRequestHeader('Authorization','Bearer '+TOKEN());
+            xhr.upload.onprogress=(e)=>{if(e.lengthComputable){const pct=Math.round((e.loaded/e.total)*100);pb.style.width=pct+'%';ps.textContent='Uploading PDF… '+pct+'%';}};
+            xhr.onload=()=>{ps.textContent='PDF uploaded!';resolve();};
+            xhr.onerror=()=>{ps.textContent='PDF upload failed (course still created)';resolve();};
+            xhr.send(fd5);
+          });
+        }
+      }
+    }
+    // Save quiz questions for Option 3
+    if(hasAssignments && courseType==='custom_quiz' && courseId){
+      showFormAlert('addCourseAlert','Saving quiz questions…','success');
+      await saveQuizQuestions(courseId);
+      _quizQuestions=[];
+      renderQuizQuestions();
+    }
+    showFormAlert('addCourseAlert','Course created successfully!','success');
+    setTimeout(()=>{
+      closeModal();
+      ['ac-title','ac-duration','ac-desc','ac-demo-video'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      document.getElementById('ac-price').value='0';
+      document.getElementById('ac-cert-validity').value='0';
+      ['ac-intro-video-file','ac-content-file','ac-scorm-file','ac-assign-scorm-file','ac-pdf-file'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      ['ac-intro-video-progress','ac-content-progress','ac-scorm-progress','ac-assign-scorm-progress','ac-pdf-progress'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+      selectPrimaryType('mp4');
+      selectCourseType('scorm_assignments');
+      const hasCb2=document.getElementById('ac-has-assignments');
+      if(hasCb2){hasCb2.checked=false;toggleAssignmentsSection(false);}
+      loadCourses();loadOverview();showSection('courses');
+    },900);
+  }else showFormAlert('addCourseAlert',r.error||'Failed to create course','error');
+}
+
+// CLONE COURSE
+async function openCloneCourse(courseId,courseName){
+  document.getElementById('clone-course-id').value=courseId;
+  document.getElementById('clone-course-name').value=courseName+' (Clone)';
+  const listEl=document.getElementById('clone-modules-list');
+  listEl.innerHTML='<p style="color:var(--muted);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading modules...</p>';
+  openModal('cloneCourseModal');
+  const r=await api('GET',`/modules?course_id=${courseId}`);
+  const mods=r.data||r||[];
+  if(mods.length===0){
+    listEl.innerHTML='<p style="color:var(--muted);font-size:13px;">No modules found. All course settings will be cloned.</p>';
+  }else{
+    listEl.innerHTML=mods.map(m=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;border-bottom:1px solid var(--brd);">
+        <input type="checkbox" class="clone-mod-chk" value="${m.id}" checked style="width:14px;height:14px;"/>
+        <span>${m.name} ${m.order_no?'(Order: '+m.order_no+')':''}</span>
+      </label>`).join('');
+  }
+}
+function toggleCloneModules(chk){
+  document.querySelectorAll('.clone-mod-chk').forEach(c=>c.checked=chk.checked);
+}
+async function submitCloneCourse(){
+  const courseId=document.getElementById('clone-course-id').value;
+  const newName=document.getElementById('clone-course-name').value.trim();
+  const allChkboxes=document.querySelectorAll('.clone-mod-chk');
+  const selectedIds=[];
+  allChkboxes.forEach(c=>{if(c.checked)selectedIds.push(parseInt(c.value));});
+  const allSelected=allChkboxes.length===0||selectedIds.length===allChkboxes.length;
+  const body={new_name:newName};
+  if(!allSelected&&selectedIds.length>0)body.module_ids=selectedIds;
+  const r=await api('POST',`/courses/${courseId}/clone`,body);
+  if(r.success){
+    showFormAlert('cloneCourseAlert','Course cloned successfully!','success');
+    setTimeout(()=>{closeModal();loadCourses();},900);
+  }else showFormAlert('cloneCourseAlert',r.error||'Failed to clone','error');
+}
+
+// CORPORATE CLIENTS
+// Password visibility toggle for corporate list rows
+function toggleCorpPwd(id){
+  const el=document.getElementById('corp-pwd-'+id);
+  const icon=document.getElementById('corp-pwd-icon-'+id);
+  if(!el||!icon)return;
+  if(el.dataset.visible==='1'){
+    el.textContent='••••••••';el.dataset.visible='0';
+    icon.className='fas fa-eye';
+  } else {
+    el.textContent=el.dataset.pwd;el.dataset.visible='1';
+    icon.className='fas fa-eye-slash';
+  }
+}
+function togglePwdEdit(){
+  const inp=document.getElementById('edit-corp-password');
+  const icon=document.getElementById('editPwdEyeIcon');
+  if(inp.type==='password'){inp.type='text';icon.className='fas fa-eye-slash';}
+  else{inp.type='password';icon.className='fas fa-eye';}
+}
+async function loadCorporate(){
+  const tbody=document.getElementById('corporateTbody');
+  tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:18px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  const r=await api('GET','/corporate/list');
+  const rows=r.data||[];
+  tbody.innerHTML=rows.length?rows.map((c,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${fmt(c.company_name)}</strong></td>
+      <td>${c.group_name?`<span style="display:inline-block;background:#e3f2fd;color:#1565c0;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:600;">${c.group_name}</span>`:'<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
+      <td style="font-size:13px;">${fmt(c.email)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="corp-pwd-${c.id}" data-pwd="${c.plain_password||'(not set)'}" data-visible="0" style="font-family:monospace;font-size:13px;letter-spacing:1px;">••••••••</span>
+          <button onclick="toggleCorpPwd(${c.id})" title="Show/Hide Password" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;font-size:13px;"><i class="fas fa-eye" id="corp-pwd-icon-${c.id}"></i></button>
+        </div>
+      </td>
+      <td>${fmt(c.contact||'—')}</td>
+      <td><span class="badge active">${c.participant_count||0} participants</span></td>
+      <td><span class="badge ${c.allowed_courses_count>0?'active':'pending'}">${c.allowed_courses_count||0} courses</span></td>
+      <td><span class="badge ${c.total_courses_taken>0?'active':'pending'}" style="background:#e8f5e9;color:#2e7d32;">${c.total_courses_taken||0}</span></td>
+      <td style="font-weight:600;color:var(--navy);">₹${Number(c.total_courses_price||0).toLocaleString()}</td>
+      <td>${statusBadge((c.status||'Active').toLowerCase())}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm btn-outline" onclick="openEditCorporate(${c.id})" title="Edit" style="padding:4px 8px;margin-right:2px;"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm" onclick="openManageCourses(${c.id},'${(c.company_name||'').replace(/'/g,"\\'")}','${(c.group_name||'').replace(/'/g,"\\'")}')" title="Manage Allowed Courses" style="padding:4px 8px;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;margin-right:2px;"><i class="fas fa-book-open"></i></button>
+        <button class="btn btn-sm" onclick="openDuplicateCorporate(${c.id},'${(c.company_name||'').replace(/'/g,"\\'")}','${(c.group_name||'').replace(/'/g,"\\'")}')" title="Duplicate (copy courses, participants=0)" style="padding:4px 8px;background:#7c4dff;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-right:2px;"><i class="fas fa-copy"></i></button>
+        <a href="corporate-dashboard.html" title="View Corporate / B-School Portal" style="display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;background:var(--navy);color:#fff;border-radius:6px;font-size:12px;text-decoration:none;margin-right:2px;"><i class="fas fa-external-link-alt"></i></a>
+        <button class="btn btn-sm" onclick="deleteCorporate(${c.id},'${(c.company_name||'').replace(/'/g,"\\'")}' )" title="Delete Corporate Client" style="padding:4px 8px;background:#e53935;color:#fff;border:none;border-radius:6px;cursor:pointer;"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`).join('')
+  :'<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:18px;">No corporate clients yet. Click "+ Add Corporate Client" to create one.</td></tr>';
+}
+
+async function openEditCorporate(id){
+  const r=await api('GET',`/corporate/${id}`);
+  if(!r.success)return alert('Failed to load corporate client');
+  const c=r.data;
+  document.getElementById('edit-corp-id').value=id;
+  document.getElementById('edit-corp-name').value=c.company_name||'';
+  document.getElementById('edit-corp-group').value=c.group_name||'';
+  document.getElementById('edit-corp-email').value=c.email||'';
+  document.getElementById('edit-corp-contact').value=c.contact||'';
+  document.getElementById('edit-corp-address').value=c.address||'';
+  document.getElementById('edit-corp-status').value=c.status||'Active';
+  document.getElementById('edit-corp-password').value='';
+  document.getElementById('edit-corp-password').type='password';
+  document.getElementById('editPwdEyeIcon').className='fas fa-eye';
+  document.getElementById('editCorporateAlert').innerHTML='';
+  openModal('editCorporateModal');
+}
+async function updateCorporate(){
+  const id=document.getElementById('edit-corp-id').value;
+  const company_name=document.getElementById('edit-corp-name').value.trim();
+  const group_name=document.getElementById('edit-corp-group').value.trim();
+  const email=document.getElementById('edit-corp-email').value.trim();
+  const contact=document.getElementById('edit-corp-contact').value.trim();
+  const address=document.getElementById('edit-corp-address').value.trim();
+  const status=document.getElementById('edit-corp-status').value;
+  const new_password=document.getElementById('edit-corp-password').value;
+  if(!company_name||!email){showFormAlert('editCorporateAlert','Company name and email are required.');return;}
+  const body={company_name,group_name,email,contact,address,status};
+  if(new_password) body.new_password=new_password;
+  const r=await api('PUT',`/corporate/${id}`,body);
+  if(r.success){showFormAlert('editCorporateAlert','Corporate client updated!','success');setTimeout(()=>{closeModal();loadCorporate();},900);}
+  else showFormAlert('editCorporateAlert',r.error||'Failed to update','error');
+}
+
+async function deleteCorporate(id, name){
+  if(!confirm(`Are you sure you want to permanently delete "${name}"?\n\nAll participants and course assignments for this client will also be deleted. This action cannot be undone.`)) return;
+  const r=await api('DELETE',`/corporate/${id}`);
+  if(r.success){ alert(`"${name}" has been successfully deleted.`); loadCorporate(); }
+  else alert('Delete failed: '+(r.error||'Unknown error'));
+}
+
+let allAdminCourses=[];
+async function loadAllAdminCourses(force=false){
+  if(allAdminCourses.length>0&&!force)return;
+  const r=await api('GET','/courses');
+  allAdminCourses=r.data||[];
+}
+async function openManageCourses(corpId,companyName,groupName){
+  document.getElementById('manage-corp-id').value=corpId;
+  document.getElementById('manageCourseTitle').textContent='Allowed Courses — '+companyName+(groupName?' ('+groupName+')':'');
+  document.getElementById('manageCourseAlert').innerHTML='';
+  document.getElementById('manageCourseCheckboxes').innerHTML='<p style="color:var(--muted);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading...</p>';
+  openModal('manageCourseModal');
+  await loadAllAdminCourses(true);
+  const allowed=await api('GET',`/corporate/${corpId}/allowed-courses`);
+  const allowedIds=new Set((allowed.data||[]).map(c=>c.course_id));
+  document.getElementById('manageCourseCheckboxes').innerHTML=allAdminCourses.map(c=>`
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--brd);hover:background:#f5f7ff;">
+      <input type="checkbox" class="manage-course-chk" value="${c.id}" ${allowedIds.has(c.id)||allowedIds.has(String(c.id))?'checked':''} style="width:15px;height:15px;accent-color:var(--navy);"/>
+      <div>
+        <div style="font-weight:500;color:var(--navy);">${c.name||c.title}</div>
+        <div style="font-size:11px;color:var(--muted);">${c.category||c.category_name||'General'} ${c.duration?' · '+c.duration:''}</div>
+      </div>
+    </label>`).join('')||'<p style="color:var(--muted);">No courses available.</p>';
+}
+function selectAllCourses(val){
+  document.querySelectorAll('.manage-course-chk').forEach(c=>c.checked=val);
+}
+async function saveAllowedCourses(){
+  const corpId=document.getElementById('manage-corp-id').value;
+  const courseIds=[];
+  document.querySelectorAll('.manage-course-chk:checked').forEach(c=>courseIds.push(parseInt(c.value)));
+  const r=await api('PUT',`/corporate/${corpId}/allowed-courses`,{course_ids:courseIds});
+  if(r.success){
+    showFormAlert('manageCourseAlert',`✅ ${courseIds.length} course(s) allowed for this corporate client.`,'success');
+    setTimeout(()=>{closeModal();loadCorporate();},1000);
+  } else showFormAlert('manageCourseAlert',r.error||'Failed to save','error');
+}
+
+async function addCorporate(){
+  const company_name=document.getElementById('corp-name').value.trim();
+  const group_name=document.getElementById('corp-group').value.trim();
+  const email=document.getElementById('corp-email').value.trim();
+  const password=document.getElementById('corp-password').value;
+  const contact=document.getElementById('corp-contact').value.trim();
+  const address=document.getElementById('corp-address').value.trim();
+  if(!company_name||!email||!password){showFormAlert('addCorporateAlert','Company name, email and password are required.');return;}
+  const r=await api('POST','/corporate/register',{company_name,group_name,email,password,contact,address});
+  if(r.success){showFormAlert('addCorporateAlert','Corporate client created!','success');setTimeout(()=>{closeModal();loadCorporate();},900);}
+  else showFormAlert('addCorporateAlert',r.error||'Failed to create','error');
+}
+
+// ─ EDIT COURSE ─
+async function openEditCourse(id){
+  const r=await api('GET','/courses');
+  if(!r.success)return alert('Could not load courses');
+  const c=(r.data||[]).find(x=>x.id===id);
+  if(!c)return alert('Course not found');
+  document.getElementById('edit-course-id').value=id;
+  document.getElementById('ec-title').value=c.name||c.title||'';
+  document.getElementById('ec-duration').value=c.duration||'';
+  document.getElementById('ec-price').value=c.price||0;
+  document.getElementById('ec-status').value=c.status||'Active';
+  document.getElementById('ec-desc').value=c.description||'';
+  document.getElementById('ec-cert-validity').value=c.certificate_validity_days||0;
+  document.getElementById('ec-demo-video').value=c.demo_video_path||'';
+  document.getElementById('editCourseAlert').innerHTML='';
+  // Reset upload fields
+  document.getElementById('ec-scorm-file').value='';
+  document.getElementById('ec-pdf-file').value='';
+  document.getElementById('ec-scorm-bar').style.width='0%';
+  document.getElementById('ec-pdf-bar').style.width='0%';
+  document.getElementById('ec-scorm-status').textContent='';
+  document.getElementById('ec-pdf-status').textContent='';
+  // Load category dropdown then set value
+  const catR=await api('GET','/categories');
+  const cats=catR.data||[];
+  const ecCat=document.getElementById('ec-category');
+  ecCat.innerHTML='<option value="">— Select Category —</option>'+cats.map(ct=>`<option value="${ct.name}">${ct.name}</option>`).join('');
+  ecCat.value=c.category_name||c.category||'';
+  // Load existing content
+  loadEditCourseContent(id);
+  openModal('editCourseModal');
+}
+
+async function loadEditCourseContent(courseId){
+  const el=document.getElementById('ec-current-content');
+  el.innerHTML='<div style="font-size:12px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading current content…</div>';
+  try{
+    // Load SCORM packages via modules
+    const [pkgR, matR] = await Promise.all([
+      api('GET',`/scorm/packages`),
+      fetch('/api/v1/courses/'+courseId+'/materials-admin',{headers:{'Authorization':'Bearer '+TOKEN()}}).then(r=>r.json()).catch(()=>({success:false}))
+    ]);
+    const allPkgs=(pkgR.data||[]).filter(p=>p.course_id==courseId||p.course_name);
+    // Simpler: get packages for this course via module join
+    const r2=await api('GET',`/admin/courses/${courseId}/content-list`);
+    const items=r2.data||[];
+    if(!items.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);margin-top:4px;"><i class="fas fa-info-circle"></i> No content uploaded yet.</div>';return;}
+    el.innerHTML='<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Current Content:</div>'+
+      items.map(item=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#fff;border:1px solid var(--brd);border-radius:8px;margin-bottom:4px;">
+          <span style="font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px;">
+            <i class="fas ${item.type==='pdf'?'fa-file-pdf':item.type==='video'?'fa-film':'fa-laptop-code'}" style="color:${item.type==='pdf'?'#e53935':item.type==='video'?'#c62828':'#1565c0'};"></i>
+            ${escHtml(item.name)}
+            <span style="font-size:10px;background:#e3e8f0;padding:1px 6px;border-radius:8px;color:var(--muted);">${item.type.toUpperCase()}</span>
+          </span>
+          <button onclick="deleteContentItem('${item.id}','${item.type}',${courseId})" style="background:none;border:none;cursor:pointer;color:#e53935;font-size:13px;" title="Delete"><i class="fas fa-trash"></i></button>
+        </div>`).join('');
+  }catch(e){el.innerHTML='<div style="font-size:12px;color:var(--muted);">Could not load content list.</div>';}
+}
+
+async function uploadEditContent(){
+  const courseId=document.getElementById('edit-course-id').value;
+  if(!courseId){alert('Save the course first.');return;}
+  const scormFile=document.getElementById('ec-scorm-file').files[0];
+  const pdfFile=document.getElementById('ec-pdf-file').files[0];
+  if(!scormFile&&!pdfFile){alert('Please select a SCORM/video or PDF file to upload.');return;}
+
+  if(scormFile){
+    const fd=new FormData();
+    fd.append('content',scormFile);
+    const bar=document.getElementById('ec-scorm-bar');
+    const st=document.getElementById('ec-scorm-status');
+    st.textContent='Uploading…';
+    await new Promise(resolve=>{
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST','/api/v1/courses/'+courseId+'/upload-content');
+      xhr.setRequestHeader('Authorization','Bearer '+TOKEN());
+      xhr.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);bar.style.width=p+'%';st.textContent='Uploading… '+p+'%';}};
+      xhr.onload=()=>{
+        const res=JSON.parse(xhr.responseText||'{}');
+        if(res.success){bar.style.width='100%';st.textContent='✅ Uploaded!';}
+        else{st.textContent='❌ '+(res.error||'Failed');}
+        resolve();
+      };
+      xhr.onerror=()=>{st.textContent='❌ Network error';resolve();};
+      xhr.send(fd);
+    });
+  }
+
+  if(pdfFile){
+    const fd=new FormData();
+    fd.append('content',pdfFile);
+    const bar=document.getElementById('ec-pdf-bar');
+    const st=document.getElementById('ec-pdf-status');
+    st.textContent='Uploading…';
+    await new Promise(resolve=>{
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST','/api/v1/courses/'+courseId+'/upload-content');
+      xhr.setRequestHeader('Authorization','Bearer '+TOKEN());
+      xhr.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);bar.style.width=p+'%';st.textContent='Uploading PDF… '+p+'%';}};
+      xhr.onload=()=>{
+        const res=JSON.parse(xhr.responseText||'{}');
+        if(res.success){bar.style.width='100%';st.textContent='✅ Uploaded!';}
+        else{st.textContent='❌ '+(res.error||'Failed');}
+        resolve();
+      };
+      xhr.onerror=()=>{st.textContent='❌ Network error';resolve();};
+      xhr.send(fd);
+    });
+  }
+
+  // Reload content list
+  setTimeout(()=>loadEditCourseContent(courseId),500);
+  document.getElementById('ec-scorm-file').value='';
+  document.getElementById('ec-pdf-file').value='';
+}
+
+async function deleteContentItem(id, type, courseId){
+  if(!confirm('Is content ko delete karna chahte ho?'))return;
+  let r;
+  if(type==='pdf'||type==='material') r=await api('DELETE',`/courses/materials/${id}`);
+  else r=await api('DELETE',`/scorm/packages/${id}`);
+  if(r&&r.success){showToast('Content deleted','success');loadEditCourseContent(courseId);}
+  else showToast(r?.error||'Delete failed','error');
+}
+async function updateCourse(){
+  const id=document.getElementById('edit-course-id').value;
+  const name=document.getElementById('ec-title').value.trim();
+  const category=document.getElementById('ec-category').value.trim();
+  const duration=document.getElementById('ec-duration').value.trim();
+  const price=parseFloat(document.getElementById('ec-price').value||0);
+  const status=document.getElementById('ec-status').value;
+  const description=document.getElementById('ec-desc').value.trim();
+  const certificate_validity_days=parseInt(document.getElementById('ec-cert-validity').value||0);
+  const demo_video_path=document.getElementById('ec-demo-video').value.trim();
+  if(!name){showFormAlert('editCourseAlert','Course title is required.');return;}
+  const r=await api('PUT',`/courses/${id}`,{name,category,duration,price,status,description,certificate_validity_days,demo_video_path});
+  if(r.success){showFormAlert('editCourseAlert','Course updated!','success');setTimeout(()=>{closeModal();loadCourses();},900);}
+  else showFormAlert('editCourseAlert',r.error||'Failed to update course','error');
+}
+
+// ─ COURSE PROGRESS ─────────────────────────────────────────────────────────
+async function openCourseProgress(courseId, courseName){
+  document.getElementById('courseProgressTitle').innerHTML=`<i class="fas fa-chart-line" style="color:#43a047;margin-right:8px;"></i>Progress — <strong>${escHtml(courseName)}</strong>`;
+  document.getElementById('courseProgressSummary').innerHTML='<div style="text-align:center;padding:12px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  document.getElementById('courseProgressBody').innerHTML='';
+  openModal('courseProgressModal');
+  const r=await api('GET',`/admin/courses/${courseId}/progress`);
+  const rows=(r.data?.users)||[];
+  const totalUsers=rows.length;
+  const completed=rows.filter(u=>u.progress_pct===100).length;
+  const avgPct=totalUsers>0?Math.round(rows.reduce((s,u)=>s+u.progress_pct,0)/totalUsers):0;
+  const students=rows.filter(u=>u.user_type==='student');
+  const participants=rows.filter(u=>u.user_type==='participant');
+  document.getElementById('courseProgressSummary').innerHTML=`
+    <div style="text-align:center;padding:10px;background:#fff;border-radius:10px;border:1px solid var(--brd);">
+      <div style="font-size:22px;font-weight:700;color:var(--navy);">${students.length} / ${participants.length}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px;">Students / Participants</div>
+    </div>
+    <div style="text-align:center;padding:10px;background:#fff;border-radius:10px;border:1px solid var(--brd);">
+      <div style="font-size:26px;font-weight:700;color:#43a047;">${completed}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px;">Fully Completed</div>
+    </div>
+    <div style="text-align:center;padding:10px;background:#fff;border-radius:10px;border:1px solid var(--brd);">
+      <div style="font-size:26px;font-weight:700;color:var(--orange);">${avgPct}%</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px;">Avg. Completion</div>
+    </div>`;
+  if(!rows.length){
+    document.getElementById('courseProgressBody').innerHTML='<p style="text-align:center;color:var(--muted);padding:24px;">No students or participants enrolled in this course yet.</p>';
+    return;
+  }
+  document.getElementById('courseProgressBody').innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#f0f4ff;">
+        <th style="padding:10px 12px;text-align:left;color:var(--navy);font-weight:600;">#</th>
+        <th style="padding:10px 12px;text-align:left;color:var(--navy);font-weight:600;">Name</th>
+        <th style="padding:10px 12px;text-align:left;color:var(--navy);font-weight:600;">Type</th>
+        <th style="padding:10px 12px;text-align:left;color:var(--navy);font-weight:600;">Modules Done</th>
+        <th style="padding:10px 12px;text-align:left;color:var(--navy);font-weight:600;min-width:130px;">Progress</th>
+        <th style="padding:10px 12px;text-align:left;color:var(--navy);font-weight:600;">Last Active</th>
+      </tr></thead>
+      <tbody>${rows.map((u,i)=>{
+        const pct=u.progress_pct||0;
+        const barColor=pct===100?'#43a047':pct>=60?'var(--orange)':'#e53935';
+        const lastActive=(u.last_accessed&&u.last_accessed!=='—')?new Date(u.last_accessed).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'Never';
+        const badge=u.user_type==='participant'
+          ?`<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">Participant${u.company?` — ${escHtml(u.company)}`:''}</span>`
+          :`<span style="background:#e8eaf6;color:#1a237e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;">Student</span>`;
+        return`<tr style="border-bottom:1px solid var(--brd);">
+          <td style="padding:10px 12px;color:var(--muted);">${i+1}</td>
+          <td style="padding:10px 12px;">
+            <strong style="color:var(--navy);">${escHtml(u.name)}</strong>
+            <div style="font-size:11px;color:var(--muted);">${escHtml(u.email)}</div>
+          </td>
+          <td style="padding:10px 12px;">${badge}</td>
+          <td style="padding:10px 12px;">
+            <span style="font-weight:600;color:var(--navy);">${u.completed_modules}</span>
+            <span style="color:var(--muted);">/ ${u.total_modules}</span>
+          </td>
+          <td style="padding:10px 12px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="flex:1;height:8px;background:#eee;border-radius:10px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:${barColor};border-radius:10px;transition:width .4s;"></div>
+              </div>
+              <span style="font-size:12px;font-weight:700;color:${barColor};min-width:34px;">${pct}%</span>
+            </div>
+          </td>
+          <td style="padding:10px 12px;color:var(--muted);font-size:12px;">${lastActive}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+// ─ DUPLICATE CORPORATE ─────────────────────────────────────────────────────
+function nextGroupName(name){
+  if(!name) return name;
+  // If ends in digits, increment them: "A1"→"A2", "A9"→"A10"
+  const m=name.match(/^(.*?)(\d+)(\s*)$/);
+  if(m) return m[1]+(parseInt(m[2])+1)+m[3];
+  // Ends in letter(s) — append "1": "A"→"A1", "Group B"→"Group B1"
+  return name.replace(/(\s*)$/,'1$1');
+}
+
+let _dupMode='new';          // 'new' | 'existing'
+let _dupAllCoursesCache=[];  // all system courses (loaded once)
+let _dupClickedId=null;      // the client whose Duplicate button was clicked
+let _dupClickedName='';
+let _dupClickedCompany='';   // company_name of clicked client (for same-company grouping)
+
+// ── Toggle between the two tabs ─────────────────────────────────────────────
+function setDupMode(mode){
+  _dupMode=mode;
+  const isNew=mode==='new';
+  document.getElementById('dup-new-section').style.display=isNew?'block':'none';
+  document.getElementById('dup-existing-section').style.display=isNew?'none':'block';
+  // Button highlight
+  const nb=document.getElementById('dup-mode-new-btn'),eb=document.getElementById('dup-mode-existing-btn');
+  if(nb){nb.style.background=isNew?'var(--navy)':'#fff';nb.style.color=isNew?'#fff':'var(--navy)';}
+  if(eb){eb.style.background=isNew?'#fff':'var(--navy)';eb.style.color=isNew?'var(--navy)':'#fff';}
+  // Submit button label
+  const sb=document.getElementById('dup-submit-btn');
+  if(sb) sb.innerHTML=isNew?'<i class="fas fa-plus-circle"></i> Create New Client':'<i class="fas fa-copy"></i> Copy Courses Into This Client';
+  // Info box text
+  const ib=document.getElementById('dup-info-box');
+  if(ib){
+    if(isNew) ib.innerHTML='<i class="fas fa-info-circle"></i> All <strong>allowed courses of this client will be pre-checked</strong>. Add or remove courses to create the new client. Participants start from 0.';
+    else       ib.innerHTML='<i class="fas fa-info-circle"></i> Select a <strong>source client</strong> below — its courses will be checked. Only checked courses will be added to <strong>'+(escHtml(_dupClickedName))+'</strong>. Participants remain unchanged.';
+  }
+  // In "copy into" mode, clear checkboxes until source is picked
+  if(!isNew){
+    const total=_dupAllCoursesCache.length;
+    _renderDupCheckboxes(new Set(),total,'Select a source client above to see courses.');
+    document.getElementById('dup-source-client').value='';
+  } else {
+    // Restore mode-1 (clicked client's own courses)
+    _loadAndRenderDupCourses(_dupClickedId);
+  }
+}
+
+// ── Main open function ───────────────────────────────────────────────────────
+async function openDuplicateCorporate(clickedId,clickedName,clickedGroup){
+  _dupClickedId=clickedId;
+  _dupClickedName=clickedName;
+  _dupMode='new';
+  document.getElementById('dup-corp-source-id').value=clickedId;
+  document.getElementById('dup-corp-name').value=clickedName;
+  document.getElementById('dup-corp-group').value=clickedGroup?nextGroupName(clickedGroup):'';
+  document.getElementById('dup-corp-email').value='';
+  document.getElementById('dup-corp-password').value='';
+  document.getElementById('dupCorpAlert').innerHTML='';
+  setDupMode('new');
+
+  const titleEl=document.getElementById('dupCorpTitle');
+  if(titleEl) titleEl.innerHTML=`<i class="fas fa-copy" style="color:var(--orange);margin-right:8px;"></i>Duplicate — <strong>${escHtml(clickedName)}</strong>`;
+
+  const checkboxEl=document.getElementById('dupCourseCheckboxes');
+  checkboxEl.innerHTML='<div style="text-align:center;padding:18px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+  openModal('duplicateCorporateModal');
+
+  // Load all courses + this client's allowed courses + all corporate clients in parallel
+  const [allRes,allowedRes,corpRes]=await Promise.all([
+    api('GET','/courses'),
+    api('GET',`/corporate/${clickedId}/allowed-courses`),
+    api('GET','/corporate/list')
+  ]);
+
+  _dupAllCoursesCache=(allRes.data||[]);
+  const clickedAllowedIds=new Set((allowedRes.data||[]).map(c=>c.course_id));
+
+  // Find the clicked client's company_name for grouping
+  const allCorpClients=corpRes.data||[];
+  const clickedClient=allCorpClients.find(c=>c.id==clickedId);
+  _dupClickedCompany=(clickedClient?.company_name||'').toLowerCase().trim();
+
+  // ── Populate "Copy FROM" source dropdown ────────────────────────────────
+  // Same company at top (highlighted), then all others
+  const others=allCorpClients.filter(c=>c.id!=clickedId);
+  const sameCompany=others.filter(c=>(c.company_name||'').toLowerCase().trim()===_dupClickedCompany);
+  const diffCompany=others.filter(c=>(c.company_name||'').toLowerCase().trim()!==_dupClickedCompany);
+
+  const srcSel=document.getElementById('dup-source-client');
+  srcSel.innerHTML='<option value="">-- Kis client se courses copy karein? --</option>';
+
+  if(sameCompany.length){
+    const grp=document.createElement('optgroup');
+    grp.label=`── Same Company (${clickedClient?.company_name||''}) ──`;
+    sameCompany.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.id;
+      o.textContent=`${c.company_name}${c.group_name?' — '+c.group_name:''}  (${c.id})`;
+      grp.appendChild(o);
+    });
+    srcSel.appendChild(grp);
+  }
+  if(diffCompany.length){
+    const grp=document.createElement('optgroup');
+    grp.label='── Other Companies ──';
+    diffCompany.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.id;
+      o.textContent=`${c.company_name}${c.group_name?' — '+c.group_name:''}`;
+      grp.appendChild(o);
+    });
+    srcSel.appendChild(grp);
+  }
+
+  // ── Render course checkboxes for mode-1 (clicked client's own courses) ──
+  const total=_dupAllCoursesCache.length;
+  if(!total){
+    checkboxEl.innerHTML='<p style="color:var(--muted);font-size:13px;padding:12px;text-align:center;">No courses available.</p>';
+    return;
+  }
+  const preChecked=_dupAllCoursesCache.filter(c=>clickedAllowedIds.has(c.id)).length;
+  const titleEl2=document.getElementById('dupCorpTitle');
+  if(titleEl2) titleEl2.innerHTML=`<i class="fas fa-copy" style="color:var(--orange);margin-right:8px;"></i>Duplicate — <strong>${escHtml(clickedName)}</strong> <span id="dupCheckedCount" style="font-size:13px;font-weight:400;color:var(--muted);">(${preChecked}/${total} selected)</span>`;
+  document.getElementById('dupCourseSummary').textContent=`${preChecked} course${preChecked!==1?'s':''} selected`;
+  _renderDupCheckboxes(clickedAllowedIds,total,'',_dupAllCoursesCache,'clicked');
+}
+
+// ── When user picks a source client in "Copy INTO" mode ──────────────────────
+async function onDupSourceClientChange(){
+  const sourceId=document.getElementById('dup-source-client').value;
+  if(!sourceId){
+    _renderDupCheckboxes(new Set(),_dupAllCoursesCache.length,'source select karne ke baad courses dikhenge');
+    return;
+  }
+  const checkboxEl=document.getElementById('dupCourseCheckboxes');
+  checkboxEl.innerHTML='<div style="text-align:center;padding:18px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading source courses...</div>';
+  const r=await api('GET',`/corporate/${sourceId}/allowed-courses`);
+  const sourceAllowedIds=new Set((r.data||[]).map(c=>c.course_id));
+  const total=_dupAllCoursesCache.length;
+  const sourceName=document.getElementById('dup-source-client').selectedOptions[0]?.text||'source';
+  _renderDupCheckboxes(sourceAllowedIds,total,'',_dupAllCoursesCache,'source',sourceName);
+  const cnt=_dupAllCoursesCache.filter(c=>sourceAllowedIds.has(c.id)).length;
+  document.getElementById('dupCourseSummary').textContent=`${cnt} course${cnt!==1?'s':''} selected from source`;
+}
+
+// ── Helper: load clicked client's courses (mode-1 reload) ───────────────────
+async function _loadAndRenderDupCourses(clientId){
+  const r=await api('GET',`/corporate/${clientId}/allowed-courses`);
+  const ids=new Set((r.data||[]).map(c=>c.course_id));
+  _renderDupCheckboxes(ids,_dupAllCoursesCache.length,'',_dupAllCoursesCache,'clicked');
+}
+
+// ── Render the checkbox list ─────────────────────────────────────────────────
+function _renderDupCheckboxes(checkedIds,total,emptyMsg,courseList,srcLabel,srcName){
+  const checkboxEl=document.getElementById('dupCourseCheckboxes');
+  courseList=courseList||_dupAllCoursesCache;
+  if(!courseList.length||emptyMsg){
+    checkboxEl.innerHTML=`<p style="color:var(--muted);font-size:13px;text-align:center;padding:14px;">${emptyMsg||'Loading courses...'}</p>`;
+    return;
+  }
+  const resetBtn=checkedIds.size>0
+    ?`<button type="button" class="btn btn-outline btn-sm" onclick="setDupSourceCourses([${[...checkedIds].join(',')}],${total})" style="color:var(--navy);border-color:var(--navy);"><i class="fas fa-undo"></i> Reset</button>`:'';
+  checkboxEl.innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="setDupAllCourses(true)"><i class="fas fa-check-square"></i> Select All</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="setDupAllCourses(false)"><i class="fas fa-square"></i> Deselect All</button>
+      ${resetBtn}
+    </div>
+    <div id="dupCourseList">
+    ${courseList.map((c,i)=>{
+      const isChecked=checkedIds.has(c.id);
+      const badge=isChecked&&srcLabel?`&nbsp;<span style="background:${srcLabel==='clicked'?'#e3f2fd':'#e8f5e9'};color:${srcLabel==='clicked'?'#1565c0':'#2e7d32'};border-radius:8px;padding:1px 7px;font-size:10px;font-weight:700;">${srcLabel==='clicked'?'From this client':'From source'}</span>`:'';
+      return`<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--brd);">
+        <input type="checkbox" class="dup-course-chk" value="${c.id}" ${isChecked?'checked':''} style="width:16px;height:16px;accent-color:var(--navy);flex-shrink:0;" onchange="updateDupCount(${total})"/>
+        <div style="flex:1;">
+          <div style="font-weight:600;color:var(--navy);">${escHtml(c.name)}</div>
+          <div style="font-size:11px;color:var(--muted);">${escHtml(c.category_name||'')}${badge}</div>
+        </div>
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${c.status==='Active'?'#e8f5e9':'#fff3e0'};color:${c.status==='Active'?'#2e7d32':'#e65100'};">${c.status||'Active'}</span>
+      </label>`;
+    }).join('')}
+    </div>`;
+  updateDupCount(total);
+}
+
+function setDupSourceCourses(sourceIds,total){
+  const idSet=new Set(sourceIds);
+  document.querySelectorAll('.dup-course-chk').forEach(c=>{c.checked=idSet.has(parseInt(c.value));});
+  updateDupCount(total);
+}
+function setDupAllCourses(val){
+  document.querySelectorAll('.dup-course-chk').forEach(c=>c.checked=val);
+  updateDupCount(document.querySelectorAll('.dup-course-chk').length);
+}
+function updateDupCount(total){
+  const checked=document.querySelectorAll('.dup-course-chk:checked').length;
+  const el=document.getElementById('dupCheckedCount');
+  if(el) el.textContent=`(${checked}/${total} selected)`;
+  const summary=document.getElementById('dupCourseSummary');
+  if(summary) summary.textContent=checked+' course'+(checked!==1?'s':'')+' selected';
+}
+
+// ── Submit ───────────────────────────────────────────────────────────────────
+async function submitDuplicateCorporate(){
+  const clickedId=document.getElementById('dup-corp-source-id').value;
+  const course_ids=[];
+  document.querySelectorAll('.dup-course-chk:checked').forEach(c=>course_ids.push(parseInt(c.value)));
+  const btn=document.getElementById('dup-submit-btn');
+
+  if(_dupMode==='existing'){
+    // ── "Copy INTO this client" — target = clickedId, source = dropdown ──
+    const sourceId=document.getElementById('dup-source-client').value;
+    if(!sourceId){showFormAlert('dupCorpAlert','Please select a source client to copy courses from.','error');return;}
+    if(course_ids.length===0){
+      if(!confirm('No course selected — continue without copying any courses?'))return;
+    }
+    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Copying...';}
+    const r=await api('POST',`/corporate/${clickedId}/copy-courses`,{course_ids});
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-copy"></i> Copy Courses Into This Client';}
+    if(r.success){
+      showFormAlert('dupCorpAlert',`✅ ${course_ids.length} course(s) successfully added to <strong>${escHtml(_dupClickedName)}</strong>!`,'success');
+      setTimeout(()=>{closeModal();loadCorporate();},1500);
+    } else showFormAlert('dupCorpAlert',r.error||'Failed to copy courses','error');
+
+  } else {
+    // ── "Create New Client" — source = clickedId, new client = target ──
+    const new_name=document.getElementById('dup-corp-name').value.trim();
+    const new_group=document.getElementById('dup-corp-group').value.trim();
+    const new_email=document.getElementById('dup-corp-email').value.trim();
+    const new_password=document.getElementById('dup-corp-password').value;
+    if(!new_name||!new_email||!new_password){showFormAlert('dupCorpAlert','New company name, email and password are required.','error');return;}
+    if(course_ids.length===0){
+      if(!confirm('No course selected — new client will be created with 0 courses. Continue?'))return;
+    }
+    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating...';}
+    const r=await api('POST','/corporate/duplicate',{source_id:parseInt(clickedId),new_name,new_email,new_password,new_group,course_ids});
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-plus-circle"></i> Create New Client';}
+    if(r.success){
+      showFormAlert('dupCorpAlert',`✅ "<strong>${escHtml(new_name)}</strong>" successfully created with ${course_ids.length} course(s)!`,'success');
+      setTimeout(()=>{closeModal();loadCorporate();},1500);
+    } else showFormAlert('dupCorpAlert',r.error||'Failed to duplicate','error');
+  }
+}
+
+// ── Utility: escape HTML ─────────────────────────────────────────────────────
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// PROGRESS REPORT
+async function loadProgressReport(){
+  const tbody=document.getElementById('progressTbody');
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:18px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  const r=await api('GET','/progress/all');
+  const rows=r.data||[];
+  tbody.innerHTML=rows.length?rows.map(s=>{
+    const total=parseInt(s.total_modules)||0;
+    const done=parseInt(s.modules_completed)||0;
+    const pct=total>0?Math.round(done/total*100):0;
+    const hrs=Math.floor((parseInt(s.total_time_seconds)||0)/3600);
+    const mins=Math.floor(((parseInt(s.total_time_seconds)||0)%3600)/60);
+    return`<tr>
+      <td><strong>${fmt(s.name)}</strong><br><small style="color:var(--muted);">${fmt(s.email)}</small></td>
+      <td>${fmt(s.course_name||'—')}</td>
+      <td>${fmt(s.batch_name||'—')}</td>
+      <td>${done}/${total} modules</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="prog-bar" style="flex:1;min-width:80px;"><div class="prog-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=40?'var(--orange)':'var(--pink)'};"></div></div>
+          <span style="font-size:12px;font-weight:600;">${pct}%</span>
+        </div>
+      </td>
+      <td>${hrs>0?hrs+'h ':''} ${mins}m</td>
+      <td>${s.last_active?new Date(s.last_active).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'Never'}</td>
+      <td><button class="btn btn-sm btn-outline" onclick="viewStudentProgress(${s.id},${JSON.stringify(s.name||'')})" style="padding:4px 10px;font-size:11px;">Details</button></td>
+    </tr>`;}).join('')
+  :'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px;">No progress data yet.</td></tr>';
+}
+async function viewStudentProgress(studentId,studentName){
+  document.getElementById('progressModalTitle').textContent='Progress: '+studentName;
+  document.getElementById('progressModalContent').innerHTML='<p style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</p>';
+  openModal('studentProgressModal');
+  const r=await api('GET',`/progress/student/${studentId}`);
+  if(!r.success){document.getElementById('progressModalContent').innerHTML='<p style="color:#e53935;padding:20px;">Failed to load progress.</p>';return;}
+  const {progress,summary}=r.data;
+  const hrs=Math.floor((parseInt(summary.total_time_seconds)||0)/3600);
+  const mins=Math.floor(((parseInt(summary.total_time_seconds)||0)%3600)/60);
+  let html=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px;background:#f8faff;border-radius:10px;margin:16px;">
+    <div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--navy);">${summary.modules_completed||0}</div><div style="font-size:12px;color:var(--muted);">Modules Done</div></div>
+    <div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--orange);">${hrs}h ${mins}m</div><div style="font-size:12px;color:var(--muted);">Total Time</div></div>
+    <div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--green);">${summary.modules_touched||0}</div><div style="font-size:12px;color:var(--muted);">Modules Accessed</div></div>
+  </div>
+  <div style="overflow-x:auto;padding:0 16px 16px;">
+    <table><thead><tr><th>Module</th><th>Course</th><th>Status</th><th>Time Spent</th><th>Last Accessed</th></tr></thead>
+    <tbody>${progress.map(p=>{
+      const mSecs=parseInt(p.time_spent_seconds)||0;
+      const mHrs=Math.floor(mSecs/3600);const mMins=Math.floor((mSecs%3600)/60);
+      return`<tr>
+        <td>${p.module_name}</td><td>${p.course_name}</td>
+        <td>${p.completed?'<span class="badge active">Completed</span>':'<span class="badge pending">In Progress</span>'}</td>
+        <td>${mHrs>0?mHrs+'h ':''} ${mMins}m</td>
+        <td>${p.last_accessed?new Date(p.last_accessed).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—'}</td>
+      </tr>`}).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted);">No module data yet</td></tr>'}
+    </tbody></table>
+  </div>`;
+  document.getElementById('progressModalContent').innerHTML=html;
+}
+
+// QUERIES (Admin view)
+async function loadAdminQueries(){
+  const tbody=document.getElementById('queriesTbody');
+  tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:18px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  const r=await api('GET','/queries');
+  const rows=r.data||[];
+  tbody.innerHTML=rows.length?rows.map((q,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${fmt(q.student_name)}</td>
+      <td>${fmt(q.trainer_name||'Unassigned')}</td>
+      <td>${fmt(q.course_name||'—')}</td>
+      <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${q.question}">${fmt(q.question)}</td>
+      <td><span class="badge ${q.status==='answered'?'active':'pending'}">${q.status||'pending'}</span></td>
+      <td>${dateFmt(q.created_at)}</td>
+    </tr>`).join('')
+  :'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:18px;">No queries found.</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// CATEGORY MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+async function loadCategories(){
+  const tbody=document.getElementById('categoryTbody');
+  tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+  const [catR,courseR]=await Promise.all([api('GET','/categories'),api('GET','/courses')]);
+  const cats=catR.data||[];
+  const courses=courseR.data||[];
+  // Count courses per category name
+  const countMap={};
+  courses.forEach(c=>{const k=c.category_name||c.category||'';if(k)countMap[k]=(countMap[k]||0)+1;});
+  if(!cats.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px;">No categories yet. Click "Add New Category" to create one.</td></tr>';return;}
+  tbody.innerHTML=cats.map((c,i)=>`
+    <tr>
+      <td style="color:var(--muted);font-size:13px;">${i+1}</td>
+      <td style="font-weight:600;color:var(--navy);">${escHtml(c.name)}</td>
+      <td><span class="badge ${c.status==='Active'?'active':'pending'}">${c.status||'Active'}</span></td>
+      <td style="font-weight:600;color:var(--teal);">${countMap[c.name]||0} course${(countMap[c.name]||0)!==1?'s':''}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-sm" style="background:#e3f2fd;color:#1565c0;border:1px solid #bbdefb;" onclick="openEditCategoryModal(${c.id},'${escHtml(c.name).replace(/'/g,"\\'")}','${c.status||'Active'}')"><i class="fas fa-edit"></i> Edit</button>
+        <button class="btn btn-sm" style="background:#fdecea;color:#c62828;border:1px solid #f5c6c6;" onclick="deleteCategory(${c.id},'${escHtml(c.name).replace(/'/g,"\\'")}',${countMap[c.name]||0})"><i class="fas fa-trash"></i> Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openAddCategoryModal(){
+  document.getElementById('cat-name').value='';
+  document.getElementById('cat-status').value='Active';
+  document.getElementById('addCatAlert').style.display='none';
+  openModal('addCategoryModal');
+}
+
+async function submitAddCategory(){
+  const name=document.getElementById('cat-name').value.trim();
+  const status=document.getElementById('cat-status').value;
+  if(!name){showFormAlert('addCatAlert','Category name is required.');return;}
+  const r=await api('POST','/categories',{name,status});
+  if(r.success){
+    showFormAlert('addCatAlert','Category added successfully!','success');
+    setTimeout(()=>{closeModal();loadCategories();loadCategoryOptions();},700);
+  } else showFormAlert('addCatAlert',r.error||'Failed to add category.');
+}
+
+function openEditCategoryModal(id,name,status){
+  document.getElementById('edit-cat-id').value=id;
+  document.getElementById('edit-cat-name').value=name;
+  document.getElementById('edit-cat-status').value=status;
+  document.getElementById('editCatAlert').style.display='none';
+  openModal('editCategoryModal');
+}
+
+async function submitEditCategory(){
+  const id=document.getElementById('edit-cat-id').value;
+  const name=document.getElementById('edit-cat-name').value.trim();
+  const status=document.getElementById('edit-cat-status').value;
+  if(!name){showFormAlert('editCatAlert','Category name is required.');return;}
+  const r=await api('PUT',`/categories/${id}`,{name,status});
+  if(r.success){
+    showFormAlert('editCatAlert','Category updated!','success');
+    setTimeout(()=>{closeModal();loadCategories();loadCategoryOptions();},700);
+  } else showFormAlert('editCatAlert',r.error||'Failed to update.');
+}
+
+async function deleteCategory(id,name,courseCount){
+  if(courseCount>0){
+    if(!confirm(`"${name}" se ${courseCount} course(s) linked hain.\n\nPhir bhi delete karna chahte ho? (Courses ka category unlink ho jayega)`))return;
+  } else {
+    if(!confirm(`"${name}" category delete karna chahte ho?`))return;
+  }
+  const r=await api('DELETE',`/categories/${id}`);
+  if(r.success){showToast('Category deleted','success');loadCategories();loadCategoryOptions();}
+  else showToast(r.error||'Delete failed','');
+}
+
+// Quick-add category from Add Course / Edit Course modal
+function openQuickAddCategory(){
+  const name=prompt('Naya category naam darj karein:');
+  if(!name||!name.trim())return;
+  api('POST','/categories',{name:name.trim(),status:'Active'}).then(r=>{
+    if(r.success){
+      showToast('Category "'+name.trim()+'" added!','success');
+      loadCategoryOptions();
+      // Also refresh ec-category if edit modal is open
+      const ecCat=document.getElementById('ec-category');
+      if(ecCat&&ecCat.offsetParent!==null){
+        api('GET','/categories').then(cr=>{
+          const cats=cr.data||[];
+          ecCat.innerHTML='<option value="">— Select Category —</option>'+cats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+          ecCat.value=name.trim();
+        });
+      }
+    } else showToast(r.error||'Failed to add category','');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── PRIMARY UPLOAD TYPE SELECTION (MP4 / SCORM) ─────────────────────────────
+function selectPrimaryType(type){
+  document.getElementById('ac-primary-type-val').value=type;
+  // Reset both labels
+  ['pt-mp4','pt-scorm'].forEach(id=>{const el=document.getElementById(id);if(el){el.style.border='2px solid var(--brd)';el.style.background='#fff';}});
+  // Highlight selected
+  const colors={mp4:{brd:'#1565c0',bg:'#e3f2fd'},scorm:{brd:'#7b1fa2',bg:'#f3e5f5'}};
+  const sel=document.getElementById(type==='mp4'?'pt-mp4':'pt-scorm');
+  if(sel&&colors[type]){sel.style.border='2px solid '+colors[type].brd;sel.style.background=colors[type].bg;}
+  // Show correct upload section
+  const mp4Sec=document.getElementById('ac-mp4-upload');
+  const scormSec=document.getElementById('ac-scorm-upload');
+  if(mp4Sec)mp4Sec.style.display=type==='mp4'?'block':'none';
+  if(scormSec)scormSec.style.display=type==='scorm'?'block':'none';
+}
+
+// ── ASSIGNMENT FILE TYPE SELECTION (Option 2 sub-options) ───────────────────
+function selectAssignmentFileType(type){
+  const scormDiv=document.getElementById('ct-assign-scorm');
+  const pdfDiv=document.getElementById('ct-assign-pdf');
+  const sub1=document.getElementById('assign-sub-opt1');
+  const sub2=document.getElementById('assign-sub-opt2');
+  if(scormDiv)scormDiv.style.display=type==='scorm'?'block':'none';
+  if(pdfDiv)pdfDiv.style.display=type==='pdf'?'block':'none';
+  if(sub1){sub1.style.border=type==='scorm'?'1.5px solid var(--blue)':'1.5px solid var(--brd)';sub1.style.background=type==='scorm'?'#e3f2fd':'#fff';}
+  if(sub2){sub2.style.border=type==='pdf'?'1.5px solid #e53935':'1.5px solid var(--brd)';sub2.style.background=type==='pdf'?'#fce4ec':'#fff';}
+}
+
+// ── HAS ASSIGNMENT TOGGLE ───────────────────────────────────────────────────
+function toggleAssignmentsSection(checked){
+  const container=document.getElementById('ct-assignments-container');
+  if(container) container.style.display=checked?'block':'none';
+  const label=document.getElementById('ac-has-assignments-label');
+  if(label){
+    label.style.background=checked?'#e3f2fd':'#f0f4ff';
+    label.style.borderColor=checked?'var(--blue)':'#c7d7ff';
+  }
+  // Update certificate logic info
+  const certText=document.getElementById('ac-cert-logic-text');
+  if(certText){
+    certText.textContent=checked
+      ?'Certificate will be generated only after the assignment is fully completed.'
+      :'Certificate will be generated automatically when the video / SCORM content is completed.';
+  }
+}
+
+// ── ASSIGNMENT TYPE SELECTION (Options 1 / 2 / 3) ───────────────────────────
+function selectCourseType(type){
+  document.getElementById('ac-course-type-val').value=type;
+  // Reset all option borders
+  ['ct-opt1','ct-opt2','ct-opt3'].forEach(id=>{ const el=document.getElementById(id); if(el){el.style.border='2px solid var(--brd)';el.style.background='#fff';} });
+  // Highlight selected
+  const map={'scorm_assignments':'ct-opt1','scorm_pdf':'ct-opt2','custom_quiz':'ct-opt3'};
+  const sel=document.getElementById(map[type]);
+  if(sel){sel.style.border='2px solid var(--blue)';sel.style.background='#e3f2fd';}
+  // Show/hide sections
+  const uploadSec=document.getElementById('ct-scorm-section');   // Option 2 file upload
+  const quizSec=document.getElementById('ct-quiz-section');
+  const passSec=document.getElementById('ct-passing-section');
+  const assignInfo=document.getElementById('ct-scorm-assign-info');
+  const quizInfo=document.getElementById('ct-quiz-info');
+  if(type==='scorm_assignments'){
+    // Option 1: already in course — no upload needed
+    if(uploadSec)uploadSec.style.display='none';
+    if(quizSec)quizSec.style.display='none';
+    if(passSec)passSec.style.display='block';
+    if(assignInfo)assignInfo.style.display='block';
+    if(quizInfo)quizInfo.style.display='none';
+  } else if(type==='scorm_pdf'){
+    // Option 2: file upload (SCORM or PDF)
+    if(uploadSec)uploadSec.style.display='block';
+    if(quizSec)quizSec.style.display='none';
+    if(passSec)passSec.style.display='none';
+    if(assignInfo)assignInfo.style.display='none';
+    if(quizInfo)quizInfo.style.display='none';
+    selectAssignmentFileType('scorm'); // default to 2.1
+  } else if(type==='custom_quiz'){
+    // Option 3: custom MCQ quiz
+    if(uploadSec)uploadSec.style.display='none';
+    if(quizSec)quizSec.style.display='block';
+    if(passSec)passSec.style.display='block';
+    if(assignInfo)assignInfo.style.display='none';
+    if(quizInfo)quizInfo.style.display='block';
+  }
+}
+
+// ── QUIZ BUILDER ─────────────────────────────────────────────────────────────
+let _quizQuestions = []; // array of {question, optA, optB, optC, optD, correct}
+function addQuizQuestion(){
+  const idx=_quizQuestions.length;
+  _quizQuestions.push({question:'',optA:'',optB:'',optC:'',optD:'',correct:'A'});
+  renderQuizQuestions();
+}
+function removeQuizQuestion(idx){
+  _quizQuestions.splice(idx,1);
+  renderQuizQuestions();
+}
+function updateQuizQ(idx,field,val){
+  if(_quizQuestions[idx]) _quizQuestions[idx][field]=val;
+}
+function renderQuizQuestions(){
+  const container=document.getElementById('quiz-questions-list');
+  if(!container)return;
+  if(!_quizQuestions.length){
+    container.innerHTML='<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px;">No questions yet. Click "+ Add Question" to start building the quiz.</p>';
+    return;
+  }
+  container.innerHTML=_quizQuestions.map((q,i)=>`
+    <div style="background:#fff;border:1px solid #c8e6c9;border-radius:10px;padding:14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:700;color:#2e7d32;">Question ${i+1}</span>
+        <button type="button" onclick="removeQuizQuestion(${i})" style="background:#fdecea;border:none;color:#c62828;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;"><i class="fas fa-trash"></i></button>
+      </div>
+      <textarea onchange="updateQuizQ(${i},'question',this.value)" placeholder="Enter question…" style="width:100%;padding:8px;border:1px solid var(--brd);border-radius:8px;font-size:12px;font-family:inherit;min-height:56px;resize:vertical;margin-bottom:8px;">${q.question||''}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><label style="font-size:11px;font-weight:600;color:var(--muted);">A.</label><input type="text" value="${q.optA||''}" onchange="updateQuizQ(${i},'optA',this.value)" placeholder="Option A" style="width:100%;padding:6px 8px;border:1px solid var(--brd);border-radius:6px;font-size:12px;"/></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--muted);">B.</label><input type="text" value="${q.optB||''}" onchange="updateQuizQ(${i},'optB',this.value)" placeholder="Option B" style="width:100%;padding:6px 8px;border:1px solid var(--brd);border-radius:6px;font-size:12px;"/></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--muted);">C.</label><input type="text" value="${q.optC||''}" onchange="updateQuizQ(${i},'optC',this.value)" placeholder="Option C (optional)" style="width:100%;padding:6px 8px;border:1px solid var(--brd);border-radius:6px;font-size:12px;"/></div>
+        <div><label style="font-size:11px;font-weight:600;color:var(--muted);">D.</label><input type="text" value="${q.optD||''}" onchange="updateQuizQ(${i},'optD',this.value)" placeholder="Option D (optional)" style="width:100%;padding:6px 8px;border:1px solid var(--brd);border-radius:6px;font-size:12px;"/></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;font-weight:600;color:#2e7d32;">Correct Answer:</span>
+        ${['A','B','C','D'].map(opt=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;">
+          <input type="radio" name="correct-${i}" value="${opt}" ${q.correct===opt?'checked':''} onchange="updateQuizQ(${i},'correct','${opt}')"/> ${opt}
+        </label>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ── SAVE QUIZ QUESTIONS TO SERVER ────────────────────────────────────────────
+async function saveQuizQuestions(courseId){
+  const valid=_quizQuestions.filter(q=>q.question.trim()&&q.optA.trim()&&q.optB.trim());
+  if(!valid.length)return;
+  for(const q of valid){
+    await api('POST','/mcqs',{question:q.question,course:await getCourseNameById(courseId),answer:q.correct,oa:q.optA,ob:q.optB,oc:q.optC||'',od:q.optD||''});
+  }
+}
+async function getCourseNameById(courseId){
+  const r=await api('GET','/courses');
+  const c=(r.data||r||[]).find(x=>x.id===courseId||String(x.id)===String(courseId));
+  return c?c.name:'';
+}
+
+let _acTrainersList = []; // cache trainers with bio for Add Course modal
+
+async function loadCategoryOptions(){
+  const sel=document.getElementById('ac-category');
+  if(!sel)return;
+  const r=await api('GET','/categories');
+  const cats=r.data||[];
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— Select Category —</option>'+cats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  if(prev)sel.value=prev;
+  // Load trainers with bio
+  const trSel=document.getElementById('ac-trainer');
+  if(trSel){
+    const tr=await api('GET','/trainers');
+    _acTrainersList=tr.data||[];
+    trSel.innerHTML='<option value="">— No Trainer —</option>'+_acTrainersList.map(t=>`<option value="${t.id}">${t.name}${t.expertise?' — '+t.expertise:''}</option>`).join('');
+    // Reset preview
+    document.getElementById('ac-trainer-preview').style.display='none';
+  }
+}
+
+function onCourseTrainerChange(){
+  const sel=document.getElementById('ac-trainer');
+  const tid=sel?.value;
+  const preview=document.getElementById('ac-trainer-preview');
+  if(!tid){ preview.style.display='none'; return; }
+  const t=_acTrainersList.find(x=>String(x.id)===String(tid));
+  if(!t){ preview.style.display='none'; return; }
+  // Fill preview
+  preview.style.display='block';
+  document.getElementById('ac-tp-name').textContent=t.name||'—';
+  document.getElementById('ac-tp-expertise').textContent=t.expertise||'Trainer';
+  // Avatar
+  const av=document.getElementById('ac-tp-avatar');
+  if(t.profile_photo){
+    av.innerHTML=`<img src="${t.profile_photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user-tie\\' style=\\'color:#fff;font-size:18px;\\'></i>'"/>`;
+  } else {
+    av.innerHTML='<i class="fas fa-user-tie" style="color:#fff;font-size:18px;"></i>';
+  }
+  // Bio
+  const bioEl=document.getElementById('ac-tp-bio');
+  const noBioEl=document.getElementById('ac-tp-no-bio');
+  const editorEl=document.getElementById('ac-tp-bio-editor');
+  editorEl.style.display='none';
+  if(t.bio){
+    bioEl.textContent=t.bio;
+    bioEl.style.display='block';
+    noBioEl.style.display='none';
+  } else {
+    bioEl.style.display='none';
+    noBioEl.style.display='block';
+  }
+  // Pre-fill bio editor
+  document.getElementById('ac-tp-bio-input').value=t.bio||'';
+}
+
+function openEditTrainerBioFromCourse(){
+  const editorEl=document.getElementById('ac-tp-bio-editor');
+  editorEl.style.display=editorEl.style.display==='block'?'none':'block';
+  if(editorEl.style.display==='block'){
+    document.getElementById('ac-tp-bio-input').focus();
+  }
+}
+
+async function saveCourseTrainerBio(){
+  const tid=document.getElementById('ac-trainer')?.value;
+  if(!tid) return;
+  const bio=document.getElementById('ac-tp-bio-input').value.trim();
+  const expertise=document.getElementById('ac-tp-expertise').textContent||'';
+  if(!bio){ alert('Please enter a bio description.'); return; }
+  const r=await api('PATCH',`/trainers/${tid}/bio`,{bio,expertise});
+  if(r.success){
+    // Update local cache
+    const t=_acTrainersList.find(x=>String(x.id)===String(tid));
+    if(t) t.bio=bio;
+    // Refresh preview
+    onCourseTrainerChange();
+    showToast('✅ Trainer bio saved!','success');
+  } else {
+    showToast(r.error||'Failed to save bio','error');
+  }
 }
 async function deleteCourse(id){if(!confirm('Delete this course?'))return;const r=await api('DELETE',`/courses/${id}`);if(r.success)loadCourses();}
+
+// Populate batch dropdown in Add Student modal
+async function loadBatchesForStudent(){
+  const sel=document.getElementById('as-batch');
+  if(!sel)return;
+  const r=await api('GET','/batches');
+  const rows=(r.data||[]);
+  sel.innerHTML='<option value="">— Select Batch —</option>'+rows.map(b=>`<option value="${b.id}">${b.name}${b.course_title?` (${b.course_title})`:''}</option>`).join('');
+}
 
 // ─ BATCHES ─
 async function loadBatches(){
@@ -913,11 +2956,209 @@ async function addFee(){
 }
 
 // ─ CERTIFICATES ─
+let _allCertRows = []; // cache for search filter
+
 async function loadCertificates(){
-  const r=await api('GET','/certificates');
-  const rows=r.data||[];
-  document.getElementById('certsTbody').innerHTML=rows.length?rows.map((c,i)=>`<tr><td>${i+1}</td><td>${fmt(c.student_name)}</td><td>${fmt(c.course_title)}</td><td>${fmt(c.certificate_number||'—')}</td><td>${dateFmt(c.issued_on)}</td><td><a href="${c.file_url||'#'}" target="_blank" class="btn btn-sm btn-outline"><i class="fas fa-download"></i></a></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;">No certificates issued.</td></tr>';
+  const tbody = document.getElementById('participantCertsTbody');
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  const r = await api('GET', '/participant-certificates');
+  _allCertRows = Array.isArray(r) ? r : (r.data || []);
+
+  // Update stat cards
+  const now = new Date();
+  const thisMonth = _allCertRows.filter(c => {
+    const d = new Date(c.issued_date||c.created_at);
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  }).length;
+  const uniqueParticipants = new Set(_allCertRows.map(c=>c.participant_id)).size;
+  const uniqueCourses = new Set(_allCertRows.map(c=>c.course_id)).size;
+  const setEl = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  setEl('cert-stat-total', _allCertRows.length);
+  setEl('cert-stat-month', thisMonth);
+  setEl('cert-stat-participants', uniqueParticipants);
+  setEl('cert-stat-courses', uniqueCourses);
+
+  renderCertTable(_allCertRows);
 }
+
+function renderCertTable(rows){
+  const tbody = document.getElementById('participantCertsTbody');
+  if(!tbody) return;
+  tbody.innerHTML = rows.length ? rows.map((c,i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td>
+        <div style="font-weight:600;color:var(--navy);">${c.participant_name||'—'}</div>
+        <div style="font-size:11px;color:var(--muted);">${c.participant_email||''}</div>
+      </td>
+      <td>${c.corporate_name||'—'}</td>
+      <td style="font-weight:500;">${c.course_name||'—'}</td>
+      <td><span style="font-family:monospace;font-size:12px;background:#f0f4ff;padding:3px 8px;border-radius:4px;color:var(--blue);">${c.certificate_no||'—'}</span></td>
+      <td>${c.issued_date ? new Date(c.issued_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+      <td><button onclick="adminViewCert('${c.certificate_no}','${(c.participant_name||'').replace(/'/g,"\\'")}','${(c.course_name||'').replace(/'/g,"\\'")}','${c.issued_date||''}')" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</button></td>
+    </tr>
+  `).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;"><i class="fas fa-certificate" style="font-size:32px;opacity:0.2;display:block;margin-bottom:10px;"></i>No certificates issued yet.</td></tr>';
+}
+
+function filterCertTable(){
+  const q = (document.getElementById('certSearchInput')?.value||'').toLowerCase();
+  if(!q){ renderCertTable(_allCertRows); return; }
+  renderCertTable(_allCertRows.filter(c =>
+    (c.participant_name||'').toLowerCase().includes(q) ||
+    (c.participant_email||'').toLowerCase().includes(q) ||
+    (c.course_name||'').toLowerCase().includes(q) ||
+    (c.corporate_name||'').toLowerCase().includes(q) ||
+    (c.certificate_no||'').toLowerCase().includes(q)
+  ));
+}
+
+// Preview the fixed sample certificate design
+function previewSampleCert(){
+  renderCertWindow({
+    participant_name: 'Participant Name',
+    course_name: 'Sample Course Name',
+    certificate_no: 'CERT-SAMPLE-2024',
+    issued_date: new Date().toISOString(),
+    corporate_name: ''
+  });
+}
+
+// Admin view: pass data directly (no extra API call needed)
+function adminViewCert(certNo, participantName, courseName, issuedDate){
+  renderCertWindow({
+    participant_name: participantName,
+    course_name: courseName,
+    certificate_no: certNo,
+    issued_date: issuedDate
+  });
+}
+
+// Single shared certificate renderer — fixed beautiful design, only data changes
+function renderCertWindow(d){
+  const accent = '#1a237e';
+  const gold   = '#b8960c';
+  const date   = d.issued_date ? new Date(d.issued_date).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+  const w = window.open('','_blank','width=960,height=700');
+  w.document.open();
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+  <title>Certificate — ${d.certificate_no||''}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Lato',sans-serif;background:#eef2f7;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 16px;}
+    .cert{width:880px;max-width:100%;background:#fff;position:relative;box-shadow:0 12px 48px rgba(0,0,0,0.18);}
+    /* Outer gold border */
+    .cert-border{padding:14px;background:linear-gradient(135deg,${gold},#e6c35a,${gold},#c9a227,${gold});}
+    /* White inner with navy frame */
+    .cert-frame{background:#fff;border:4px solid ${accent};padding:10px;}
+    .cert-inner{padding:44px 64px;text-align:center;position:relative;background:#fff;}
+    /* Corner ornaments */
+    .orn{position:absolute;font-size:28px;color:${gold};line-height:1;}
+    .orn-tl{top:8px;left:12px;} .orn-tr{top:8px;right:12px;}
+    .orn-bl{bottom:8px;left:12px;} .orn-br{bottom:8px;right:12px;}
+    /* Header band */
+    .cert-header{background:linear-gradient(135deg,${accent},#1565c0);margin:-44px -64px 28px;padding:22px 64px;display:flex;align-items:center;justify-content:space-between;}
+    .cert-logo{font-family:'Cinzel',serif;font-size:20px;color:#fff;font-weight:700;letter-spacing:2px;}
+    .cert-logo span{color:${gold};}
+    .cert-header-right{font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;}
+    /* Title */
+    .cert-title{font-family:'Cinzel',serif;font-size:34px;font-weight:700;color:${accent};letter-spacing:2px;margin-bottom:4px;}
+    .cert-title-sub{font-size:11px;color:${gold};letter-spacing:6px;text-transform:uppercase;margin-bottom:22px;font-weight:700;}
+    /* Divider */
+    .divider{display:flex;align-items:center;gap:14px;justify-content:center;margin:16px 0;}
+    .divider-line{flex:1;height:1px;max-width:120px;background:linear-gradient(to right,transparent,${gold});}
+    .divider-line.r{background:linear-gradient(to left,transparent,${gold});}
+    .divider-star{color:${gold};font-size:18px;}
+    /* Presented to */
+    .present-to{font-size:12px;color:#90a4ae;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;}
+    /* Name */
+    .cert-name{font-family:'Cinzel',serif;font-size:42px;font-weight:600;color:#1a237e;margin-bottom:16px;letter-spacing:1px;}
+    /* Body */
+    .cert-body{font-size:14px;color:#607d8b;line-height:1.8;margin-bottom:8px;}
+    /* Course */
+    .cert-course{font-family:'Cinzel',serif;font-size:22px;font-weight:600;color:${accent};margin:12px auto 28px;padding:10px 28px;border-top:1px solid ${gold}44;border-bottom:1px solid ${gold}44;display:inline-block;}
+    /* Footer meta */
+    .cert-footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid #e8eaf6;}
+    .cert-footer-block{text-align:center;min-width:160px;}
+    .footer-label{font-size:10px;color:#b0bec5;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+    .footer-val{font-size:13px;font-weight:700;color:#263238;}
+    .footer-mono{font-family:monospace;font-size:12px;color:#78909c;background:#f5f5f5;padding:3px 10px;border-radius:4px;display:inline-block;}
+    .seal{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,${accent},#1565c0);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;box-shadow:0 2px 8px rgba(26,35,126,0.3);}
+    .seal i{color:${gold};font-size:26px;}
+    /* Print button */
+    .print-bar{margin-top:24px;display:flex;gap:12px;align-items:center;}
+    .btn-print{padding:11px 32px;background:${accent};color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:8px;}
+    .btn-print:hover{background:#283593;}
+    .btn-note{font-size:11px;color:#90a4ae;}
+    @media print{
+      body{background:#fff;padding:0;}
+      .print-bar{display:none!important;}
+      .cert{width:100%!important;box-shadow:none!important;}
+    }
+  </style></head><body>
+  <div class="cert">
+    <div class="cert-border">
+      <div class="cert-frame">
+        <div class="cert-inner">
+          <div class="orn orn-tl">❧</div><div class="orn orn-tr">❧</div>
+          <div class="orn orn-bl">❧</div><div class="orn orn-br">❧</div>
+
+          <!-- Header -->
+          <div class="cert-header">
+            <div class="cert-logo">Smart<span>LMS</span></div>
+            <div class="cert-header-right">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>
+          </div>
+
+          <!-- Title -->
+          <div class="cert-title">Certificate</div>
+          <div class="cert-title-sub">of Completion</div>
+
+          <div class="divider">
+            <div class="divider-line"></div>
+            <span class="divider-star">✦</span>
+            <div class="divider-line r"></div>
+          </div>
+
+          <!-- Recipient -->
+          <div class="present-to">This is to certify that</div>
+          <div class="cert-name">${d.participant_name||'Participant'}</div>
+
+          <!-- Body -->
+          <div class="cert-body">has successfully completed all requirements of the course</div>
+          <div class="cert-course">${d.course_name||'Course Name'}</div>
+
+          <!-- Footer row -->
+          <div class="cert-footer">
+            <div class="cert-footer-block">
+              <div class="footer-label">Date of Issue</div>
+              <div class="footer-val">${date}</div>
+            </div>
+            <div class="cert-footer-block">
+              <div class="seal"><i class="fas fa-certificate"></i></div>
+              <div style="font-size:10px;color:#90a4ae;letter-spacing:1px;">VERIFIED</div>
+            </div>
+            <div class="cert-footer-block">
+              <div class="footer-label">Certificate No.</div>
+              <div class="footer-mono">${d.certificate_no||'—'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="print-bar">
+    <button class="btn-print" onclick="window.print()">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+      Print / Save as PDF
+    </button>
+    <span class="btn-note">Use browser Print → Save as PDF to download</span>
+  </div>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  </body></html>`);
+  w.document.close();
+}
+
 async function issueCertificate(){
   const student_id=document.getElementById('ic-student').value,course_id=document.getElementById('ic-course').value,issued_on=document.getElementById('ic-date').value;
   if(!student_id||!course_id){showFormAlert('issueCertAlert','Student and course are required.');return;}
@@ -997,6 +3238,33 @@ async function uploadLogo(){
 
 function exportReport(type){window.open(API(`/reports/${type}`)+'?token='+TOKEN(),'_blank');}
 
+// ─ SCORM / Video Content Type Toggle ─
+function toggleScormType(val){
+  const fileInput=document.getElementById('su-file');
+  const fileLabel=document.getElementById('su-file-label');
+  const fileHint=document.getElementById('su-file-hint');
+  const versionGroup=document.getElementById('su-version-group');
+  const btn=document.getElementById('scormUploadBtn');
+  // Update radio label borders
+  document.querySelectorAll('input[name="su-ctype"]').forEach(r=>{
+    r.closest('label').style.border=r.checked?'2px solid var(--orange)':'2px solid var(--brd)';
+    r.closest('label').style.background=r.checked?'#fff8f4':'';
+  });
+  if(val==='video'){
+    fileInput.accept='.mp4,.webm,.mov';
+    fileLabel.innerHTML='Video File <span style="color:red;">*</span>';
+    fileHint.textContent='Supported: .mp4, .webm, .mov (max 500MB)';
+    versionGroup.style.display='none';
+    btn.innerHTML='<i class="fas fa-upload"></i> Upload Video';
+  } else {
+    fileInput.accept='.zip';
+    fileLabel.innerHTML='SCORM ZIP File <span style="color:red;">*</span>';
+    fileHint.textContent='Supported: .zip (SCORM package)';
+    versionGroup.style.display='';
+    btn.innerHTML='<i class="fas fa-upload"></i> Upload & Extract';
+  }
+}
+
 // ─ SCORM ─
 async function loadScormPackages(){
   const r=await api('GET','/scorm/packages');
@@ -1005,19 +3273,29 @@ async function loadScormPackages(){
   // Populate filter
   const f=document.getElementById('scormPkgFilter');
   f.innerHTML='<option value="">All Packages</option>'+pkgs.map(p=>`<option value="${p.id}">${fmt(p.package_name)}</option>`).join('');
-  document.getElementById('scormTbody').innerHTML=pkgs.length?pkgs.map((p,i)=>`
-    <tr>
+  document.getElementById('scormTbody').innerHTML=pkgs.length?pkgs.map((p,i)=>{
+    const isVideo=(p.content_type||'scorm')==='video';
+    const typeBadge=isVideo
+      ?`<span class="badge" style="background:#e91e8c20;color:#e91e8c;border:1px solid #e91e8c40;"><i class="fas fa-video"></i> Video</span>`
+      :`<span class="badge pending"><i class="fas fa-cube"></i> SCORM</span>`;
+    const previewBtn=isVideo
+      ?`<a href="${p.upload_path}" target="_blank" class="btn btn-sm btn-primary" title="Play Video"><i class="fas fa-play"></i></a>`
+      :`<a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" target="_blank" class="btn btn-sm btn-primary" title="Preview SCORM"><i class="fas fa-play"></i></a>`;
+    return`<tr>
       <td>${i+1}</td>
       <td><strong>${fmt(p.package_name)}</strong></td>
-      <td><span class="badge pending">${p.scorm_version||'1.2'}</span></td>
+      <td>${typeBadge}</td>
+      <td>${isVideo?'—':`<span class="badge pending">${p.scorm_version||'1.2'}</span>`}</td>
       <td>${fmt(p.module_name||'—')}</td>
       <td>${fmt(p.course_name||'—')}</td>
       <td>${dateFmt(p.created_at)}</td>
       <td>
-        <a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" target="_blank" class="btn btn-sm btn-primary" title="Preview"><i class="fas fa-play"></i></a>
+        ${previewBtn}
+        ${!isVideo?`<button class="btn btn-sm btn-secondary" onclick="rescanScorm(${p.id})" title="Re-scan launch URL"><i class="fas fa-sync-alt"></i></button>`:''}
         <button class="btn btn-sm btn-danger" onclick="deleteScorm(${p.id})" title="Delete"><i class="fas fa-trash"></i></button>
       </td>
-    </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No SCORM packages uploaded yet.</td></tr>';
+    </tr>`;
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">No content uploaded yet.</td></tr>';
 }
 async function loadScormTracking(){
   const pkgId=document.getElementById('scormPkgFilter').value;
@@ -1041,31 +3319,45 @@ async function deleteScorm(id){
   const r=await api('DELETE','/scorm/packages/'+id);
   if(r.success)loadScormPackages();else alert(r.error||'Delete failed');
 }
+async function rescanScorm(id){
+  if(!confirm('Re-scan this SCORM package to fix the launch URL? This will re-detect the correct HTML entry point.'))return;
+  const r=await api('POST','/scorm/packages/'+id+'/rescan');
+  if(r.success){
+    alert('Re-scan complete!\nNew launch URL: '+(r.data&&r.data.launch_url||'updated'));
+    loadScormPackages();
+  }else{
+    alert(r.error||'Re-scan failed');
+  }
+}
 async function uploadScorm(){
   const name=document.getElementById('su-name').value.trim();
   const file=document.getElementById('su-file').files[0];
   const version=document.getElementById('su-version').value;
   const moduleId=document.getElementById('su-module').value;
-  if(!name||!file){showFormAlert('scormUploadAlert','Please enter a name and select a ZIP file.');return;}
+  const ctype=document.querySelector('input[name="su-ctype"]:checked')?.value||'scorm';
+  const isVideo=ctype==='video';
+  if(!name||!file){showFormAlert('scormUploadAlert',`Please enter a name and select a ${isVideo?'video':'ZIP'} file.`);return;}
   const btn=document.getElementById('scormUploadBtn');
   btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Uploading…';
   document.getElementById('scormUploadProgress').style.display='block';
-  document.getElementById('scormProgressBar').style.width='30%';
-  document.getElementById('scormProgressText').textContent='Uploading ZIP file…';
+  document.getElementById('scormProgressBar').style.width='20%';
+  document.getElementById('scormProgressBar').style.background='var(--orange)';
+  document.getElementById('scormProgressText').textContent=isVideo?'Uploading video file…':'Uploading ZIP file…';
   try{
     const fd=new FormData();
     fd.append('scorm',file);
     fd.append('package_name',name);
-    fd.append('scorm_version',version);
+    fd.append('content_type',ctype);
+    if(!isVideo)fd.append('scorm_version',version);
     if(moduleId)fd.append('module_id',moduleId);
     const h={'Authorization':'Bearer '+TOKEN()};
     document.getElementById('scormProgressBar').style.width='60%';
-    document.getElementById('scormProgressText').textContent='Extracting package…';
+    document.getElementById('scormProgressText').textContent=isVideo?'Processing video…':'Extracting package…';
     const resp=await fetch(API('/scorm/upload'),{method:'POST',headers:h,body:fd});
     const d=await resp.json();
     document.getElementById('scormProgressBar').style.width='100%';
     if(d.success){
-      document.getElementById('scormProgressText').textContent='Done! Package extracted successfully.';
+      document.getElementById('scormProgressText').textContent=isVideo?'Video uploaded successfully!':'Done! Package extracted successfully.';
       document.getElementById('scormProgressBar').style.background='#43a047';
       setTimeout(()=>{closeModal();loadScormPackages();},1200);
     }else{
@@ -1073,33 +3365,42 @@ async function uploadScorm(){
       document.getElementById('scormUploadProgress').style.display='none';
     }
   }catch(e){showFormAlert('scormUploadAlert','Upload failed: '+e.message);}
-  btn.disabled=false;btn.innerHTML='<i class="fas fa-upload"></i> Upload & Extract';
+  btn.disabled=false;btn.innerHTML=`<i class="fas fa-upload"></i> ${isVideo?'Upload Video':'Upload & Extract'}`;
 }
 
 // ─ Init ─
 (async()=>{
-  await Promise.all([loadCourses(),loadBatches()]);
-  // populate student selects
-  const sr=await api('GET','/students?limit=200');
-  const students=sr.data?.students||sr.data||[];
-  [document.getElementById('af-student'),document.getElementById('ic-student')].forEach(s=>{
-    if(s)s.innerHTML='<option value="">Select Student</option>'+students.map(st=>`<option value="${st.id}">${st.name}</option>`).join('');
-  });
-  // populate trainer select in batch modal
-  const tr=await api('GET','/trainers');
-  const trainers=tr.data||[];
-  const tsel=document.getElementById('ab-trainer');
-  if(tsel)tsel.innerHTML='<option value="">Select Trainer</option>'+trainers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
-  // populate module select for SCORM upload
-  const mods=await api('GET','/courses');
-  const modSel=document.getElementById('su-module');
-  if(modSel&&mods.success){
-    const courses=mods.data?.courses||mods.data||[];
-    let opts='<option value="">— None —</option>';
-    courses.forEach(c=>{opts+=`<optgroup label="${c.name||c.title}"></optgroup>`;});
-    modSel.innerHTML=opts;
+  try{
+    // Load courses and batches first
+    await loadCourses();
+    await loadBatches();
+
+    // populate student selects
+    const sr=await api('GET','/students?limit=200');
+    const students=sr.data?.students||sr.data||[];
+    [document.getElementById('af-student'),document.getElementById('ic-student')].forEach(s=>{
+      if(s)s.innerHTML='<option value="">Select Student</option>'+students.map(st=>`<option value="${st.id}">${st.name}</option>`).join('');
+    });
+
+    // populate trainer select in batch modal
+    const tr=await api('GET','/trainers');
+    const trainers=tr.data||[];
+    const tsel=document.getElementById('ab-trainer');
+    if(tsel)tsel.innerHTML='<option value="">Select Trainer</option>'+trainers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+
+    // populate module select for SCORM upload
+    const mods=await api('GET','/courses');
+    const modSel=document.getElementById('su-module');
+    if(modSel){
+      const courses=Array.isArray(mods.data)?mods.data:[];
+      modSel.innerHTML='<option value="">— None —</option>'+courses.map(c=>`<option value="${c.id}">${c.name||c.title}</option>`).join('');
+    }
+
+    loadOverview();
+  }catch(initErr){
+    console.error('Init error:',initErr);
+    loadOverview();
   }
-  loadOverview();
 })();
 </script>
 </body>

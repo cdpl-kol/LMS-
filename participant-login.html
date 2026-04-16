@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Participant Login – Smart LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root{--navy:#1a237e;--teal:#00897b;--white:#fff;--text:#263238;--muted:#78909c;--red:#e53935;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;min-height:100vh;background:linear-gradient(135deg,#1a237e 0%,#283593 40%,#00695c 100%);display:flex;align-items:center;justify-content:center;padding:24px 16px;position:relative;overflow:hidden;}
+    body::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='10' y='10' width='60' height='60' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='1'/%3E%3C/svg%3E") repeat;}
+    .glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+    .glow.g1{width:350px;height:350px;background:rgba(255,255,255,0.07);top:-80px;right:-80px;}
+    .glow.g2{width:300px;height:300px;background:rgba(0,137,123,0.2);bottom:-60px;left:-60px;}
+    .card{position:relative;z-index:10;background:#fff;border-radius:24px;padding:40px 36px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,0.25);}
+    .back-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);text-decoration:none;margin-bottom:24px;transition:color 0.2s;}
+    .back-link:hover{color:var(--navy);}
+    .card-header{text-align:center;margin-bottom:28px;}
+    .role-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a237e,#00897b);color:#fff;font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;margin-bottom:16px;letter-spacing:0.5px;}
+    .card-title{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;color:var(--navy);}
+    .card-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+    .form-group{margin-bottom:18px;}
+    .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:7px;}
+    .input-wrap{position:relative;}
+    .input-wrap i.ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;}
+    .input-wrap input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);background:#fafafa;transition:border-color 0.2s;outline:none;}
+    .input-wrap input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,137,123,0.1);background:#fff;}
+    .toggle-pw{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:14px;border:none;background:none;}
+    .btn-login{width:100%;padding:13px;background:linear-gradient(135deg,#1a237e,#00897b);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s,transform 0.15s;margin-top:4px;}
+    .btn-login:hover{opacity:0.9;transform:translateY(-1px);}
+    .btn-login:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+    .msg{padding:11px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
+    .msg.error{background:#fdecea;color:var(--red);border:1px solid #f5c6c6;}
+    .msg.success{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+    .info-box{background:#e8f0fe;border:1px solid #c5d0fc;border-radius:10px;padding:12px 14px;font-size:12px;color:#1a237e;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;}
+    .footer-copy{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;}
+    /* Change password section */
+    .change-pw-section{display:none;}
+    @media(max-width:480px){.card{padding:30px 22px;}}
+  </style>
+</head>
+<body>
+<div class="glow g1"></div><div class="glow g2"></div>
+<div class="card">
+  <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+  <div class="card-header">
+    <div class="role-badge"><i class="fas fa-id-badge"></i>&nbsp;Corporate Participant</div>
+    <div class="card-title">Participant Login</div>
+    <div class="card-sub">Access your assigned training courses</div>
+  </div>
+
+  <div class="info-box">
+    <i class="fas fa-info-circle" style="font-size:16px;margin-top:1px;"></i>
+    <span>Use the <strong>Email</strong> and <strong>One-Time Password (OTP)</strong> sent to your email by your company's HR team.</span>
+  </div>
+
+  <!-- ── Local Dev: Quick Test Credentials ── -->
+  <div style="background:#f0fdf4;border:1.5px dashed #86efac;border-radius:10px;padding:12px 14px;margin-bottom:18px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:12px;font-weight:700;color:#166534;display:flex;align-items:center;gap:6px;">
+        <i class="fas fa-flask"></i> Local Dev — Quick Test Login
+      </div>
+      <button type="button" id="loadCredsBtn" onclick="loadTestCredentials()"
+        style="background:#166534;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;">
+        <i class="fas fa-bolt"></i> Load Credentials
+      </button>
+    </div>
+    <div id="testCredInfo" style="display:none;margin-top:10px;font-size:12px;color:#166534;">
+      <div id="testCredContent"></div>
+    </div>
+  </div>
+
+  <div class="msg" id="msgBox"></div>
+
+  <!-- Login Form -->
+  <div id="loginSection">
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="email">Your Email (Login ID)</label>
+        <div class="input-wrap">
+          <i class="fas fa-envelope ico"></i>
+          <input type="email" id="email" placeholder="your.email@company.com" autocomplete="username" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="password">Password / One-Time Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-key ico"></i>
+          <input type="password" id="password" placeholder="Enter OTP or your password" autocomplete="current-password" required/>
+          <button type="button" class="toggle-pw" onclick="togglePw()"><i class="fas fa-eye" id="eyeIcon"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn-login" id="loginBtn"><i class="fas fa-sign-in-alt"></i>&nbsp; Sign In</button>
+    </form>
+  </div>
+
+  <!-- Change Password Section (shown on first login) -->
+  <div id="changePwSection" class="change-pw-section">
+    <div style="background:#fff3e0;border:1px solid #ffcc02;border-radius:10px;padding:12px 14px;font-size:13px;color:#e65100;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;">
+      <i class="fas fa-exclamation-triangle" style="font-size:16px;margin-top:1px;"></i>
+      <span><strong>First Login:</strong> Please set a new personal password to secure your account.</span>
+    </div>
+    <form id="changePwForm" novalidate>
+      <div class="form-group">
+        <label for="newPw">New Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock ico"></i>
+          <input type="password" id="newPw" placeholder="Min 6 characters" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="confirmPw">Confirm New Password</label>
+        <div class="input-wrap">
+          <i class="fas fa-lock ico"></i>
+          <input type="password" id="confirmPw" placeholder="Repeat new password" required/>
+        </div>
+      </div>
+      <button type="submit" class="btn-login"><i class="fas fa-save"></i>&nbsp; Set Password & Continue</button>
+    </form>
+  </div>
+
+  <div class="footer-copy">© 2026 Connecting Dot Consultancy Pvt. Ltd. All rights reserved.</div>
+</div>
+
+<script>
+  let loginToken='';
+  function togglePw(){const i=document.getElementById('password'),e=document.getElementById('eyeIcon');if(i.type==='password'){i.type='text';e.className='fas fa-eye-slash';}else{i.type='password';e.className='fas fa-eye';}}
+  function showMsg(msg,type='error'){const el=document.getElementById('msgBox');el.textContent=msg;el.className='msg '+type;el.style.display='block';}
+
+  async function loadTestCredentials(){
+    const btn=document.getElementById('loadCredsBtn');
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Loading...';
+    try{
+      const r=await fetch('/api/v1/participant/test-credentials');
+      const d=await r.json();
+      if(d.success&&d.data){
+        const {email,otp_password,name,company}=d.data;
+        document.getElementById('email').value=email;
+        document.getElementById('password').value=otp_password;
+        document.getElementById('testCredInfo').style.display='block';
+        document.getElementById('testCredContent').innerHTML=
+          `<strong>${name}</strong> (${company})<br>`+
+          `Email: <code style="background:#dcfce7;padding:1px 5px;border-radius:4px;">${email}</code><br>`+
+          `OTP: <code style="background:#dcfce7;padding:1px 5px;border-radius:4px;font-size:15px;font-weight:700;letter-spacing:2px;">${otp_password}</code><br>`+
+          `<span style="color:#16a34a;margin-top:4px;display:block;">✅ Credentials auto-filled — click Sign In</span>`;
+        btn.innerHTML='<i class="fas fa-check"></i> Loaded';
+      } else {
+        document.getElementById('testCredInfo').style.display='block';
+        document.getElementById('testCredContent').innerHTML=
+          `<span style="color:#dc2626;">No participants found. Please add a participant from the Corporate portal first.</span>`;
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-bolt"></i> Load Credentials';
+      }
+    }catch{
+      document.getElementById('testCredInfo').style.display='block';
+      document.getElementById('testCredContent').innerHTML=
+        `<span style="color:#dc2626;">Server error. Make sure backend is running on port 3001.</span>`;
+      btn.disabled=false;btn.innerHTML='<i class="fas fa-bolt"></i> Load Credentials';
+    }
+  }
+
+  document.getElementById('loginForm').addEventListener('submit',async(e)=>{
+    e.preventDefault();
+    const email=document.getElementById('email').value.trim();
+    const password=document.getElementById('password').value;
+    if(!email||!password){showMsg('Please enter email and password.');return;}
+    const btn=document.getElementById('loginBtn');
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Signing in...';
+    try{
+      const r=await fetch('/api/v1/participant/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+      const d=await r.json();
+      if(d.success){
+        loginToken=d.data.token;
+        localStorage.setItem('lms_token',d.data.token);
+        localStorage.setItem('lms_user',JSON.stringify({name:d.data.name,role:'participant',id:d.data.id,email,first_login:d.data.first_login}));
+        // Preserve ?goto= param from email link
+        const gotoParam=new URLSearchParams(window.location.search).get('goto');
+        const redirectUrl='participant-dashboard.html'+(gotoParam?'?goto='+gotoParam:'');
+        if(d.data.first_login){
+          // Show change password form
+          document.getElementById('loginSection').style.display='none';
+          document.getElementById('changePwSection').style.display='block';
+          document.getElementById('msgBox').style.display='none';
+        }else{
+          showMsg('Login successful! Redirecting...','success');
+          setTimeout(()=>window.location.href=redirectUrl,600);
+        }
+      }else{showMsg(d.error||'Invalid credentials. Check your email and OTP password.');btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i>&nbsp; Sign In';}
+    }catch{showMsg('Network error. Please ensure the server is running.');btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i>&nbsp; Sign In';}
+  });
+
+  document.getElementById('changePwForm').addEventListener('submit',async(e)=>{
+    e.preventDefault();
+    const newPw=document.getElementById('newPw').value;
+    const confirmPw=document.getElementById('confirmPw').value;
+    if(newPw.length<6){showMsg('Password must be at least 6 characters.');return;}
+    if(newPw!==confirmPw){showMsg('Passwords do not match.');return;}
+    try{
+      const r=await fetch('/api/v1/participant/change-password',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+loginToken},body:JSON.stringify({new_password:newPw})});
+      const d=await r.json();
+      if(d.success){
+        showMsg('Password set successfully! Redirecting...','success');
+        const u=JSON.parse(localStorage.getItem('lms_user')||'{}');
+        u.first_login=false;
+        localStorage.setItem('lms_user',JSON.stringify(u));
+        const gotoParam2=new URLSearchParams(window.location.search).get('goto');
+        const redirectUrl2='participant-dashboard.html'+(gotoParam2?'?goto='+gotoParam2:'');
+        setTimeout(()=>window.location.href=redirectUrl2,800);
+      }else showMsg(d.error||'Failed to change password');
+    }catch{showMsg('Network error.');}
+  });
+</script>
+</body>
+</html>

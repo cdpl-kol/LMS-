@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>My Training – Smart LMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+:root{--navy:#1a237e;--navy2:#111b60;--teal:#00897b;--orange:#ff6b35;--green:#43a047;--bg:#f0f4ff;--white:#fff;--text:#263238;--muted:#78909c;--brd:#e3e8f0;--shadow:0 2px 12px rgba(26,35,126,0.09);--sid-w:240px;--top-h:60px;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);font-size:14px;}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sid-w);background:var(--navy);display:flex;flex-direction:column;z-index:200;overflow-y:auto;}
+.sb-header{padding:16px 18px;background:var(--navy2);display:flex;align-items:center;gap:10px;min-height:var(--top-h);border-bottom:1px solid rgba(255,255,255,0.08);}
+.sb-name{font-size:13px;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;}
+.sb-sub{font-size:11px;color:rgba(255,255,255,0.45);}
+.sb-section{font-size:10px;color:rgba(255,255,255,0.35);padding:18px 18px 6px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 18px;color:rgba(255,255,255,0.72);font-size:13px;cursor:pointer;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all 0.15s;}
+.nav-item i{width:18px;text-align:center;font-size:14px;}
+.nav-item:hover{background:rgba(255,255,255,0.07);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,0.13);color:#fff;border-left:3px solid var(--teal);}
+.sb-footer{margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.08);}
+.sb-user{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.8);font-size:13px;}
+.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;}
+.topbar{position:fixed;top:0;left:var(--sid-w);right:0;height:var(--top-h);background:#fff;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:100;box-shadow:var(--shadow);}
+.page-title{font-family:'Poppins',sans-serif;font-size:16px;font-weight:600;color:var(--navy);}
+.logout-btn{display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--brd);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--muted);cursor:pointer;}
+.logout-btn:hover{border-color:var(--teal);color:var(--teal);}
+.main{margin-left:var(--sid-w);margin-top:var(--top-h);padding:24px;min-height:calc(100vh - var(--top-h));}
+.section{display:none;}.section.active{display:block;}
+.card{background:#fff;border-radius:16px;padding:22px;box-shadow:var(--shadow);border:1px solid var(--brd);margin-bottom:20px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.card-title{font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);}
+.course-card{background:#fff;border-radius:16px;border:1px solid var(--brd);overflow:hidden;box-shadow:var(--shadow);transition:transform 0.2s,box-shadow 0.2s;}
+.course-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(26,35,126,0.14);}
+.course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge.active{background:#e8f5e9;color:#2e7d32;}
+.badge.pending{background:#fff3e0;color:#e65100;}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;font-family:'Inter',sans-serif;}
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--navy));color:#fff;}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-outline{background:transparent;border:1.5px solid var(--brd);color:var(--text);}
+.prog-bar{background:#eee;border-radius:8px;height:8px;overflow:hidden;margin:6px 0;}
+.prog-fill{height:100%;border-radius:8px;transition:width 0.6s ease;}
+.welcome-banner{background:linear-gradient(135deg,#1a237e,#00897b);border-radius:16px;padding:24px 28px;color:#fff;margin-bottom:24px;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:7px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.15s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--teal);}
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;}
+.alert.error{background:#fdecea;color:#c62828;border:1px solid #f5c6c6;}
+.alert.success{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+.toast{position:fixed;bottom:24px;right:24px;background:#263238;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;z-index:500;opacity:0;transform:translateY(20px);transition:all 0.3s;pointer-events:none;}
+.toast.show{opacity:1;transform:none;}
+
+/* ── Course Content Modal ── */
+.content-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;display:none;align-items:center;justify-content:center;}
+.content-modal-overlay.open{display:flex;}
+.content-modal{background:#fff;border-radius:20px;width:min(760px,96vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(26,35,126,0.22);overflow:hidden;}
+.cm-header{background:linear-gradient(135deg,var(--navy),var(--teal));padding:20px 24px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.cm-title{font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;}
+.cm-close{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.cm-close:hover{background:rgba(255,255,255,0.3);}
+.cm-body{overflow-y:auto;padding:20px 24px;flex:1;}
+.module-block{border:1px solid var(--brd);border-radius:12px;margin-bottom:14px;overflow:hidden;}
+.module-header{background:#f0f4ff;padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brd);}
+.module-title{font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:var(--navy);}
+.module-badge{font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;}
+.module-badge.done{background:#e8f5e9;color:#2e7d32;}
+.module-badge.progress{background:#fff3e0;color:#e65100;}
+.module-badge.new{background:#e3f2fd;color:#1565c0;}
+.content-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #f5f5f5;}
+.content-item:last-child{border-bottom:none;}
+.content-item-left{display:flex;align-items:center;gap:10px;}
+.content-item-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.icon-scorm{background:#e3f2fd;color:#1565c0;}
+.icon-video{background:#fce4ec;color:#c62828;}
+.icon-pdf{background:#fdecea;color:#c62828;}
+.icon-link{background:#e8f5e9;color:#2e7d32;}
+.content-item-name{font-size:13px;font-weight:600;color:var(--text);}
+.content-item-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.launch-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;text-decoration:none;white-space:nowrap;transition:all 0.15s;}
+.launch-btn.scorm{background:linear-gradient(135deg,var(--navy),var(--teal));color:#fff;}
+.launch-btn.scorm:hover{opacity:0.9;}
+.launch-btn.pdf{background:#e53935;color:#fff;}
+.launch-btn.pdf:hover{opacity:0.9;}
+.launch-btn.link{background:#43a047;color:#fff;}
+.launch-btn.link:hover{opacity:0.9;}
+.pct-pill{font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;margin-left:6px;}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sb-header">
+    <div><div class="sb-name" id="sbName">Participant</div><div class="sb-sub">Corporate Training</div></div>
+  </div>
+  <button class="nav-item active" onclick="showSection('overview')"><i class="fas fa-th-large"></i>Dashboard</button>
+  <span class="sb-section">My Training</span>
+  <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>My Courses</button>
+  <button class="nav-item" onclick="showSection('certificates')"><i class="fas fa-certificate"></i>My Certificates</button>
+  <span class="sb-section">Account</span>
+  <button class="nav-item" onclick="showSection('profile')"><i class="fas fa-user"></i>My Profile</button>
+  <div class="sb-footer">
+    <div class="sb-user"><div class="sb-avatar" id="sbAvatar">P</div><div id="sbUserName">Participant</div></div>
+    <button onclick="logout()" style="margin-top:10px;background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-sign-out-alt"></i>Logout</button>
+  </div>
+</div>
+
+<div class="topbar">
+  <span class="page-title" id="pageTitle">Dashboard</span>
+  <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</button>
+</div>
+
+<div class="main">
+  <!-- OVERVIEW -->
+  <div class="section active" id="sec-overview">
+    <div class="welcome-banner">
+      <h2 style="font-family:'Poppins',sans-serif;font-size:22px;margin-bottom:6px;">Welcome back, <span id="welcomeName">Participant</span>! 🎓</h2>
+      <p style="opacity:0.85;font-size:14px;">Continue your corporate training journey.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;">
+      <div class="card" style="margin:0;text-align:center;">
+        <div style="font-size:32px;font-weight:700;color:var(--navy);" id="st-total-courses">—</div>
+        <div style="font-size:13px;color:var(--muted);">Assigned Courses</div>
+      </div>
+      <div class="card" style="margin:0;text-align:center;">
+        <div style="font-size:32px;font-weight:700;color:var(--green);" id="st-completed">—</div>
+        <div style="font-size:13px;color:var(--muted);">Courses Completed</div>
+      </div>
+      <div class="card" style="margin:0;text-align:center;">
+        <div style="font-size:32px;font-weight:700;color:var(--orange);" id="st-time">—</div>
+        <div style="font-size:13px;color:var(--muted);">Hours Learned</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">My Assigned Courses</span></div>
+      <div id="overviewCoursesGrid" class="course-grid"></div>
+    </div>
+  </div>
+
+  <!-- MY COURSES -->
+  <div class="section" id="sec-courses">
+    <div style="margin-bottom:20px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">My Training Courses</span>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px;">All courses assigned to you by your company.</p>
+    </div>
+    <div id="myCoursesGrid" class="course-grid">
+      <div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>
+    </div>
+  </div>
+
+  <!-- CERTIFICATES -->
+  <div class="section" id="sec-certificates">
+    <div style="margin-bottom:20px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">My Certificates</span>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px;">Certificates earned by completing courses.</p>
+    </div>
+    <div id="certsGrid"></div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="section" id="sec-profile">
+    <div class="card" style="max-width:500px;">
+      <div class="card-header"><span class="card-title">My Profile</span></div>
+      <div id="profileInfo" style="margin-bottom:20px;"></div>
+      <hr style="border:none;border-top:1px solid var(--brd);margin-bottom:20px;"/>
+      <div class="card-title" style="margin-bottom:14px;font-size:14px;">Change Password</div>
+      <div class="alert" id="changePwAlert"></div>
+      <div class="form-group"><label>Current Password</label><input type="password" id="cp-old" placeholder="Current password"/></div>
+      <div class="form-group"><label>New Password</label><input type="password" id="cp-new" placeholder="Min 6 characters"/></div>
+      <div class="form-group"><label>Confirm New Password</label><input type="password" id="cp-confirm" placeholder="Repeat new password"/></div>
+      <button class="btn btn-primary btn-sm" onclick="changePassword()"><i class="fas fa-lock"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Quiz Modal -->
+<div class="content-modal-overlay" id="quizModalOverlay" onclick="if(event.target===this)closeQuizModal()" style="z-index:450;">
+  <div class="content-modal" style="max-width:680px;">
+    <div class="cm-header">
+      <span class="cm-title" id="quizModalTitle">Course Quiz</span>
+      <button class="cm-close" onclick="closeQuizModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="cm-body" id="quizModalBody">
+      <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- Course Content Modal -->
+<div class="content-modal-overlay" id="courseContentOverlay" onclick="if(event.target===this)closeCourseContent()">
+  <div class="content-modal">
+    <div class="cm-header">
+      <span class="cm-title" id="cmTitle">Course Content</span>
+      <button class="cm-close" onclick="closeCourseContent()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="cm-body" id="cmBody">
+      <div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN=()=>localStorage.getItem('lms_token')||'';
+const USER=()=>{try{return JSON.parse(localStorage.getItem('lms_user')||'{}')}catch{return{};}};
+if(!TOKEN()){window.location.href='participant-login.html';}
+
+const BASE='/api/v1';
+async function api(method,path,body=null){
+  const h={'Content-Type':'application/json','Authorization':'Bearer '+TOKEN()};
+  const opts={method,headers:h};
+  if(body)opts.body=JSON.stringify(body);
+  try{const r=await fetch(BASE+path,opts);if(r.status===401){window.location.href='participant-login.html';return{success:false};}return r.json();}
+  catch{return{success:false,error:'Network error'};}
+}
+function fmt(v){return v===null||v===undefined?'—':v;}
+function showToast(m,t=''){const el=document.getElementById('toast');el.textContent=m;el.className='toast show '+(t||'');setTimeout(()=>el.className='toast',3000);}
+function showAlert(id,m,t='error'){const el=document.getElementById(id);if(!el)return;el.textContent=m;el.className='alert '+t;el.style.display='block';setTimeout(()=>el.style.display='none',5000);}
+function logout(){localStorage.clear();window.location.href='participant-login.html';}
+
+const u=USER();
+if(u.name){
+  document.getElementById('sbName').textContent=u.name;
+  document.getElementById('sbUserName').textContent=u.name;
+  document.getElementById('sbAvatar').textContent=u.name[0]?.toUpperCase()||'P';
+  document.getElementById('welcomeName').textContent=u.name.split(' ')[0];
+}
+
+const sectionTitles={overview:'Dashboard',courses:'My Courses',certificates:'My Certificates',profile:'My Profile'};
+function showSection(name){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const sec=document.getElementById('sec-'+name);if(sec)sec.classList.add('active');
+  document.getElementById('pageTitle').textContent=sectionTitles[name]||name;
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.textContent.trim()===sectionTitles[name])n.classList.add('active');});
+  const loaders={overview:loadOverview,courses:loadMyCourses,certificates:loadCertificates,profile:loadProfile};
+  if(loaders[name])loaders[name]();
+}
+
+function openIntroVideo(url, title) {
+  if (!url) return;
+  const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
+  const w = window.open('', '_blank', 'width=860,height=520');
+  w.document.write(`<html><head><title>Intro: ${title}</title><style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;}</style></head><body>
+    ${isYoutube
+      ? `<iframe width="840" height="480" src="${url}" frameborder="0" allow="autoplay;fullscreen" allowfullscreen></iframe>`
+      : `<video controls autoplay style="max-width:100%;max-height:100vh;"><source src="${url}"/></video>`}
+  </body></html>`);
+}
+
+function renderCourseCard(c,id){
+  const total=parseInt(c.total_modules)||0;
+  const done=parseInt(c.completed_modules)||0;
+  let pct=total>0?Math.round(done/total*100):0;
+  // If no module completion yet but SCORM score exists, use SCORM score as progress
+  if(pct===0 && c.scorm_score!==null && c.scorm_score!==undefined && c.scorm_score!==''){
+    const sMax=parseInt(c.scorm_score_max)||100;
+    const sRaw=parseInt(c.scorm_score)||0;
+    pct=sMax>0?Math.round((sRaw/sMax)*100):0;
+  }
+  const totalSecs=parseInt(c.time_spent_seconds)||0;
+  const hrs=Math.floor(totalSecs/3600);
+  const mins=Math.floor((totalSecs%3600)/60);
+  // SCORM score display
+  let scormScoreHtml='';
+  if(c.scorm_score!==null&&c.scorm_score!==undefined){
+    const sPct=c.scorm_score_max>0?Math.round((c.scorm_score/c.scorm_score_max)*100):0;
+    const sCol=sPct>=60?'#2e7d32':'#e65100';
+    scormScoreHtml=`<div style="font-size:12px;margin-bottom:8px;padding:6px 10px;background:#f0f4ff;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="color:var(--muted);"><i class="fas fa-star-half-alt"></i> SCORM Score</span>
+      <span style="font-weight:700;color:${sCol};">${c.scorm_score}/${c.scorm_score_max||100} (${sPct}%)</span>
+    </div>`;
+  }
+  // Quiz button only for Option 3 (custom_quiz) — Options 1 & 2 get cert directly from SCORM completion
+  const needsQuiz=c.course_type==='custom_quiz';
+  const scormDone=parseInt(c.scorm_completed)||0;
+  let quizBtnHtml='';
+  if(needsQuiz){
+    if(c.course_type==='custom_quiz' && !scormDone){
+      quizBtnHtml=`<div style="width:100%;margin-bottom:8px;padding:8px 12px;background:#f0f4ff;border-radius:8px;font-size:12px;color:var(--muted);text-align:center;border:1.5px dashed #b0bec5;">
+        <i class="fas fa-lock" style="margin-right:6px;"></i>Quiz pehle SCORM complete karo
+      </div>`;
+    } else {
+      quizBtnHtml=`<button class="btn btn-sm" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;" onclick="openQuizModal(${c.id},'${(c.name||'').replace(/'/g,"\\'")}')">
+        <i class="fas fa-question-circle"></i> Take Quiz
+      </button>`;
+    }
+  }
+  // Certificate check button
+  const certBtnHtml=`<button class="btn btn-sm" style="width:100%;margin-bottom:8px;background:#fff3e0;color:#e65100;border:1.5px solid #ffcc80;" onclick="checkCertificate(${c.id},'${(c.name||'').replace(/'/g,"\\'")}',this)">
+    <i class="fas fa-certificate"></i> Check Certificate
+  </button>`;
+  return`<div class="course-card">
+    ${c.thumbnail?`<img src="${c.thumbnail}" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display='none'"/>`:`<div style="height:90px;background:linear-gradient(135deg,var(--navy),var(--teal));display:flex;align-items:center;justify-content:center;"><i class="fas fa-book-open" style="color:#fff;font-size:32px;"></i></div>`}
+    <div style="padding:16px;">
+      <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;color:var(--navy);margin-bottom:4px;">${c.name}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${c.trainer_name?'<i class="fas fa-user-tie"></i> '+c.trainer_name+(c.trainer_expertise?' · '+c.trainer_expertise:''):''}${c.duration?(!c.trainer_name?' · ':' &nbsp;|&nbsp; ')+c.duration:''}</div>
+      ${c.trainer_bio?`<div style="font-size:11px;color:var(--text);line-height:1.55;padding:8px 10px;background:#f0f4ff;border-radius:8px;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.trainer_bio}</div>`:''}
+      ${c.avg_rating>0?`<div style="font-size:12px;color:#f59e0b;margin-bottom:8px;">★ ${Number(c.avg_rating).toFixed(1)}</div>`:''}
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:3px;"><span>${done}/${total} modules</span><span>${pct}%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=40?'var(--orange)':'var(--teal)'};"></div></div>
+      </div>
+      ${scormScoreHtml}
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;"><i class="fas fa-clock"></i> ${hrs}h ${mins}m spent</div>
+      ${(c.intro_video||c.demo_video_path)?`<button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:8px;" onclick="openIntroVideo('${c.intro_video||c.demo_video_path}','${(c.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-play-circle"></i> Watch Intro Video</button>`:''}
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-bottom:8px;" onclick="openCourseContent(${c.id},'${(c.name||'').replace(/'/g,"\\'")}')">
+        <i class="fas fa-book-open"></i> Open Course
+      </button>
+      <button class="btn btn-sm" style="width:100%;margin-bottom:8px;background:#fdecea;color:#c62828;border:1.5px solid #f5c6c6;" onclick="toggleCoursePDFs(${c.id},this)">
+        <i class="fas fa-file-pdf"></i> Course PDFs / Materials
+      </button>
+      <div id="pdfs-${c.id}" style="display:none;margin-bottom:8px;"></div>
+      ${quizBtnHtml}
+      ${certBtnHtml}
+      <div id="cert-status-${c.id}" style="margin-top:4px;"></div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;">
+        ${pct===100?'<span class="badge active">✅ Completed</span>':'<span class="badge pending">In Progress</span>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function toggleCoursePDFs(courseId, btn){
+  const el=document.getElementById('pdfs-'+courseId);
+  if(el.style.display==='block'){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML='<div style="text-align:center;padding:8px;font-size:12px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  const r=await api('GET',`/participant/courses/${courseId}/materials`);
+  const mats=r.data||[];
+  if(!mats.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No PDF materials available for this course yet.</div>';return;}
+  el.innerHTML=mats.map(m=>{
+    const isPDF=(m.type||'').toUpperCase()==='PDF'||(m.file_path_or_url||'').toLowerCase().endsWith('.pdf');
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:#fff8f8;border-radius:8px;margin-bottom:4px;border:1px solid #fecaca;">
+      <span style="font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px;">
+        <i class="fas ${isPDF?'fa-file-pdf':'fa-file-alt'}" style="color:${isPDF?'#e53935':'#1565c0'};"></i>
+        ${m.title}
+      </span>
+      <a href="${m.file_path_or_url}" ${isPDF?'download':''} target="${isPDF?'_self':'_blank'}"
+         style="background:${isPDF?'#e53935':'#1565c0'};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;text-decoration:none;white-space:nowrap;">
+        <i class="fas fa-download"></i> ${isPDF?'Download':'Open'}
+      </a>
+    </div>`;
+  }).join('');
+}
+
+function closeCourseContent(){
+  document.getElementById('courseContentOverlay').classList.remove('open');
+}
+
+function fmtStatus(tracking){
+  if(!tracking) return '<span style="font-size:11px;color:var(--muted);">Not started</span>';
+  const s=tracking.completion_status||'not attempted';
+  const map={'completed':'✅ Completed','passed':'✅ Passed','incomplete':'🔄 In Progress','failed':'❌ Failed','browsed':'👁 Browsed','not attempted':'Not started'};
+  const col={'completed':'#2e7d32','passed':'#2e7d32','incomplete':'#e65100','failed':'#c62828','browsed':'#1565c0','not attempted':'#78909c'};
+  return`<span style="font-size:11px;font-weight:600;color:${col[s]||'#78909c'}">${map[s]||s}</span>`;
+}
+
+function fmtTime(tracking){
+  if(!tracking||!tracking.total_time) return '';
+  const m=tracking.total_time.match(/(\d+):(\d+):(\d+)/);
+  if(!m) return '';
+  const h=parseInt(m[1]),min=parseInt(m[2]),sec=parseInt(m[3]);
+  if(h>0) return `${h}h ${min}m`;
+  if(min>0) return `${min}m ${sec}s`;
+  if(sec>0) return `${sec}s`;
+  return '';
+}
+
+async function openCourseContent(courseId, courseName){
+  const overlay=document.getElementById('courseContentOverlay');
+  document.getElementById('cmTitle').textContent=courseName||'Course Content';
+  document.getElementById('cmBody').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;">Loading course content…</p></div>';
+  overlay.classList.add('open');
+
+  const r=await api('GET',`/participant/courses/${courseId}/content`);
+
+  if(!r.success && r.error){
+    document.getElementById('cmBody').innerHTML=`<div style="text-align:center;padding:40px;color:#c62828;"><i class="fas fa-triangle-exclamation" style="font-size:40px;opacity:0.5;display:block;margin-bottom:12px;"></i><p>Content load nahi hua.<br><small style="color:var(--muted);">${r.error||'Server error — please try again.'}</small></p></div>`;
+    return;
+  }
+
+  const modules=r.data||[];
+
+  if(!modules.length){
+    document.getElementById('cmBody').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-folder-open" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i><p>Is course mein abhi koi content nahi hai.<br><small>Admin se contact karein.</small></p></div>';
+    return;
+  }
+
+  let html='';
+  for(const mod of modules){
+    const prog=mod.progress;
+    const isModDone=prog&&prog.completed;
+    const hasStarted=prog&&prog.last_accessed;
+    const badgeHtml=isModDone?'<span class="module-badge done">✅ Completed</span>':hasStarted?'<span class="module-badge progress">🔄 In Progress</span>':'<span class="module-badge new">New</span>';
+    const timeTxt=prog&&prog.time_spent_seconds>0?`${Math.floor(prog.time_spent_seconds/60)}m spent`:'';
+
+    html+=`<div class="module-block">
+      <div class="module-header">
+        <i class="fas fa-layer-group" style="color:var(--teal);font-size:15px;"></i>
+        <span class="module-title">${mod.name}</span>
+        ${badgeHtml}
+        ${timeTxt?`<span style="font-size:11px;color:var(--muted);margin-left:auto;"><i class="fas fa-clock"></i> ${timeTxt}</span>`:''}
+      </div>`;
+
+    // SCORM / Video packages
+    if(mod.packages&&mod.packages.length>0){
+      for(const pkg of mod.packages){
+        const isVideo=pkg.content_type==='video';
+        const iconClass=isVideo?'icon-video':'icon-scorm';
+        const iconName=isVideo?'fa-film':'fa-laptop-code';
+        const typeLabel=isVideo?'Video':'SCORM';
+        const timeStr=fmtTime(pkg.tracking);
+        const statusHtml=fmtStatus(pkg.tracking);
+        const encodedName=encodeURIComponent(pkg.package_name||typeLabel);
+        html+=`<div class="content-item">
+          <div class="content-item-left">
+            <div class="content-item-icon ${iconClass}"><i class="fas ${iconName}"></i></div>
+            <div>
+              <div class="content-item-name">${pkg.package_name||typeLabel}</div>
+              <div class="content-item-meta">${typeLabel}${timeStr?' · ⏱ '+timeStr:''} · ${statusHtml}</div>
+            </div>
+          </div>
+          <a href="scorm-player.html?pkg=${pkg.id}&name=${encodedName}" target="_blank" class="launch-btn scorm">
+            <i class="fas fa-play"></i> ${isVideo?'Watch':'Launch'}
+          </a>
+        </div>`;
+      }
+    }
+
+    // PDF / Materials
+    if(mod.materials&&mod.materials.length>0){
+      for(const mat of mod.materials){
+        const isPDF=(mat.type||'').toUpperCase()==='PDF'||(mat.file_path_or_url||'').toLowerCase().endsWith('.pdf');
+        const iconClass=isPDF?'icon-pdf':'icon-link';
+        const iconName=isPDF?'fa-file-pdf':'fa-file-alt';
+        html+=`<div class="content-item">
+          <div class="content-item-left">
+            <div class="content-item-icon ${iconClass}"><i class="fas ${iconName}"></i></div>
+            <div>
+              <div class="content-item-name">${mat.title}</div>
+              <div class="content-item-meta">${isPDF?'PDF Document':'Resource'}</div>
+            </div>
+          </div>
+          <a href="${mat.file_path_or_url}" ${isPDF?'download':''} target="${isPDF?'_self':'_blank'}" class="launch-btn ${isPDF?'pdf':'link'}">
+            <i class="fas ${isPDF?'fa-download':'fa-external-link-alt'}"></i> ${isPDF?'Download':'Open'}
+          </a>
+        </div>`;
+      }
+    }
+
+    if((!mod.packages||mod.packages.length===0)&&(!mod.materials||mod.materials.length===0)){
+      html+=`<div style="padding:14px 16px;font-size:12px;color:var(--muted);"><i class="fas fa-info-circle"></i> No content added to this module yet.</div>`;
+    }
+    html+='</div>';
+  }
+
+  document.getElementById('cmBody').innerHTML=html;
+}
+
+async function loadOverview(){
+  const r=await api('GET','/participant/mycourses');
+  const courses=r.data||[];
+  const total=courses.length;
+  const completed=courses.filter(c=>parseInt(c.completed_modules)===parseInt(c.total_modules)&&parseInt(c.total_modules)>0).length;
+  const totalSecs=courses.reduce((a,c)=>a+(parseInt(c.time_spent_seconds)||0),0);
+  const hrs=Math.floor(totalSecs/3600);
+  document.getElementById('st-total-courses').textContent=total;
+  document.getElementById('st-completed').textContent=completed;
+  document.getElementById('st-time').textContent=hrs+'h';
+  const grid=document.getElementById('overviewCoursesGrid');
+  if(!courses.length){grid.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-book-open" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i><p>No courses assigned yet.<br><small>Contact your HR team.</small></p></div>';return;}
+  grid.innerHTML=courses.map((c,i)=>renderCourseCard(c,i)).join('');
+}
+
+async function loadMyCourses(){
+  const grid=document.getElementById('myCoursesGrid');
+  grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
+  const r=await api('GET','/participant/mycourses');
+  const courses=r.data||[];
+  if(!courses.length){
+    grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-book-open" style="font-size:48px;opacity:0.3;display:block;margin-bottom:16px;"></i><p>No courses assigned yet.<br><small>Contact your HR team or company admin.</small></p></div>';
+    return;
+  }
+  grid.innerHTML=courses.map((c,i)=>renderCourseCard(c,i)).join('');
+}
+
+async function loadProfile(){
+  const u=USER();
+  document.getElementById('profileInfo').innerHTML=`
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+      <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--teal));display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:700;">${(u.name||'P')[0].toUpperCase()}</div>
+      <div>
+        <div style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:600;color:var(--navy);">${u.name||'Participant'}</div>
+        <div style="font-size:13px;color:var(--muted);">${u.email||''}</div>
+        <span class="badge active" style="margin-top:4px;">Corporate Participant</span>
+      </div>
+    </div>`;
+}
+
+// ── QUIZ MODAL ───────────────────────────────────────────────────────────────
+let _currentQuizCourseId=null;
+let _currentQuizCourseName='';
+let _currentQuizAnswers={};
+
+function closeQuizModal(){document.getElementById('quizModalOverlay').classList.remove('open');}
+
+async function openQuizModal(courseId, courseName){
+  _currentQuizCourseId=courseId;
+  _currentQuizCourseName=courseName||'';
+  _currentQuizAnswers={};
+  const overlay=document.getElementById('quizModalOverlay');
+  document.getElementById('quizModalTitle').textContent=courseName+' — Quiz';
+  document.getElementById('quizModalBody').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;">Loading quiz…</p></div>';
+  overlay.classList.add('open');
+  const r=await api('GET',`/participant/courses/${courseId}/quiz`);
+  if(!r.success){
+    document.getElementById('quizModalBody').innerHTML=`<div style="text-align:center;padding:32px;color:#c62828;"><i class="fas fa-exclamation-circle" style="font-size:36px;opacity:0.5;display:block;margin-bottom:12px;"></i><p>${r.error||'Could not load quiz.'}</p></div>`;
+    return;
+  }
+  const {questions,total,previous_attempt,course}=r.data||r;
+  // Show previous attempt result if exists
+  if(previous_attempt){
+    const pPct=Math.round((previous_attempt.score/previous_attempt.total_questions)*100);
+    const pCol=previous_attempt.passed?'#2e7d32':'#c62828';
+    const pBg=previous_attempt.passed?'#e8f5e9':'#fdecea';
+    document.getElementById('quizModalBody').innerHTML=`
+      <div style="background:${pBg};border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:${pCol};">${previous_attempt.passed?'✅ Passed':'❌ Failed'}</div>
+        <div style="font-size:15px;color:${pCol};margin-top:4px;">Score: ${previous_attempt.score}/${previous_attempt.total_questions} (${pPct}%)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Attempted on ${new Date(previous_attempt.attempted_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div>
+        ${!previous_attempt.passed?`<button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="renderQuizQuestions(${JSON.stringify(questions||[]).replace(/"/g,'&quot;')},${total||0},${parseInt(course?.passing_percentage||60)})"><i class="fas fa-redo"></i> Retry Quiz</button>`:''}
+      </div>
+      ${previous_attempt.passed?'<p style="text-align:center;font-size:13px;color:var(--muted);">You have already passed this quiz. Check your certificate below.</p>':''}`;
+    return;
+  }
+  if(!questions||!questions.length){
+    document.getElementById('quizModalBody').innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-question" style="font-size:36px;opacity:0.3;display:block;margin-bottom:12px;"></i><p>No quiz questions available for this course yet.</p></div>';
+    return;
+  }
+  renderQuizForm(questions, total, parseInt(course?.passing_percentage||60));
+}
+
+function renderQuizForm(questions, total, passingPct){
+  let html=`<div style="background:#f0f4ff;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--navy);">
+    <i class="fas fa-info-circle" style="margin-right:6px;"></i> <strong>${total} Questions</strong> · Passing score: <strong>${passingPct}%</strong>
+  </div>`;
+  questions.forEach((q,i)=>{
+    html+=`<div style="margin-bottom:20px;border:1px solid var(--brd);border-radius:12px;padding:16px;background:#fff;">
+      <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px;"><span style="background:#1a237e;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;margin-right:8px;">${i+1}</span>${q.question}</div>
+      ${['A','B','C','D'].map(opt=>{
+        const optText=q['option_'+opt.toLowerCase()];
+        if(!optText) return '';
+        return`<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;margin-bottom:6px;border:1.5px solid var(--brd);transition:all 0.15s;" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--brd)'">
+          <input type="radio" name="quiz-q-${q.id}" value="${opt}" onchange="_currentQuizAnswers['${q.id}']='${opt}'" style="width:16px;height:16px;accent-color:var(--teal);"/>
+          <span style="font-size:13px;"><strong style="color:var(--teal);">${opt}.</strong> ${optText}</span>
+        </label>`;
+      }).join('')}
+    </div>`;
+  });
+  html+=`<button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="submitQuiz(${JSON.stringify(questions.map(q=>q.id))})">
+    <i class="fas fa-paper-plane"></i> Submit Quiz
+  </button>`;
+  document.getElementById('quizModalBody').innerHTML=html;
+}
+
+async function submitQuiz(questionIds){
+  // Validate all answered
+  const missing=questionIds.filter(id=>!_currentQuizAnswers[String(id)]);
+  if(missing.length){showToast(`Please answer all questions (${missing.length} unanswered)`);return;}
+  const btn=document.querySelector('#quizModalBody .btn-primary');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Submitting…';}
+  const r=await api('POST',`/participant/courses/${_currentQuizCourseId}/quiz/submit`,{answers:_currentQuizAnswers});
+  if(!r.success){showToast(r.error||'Submission failed');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> Submit Quiz';}return;}
+  const d=r.data||r;
+  const col=d.passed?'#2e7d32':'#c62828';
+  const bg=d.passed?'#e8f5e9':'#fdecea';
+  let html=`<div style="background:${bg};border-radius:16px;padding:28px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:12px;">${d.passed?'🎉':'😔'}</div>
+    <div style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:${col};">${d.passed?'Congratulations! You Passed!':'Not Quite There Yet'}</div>
+    <div style="font-size:16px;color:${col};margin:10px 0;">Score: ${d.score}/${d.total} (${d.score_pct}%)</div>
+    <div style="font-size:13px;color:var(--muted);">Passing score: ${d.passing_pct}%</div>`;
+  if(d.certificate){
+    html+=`<div style="margin-top:20px;background:#fff;border-radius:12px;padding:16px;border:2px solid #a5d6a7;">
+      <i class="fas fa-certificate" style="font-size:36px;color:#43a047;margin-bottom:8px;display:block;"></i>
+      <div style="font-weight:700;color:#2e7d32;font-size:16px;">Certificate Issued!</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;font-family:monospace;">${d.certificate.certificate_no}</div>
+      <button class="btn btn-sm" style="margin-top:12px;background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;width:100%;justify-content:center;padding:10px;" onclick="viewCertificate('${d.certificate.certificate_no}','${(_currentQuizCourseName||'').replace(/'/g,"\\'")}','${d.certificate.issued_date||''}')">
+        <i class="fas fa-eye"></i> View & Download Certificate
+      </button>
+    </div>`;
+  }
+  if(!d.passed){html+=`<button class="btn btn-outline btn-sm" style="margin-top:16px;" onclick="openQuizModal(${_currentQuizCourseId},'Quiz')"><i class="fas fa-redo"></i> Try Again</button>`;}
+  html+='</div>';
+  document.getElementById('quizModalBody').innerHTML=html;
+  // Refresh course cards
+  loadMyCourses();
+  if(d.certificate){const el=document.getElementById('cert-status-'+_currentQuizCourseId);if(el)el.innerHTML=`<div style="background:#e8f5e9;border-radius:8px;padding:8px 10px;font-size:12px;color:#2e7d32;text-align:center;"><i class="fas fa-certificate"></i> Certificate: ${d.certificate.certificate_no}</div>`;}
+}
+
+// ── CERTIFICATE VIEWER ───────────────────────────────────────────────────────
+async function viewCertificate(certNo, courseName, issuedDate){
+  const accent='#1a237e';
+  const gold='#b8960c';
+  const participantName=USER().name||'Participant';
+  const date=issuedDate?new Date(issuedDate).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}):'—';
+
+  // Fetch logos (super admin logo + corporate logo)
+  let superLogo='', corpLogo='';
+  try{
+    const br=await api('GET','/branding');
+    const bd=br.data||br;
+    superLogo=bd.super_logo||'';
+    corpLogo=bd.corp_logo||'';
+  }catch(e){}
+
+  // Build left-side header: corporate logo image OR SmartLMS text
+  const leftHeader = corpLogo
+    ? `<img src="${corpLogo}" alt="Company Logo" style="max-height:48px;max-width:160px;object-fit:contain;filter:brightness(0) invert(1);"/>`
+    : `<div style="font-family:'Cinzel',serif;font-size:20px;color:#fff;font-weight:700;letter-spacing:2px;">Smart<span style="color:${gold};">LMS</span></div>`;
+
+  // Build right-side header: super admin logo + CLMPD text
+  const rightHeader = superLogo
+    ? `<div style="display:flex;align-items:center;gap:10px;">
+        <img src="${superLogo}" alt="Logo" style="max-height:40px;max-width:100px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;"/>
+        <div style="font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>
+       </div>`
+    : `<div style="font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>`;
+
+  const w=window.open('','_blank','width=960,height=700');
+  w.document.open();
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+  <title>Certificate — ${certNo||''}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Lato',sans-serif;background:#eef2f7;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 16px;}
+    .cert{width:880px;max-width:100%;background:#fff;position:relative;box-shadow:0 12px 48px rgba(0,0,0,0.18);}
+    .cert-border{padding:14px;background:linear-gradient(135deg,${gold},#e6c35a,${gold},#c9a227,${gold});}
+    .cert-frame{background:#fff;border:4px solid ${accent};padding:10px;}
+    .cert-inner{padding:44px 64px;text-align:center;position:relative;background:#fff;}
+    .orn{position:absolute;font-size:28px;color:${gold};line-height:1;}
+    .orn-tl{top:8px;left:12px;} .orn-tr{top:8px;right:12px;}
+    .orn-bl{bottom:8px;left:12px;} .orn-br{bottom:8px;right:12px;}
+    .cert-header{background:linear-gradient(135deg,${accent},#1565c0);margin:-44px -64px 28px;padding:22px 64px;display:flex;align-items:center;justify-content:space-between;}
+    .cert-title{font-family:'Cinzel',serif;font-size:34px;font-weight:700;color:${accent};letter-spacing:2px;margin-bottom:4px;}
+    .cert-title-sub{font-size:11px;color:${gold};letter-spacing:6px;text-transform:uppercase;margin-bottom:22px;font-weight:700;}
+    .divider{display:flex;align-items:center;gap:14px;justify-content:center;margin:16px 0;}
+    .divider-line{flex:1;height:1px;max-width:120px;background:linear-gradient(to right,transparent,${gold});}
+    .divider-line.r{background:linear-gradient(to left,transparent,${gold});}
+    .divider-star{color:${gold};font-size:18px;}
+    .present-to{font-size:12px;color:#90a4ae;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;}
+    .cert-name{font-family:'Cinzel',serif;font-size:42px;font-weight:600;color:#1a237e;margin-bottom:16px;letter-spacing:1px;}
+    .cert-body{font-size:14px;color:#607d8b;line-height:1.8;margin-bottom:8px;}
+    .cert-course{font-family:'Cinzel',serif;font-size:22px;font-weight:600;color:${accent};margin:12px auto 28px;padding:10px 28px;border-top:1px solid ${gold}44;border-bottom:1px solid ${gold}44;display:inline-block;}
+    .cert-footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid #e8eaf6;}
+    .cert-footer-block{text-align:center;min-width:160px;}
+    .footer-label{font-size:10px;color:#b0bec5;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+    .footer-val{font-size:13px;font-weight:700;color:#263238;}
+    .footer-mono{font-family:monospace;font-size:12px;color:#78909c;background:#f5f5f5;padding:3px 10px;border-radius:4px;display:inline-block;}
+    .seal{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,${accent},#1565c0);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;box-shadow:0 2px 8px rgba(26,35,126,0.3);}
+    .seal i{color:${gold};font-size:26px;}
+    .print-bar{margin-top:24px;display:flex;gap:12px;align-items:center;}
+    .btn-print{padding:11px 32px;background:${accent};color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:8px;}
+    .btn-print:hover{background:#283593;}
+    .btn-note{font-size:11px;color:#90a4ae;}
+    @media print{
+      body{background:#fff;padding:0;}
+      .print-bar{display:none!important;}
+      .cert{width:100%!important;box-shadow:none!important;}
+    }
+  </style></head><body>
+  <div class="cert">
+    <div class="cert-border">
+      <div class="cert-frame">
+        <div class="cert-inner">
+          <div class="orn orn-tl">❧</div><div class="orn orn-tr">❧</div>
+          <div class="orn orn-bl">❧</div><div class="orn orn-br">❧</div>
+          <div class="cert-header">
+            ${leftHeader}
+            ${rightHeader}
+          </div>
+          <div class="cert-title">Certificate</div>
+          <div class="cert-title-sub">of Completion</div>
+          <div class="divider">
+            <div class="divider-line"></div>
+            <span class="divider-star">✦</span>
+            <div class="divider-line r"></div>
+          </div>
+          <div class="present-to">This is to certify that</div>
+          <div class="cert-name">${participantName}</div>
+          <div class="cert-body">has successfully completed all requirements of the course</div>
+          <div class="cert-course">${courseName||'Course Name'}</div>
+          <div class="cert-footer">
+            <div class="cert-footer-block">
+              <div class="footer-label">Date of Issue</div>
+              <div class="footer-val">${date}</div>
+            </div>
+            <div class="cert-footer-block">
+              <div class="seal"><i class="fas fa-certificate"></i></div>
+              <div style="font-size:10px;color:#90a4ae;letter-spacing:1px;">VERIFIED</div>
+            </div>
+            <div class="cert-footer-block">
+              <div class="footer-label">Certificate No.</div>
+              <div class="footer-mono">${certNo||'—'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="print-bar">
+    <button class="btn-print" onclick="window.print()">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/></svg>
+      Print / Save as PDF
+    </button>
+    <span class="btn-note">Use browser Print → Save as PDF to download</span>
+  </div>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  </body></html>`);
+  w.document.close();
+}
+
+// ── CERTIFICATE CHECK ────────────────────────────────────────────────────────
+async function checkCertificate(courseId, courseName, btn){
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Checking…';}
+  const r=await api('GET',`/participant/courses/${courseId}/certificate`);
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-certificate"></i> Check Certificate';}
+  if(!r.success){showToast(r.error||'Could not check certificate');return;}
+  const d=r.data||r;
+  const el=document.getElementById('cert-status-'+courseId);
+  if(!el)return;
+  if(d.certificate){
+    el.innerHTML=`<div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:10px 12px;font-size:12px;text-align:center;">
+      <i class="fas fa-certificate" style="color:#43a047;font-size:20px;display:block;margin-bottom:4px;"></i>
+      <strong style="color:#2e7d32;">Certificate Issued!</strong><br/>
+      <span style="color:var(--muted);font-size:11px;">No: ${d.certificate.certificate_no}</span>
+      <div style="margin-top:8px;">
+        <button class="btn btn-sm" style="background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;width:100%;justify-content:center;" onclick="viewCertificate('${d.certificate.certificate_no}','${(courseName||'').replace(/'/g,"\\'")}','${d.certificate.issued_date||''}')">
+          <i class="fas fa-eye"></i> View Certificate
+        </button>
+      </div>
+    </div>`;
+    showToast('Certificate issued!','success');
+  } else if(!d.modules_complete){
+    el.innerHTML=`<div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:10px 12px;font-size:12px;text-align:center;color:#e65100;"><i class="fas fa-hourglass-half"></i> Complete all modules first (${d.completed_modules}/${d.total_modules} done)</div>`;
+  } else if(d.quiz_required&&!d.quiz_passed){
+    el.innerHTML=`<div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:10px 12px;font-size:12px;text-align:center;color:#e65100;"><i class="fas fa-question-circle"></i> Pass the quiz to earn your certificate</div>`;
+  } else {
+    el.innerHTML=`<div style="background:#f3e5f5;border:1px solid #ce93d8;border-radius:10px;padding:10px 12px;font-size:12px;text-align:center;color:#6a1b9a;"><i class="fas fa-info-circle"></i> Not yet eligible</div>`;
+  }
+}
+
+// ── CERTIFICATES PAGE ────────────────────────────────────────────────────────
+async function loadCertificates(){
+  const grid=document.getElementById('certsGrid');
+  grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
+  const r=await api('GET','/participant/mycourses');
+  const courses=r.data||[];
+  if(!courses.length){grid.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-certificate" style="font-size:48px;opacity:0.2;display:block;margin-bottom:16px;"></i><p>No courses assigned yet.</p></div>';return;}
+  grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;">Checking certificates…</p></div>';
+  const certResults=await Promise.all(courses.map(c=>api('GET',`/participant/courses/${c.id}/certificate`)));
+  let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;">';
+  courses.forEach((c,i)=>{
+    const d=certResults[i]?.data||certResults[i]||{};
+    const hasCert=!!d.certificate;
+    const certNo=d.certificate?.certificate_no||'';
+    const modsDone=d.modules_complete;
+    const quizReq=d.quiz_required;
+    const quizPass=d.quiz_passed;
+    let statusHtml,statusColor,bgColor;
+    if(hasCert){statusHtml='🏆 Certificate Issued';statusColor='#2e7d32';bgColor='#e8f5e9';}
+    else if(!modsDone){statusHtml=`⏳ ${d.completed_modules||0}/${d.total_modules||0} modules done`;statusColor='#e65100';bgColor='#fff3e0';}
+    else if(quizReq&&!quizPass){statusHtml='📝 Quiz required';statusColor='#1565c0';bgColor='#e3f2fd';}
+    else{statusHtml='⏳ Pending';statusColor='#78909c';bgColor='#f5f5f5';}
+    html+=`<div class="card" style="margin:0;border:2px solid ${hasCert?'#a5d6a7':'var(--brd)'};position:relative;">
+      <div style="text-align:center;padding:20px 0 12px;">
+        <i class="fas fa-certificate" style="font-size:44px;color:${hasCert?'#43a047':'#bdbdbd'};"></i>
+      </div>
+      <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px;">${c.name}</div>
+      <div style="background:${bgColor};border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;color:${statusColor};text-align:center;margin-bottom:12px;">${statusHtml}</div>
+      ${hasCert?`
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;font-family:monospace;">${certNo}</div>
+        <button class="btn btn-sm" style="width:100%;justify-content:center;background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;margin-bottom:6px;" onclick="viewCertificate('${certNo}','${(c.name||'').replace(/'/g,"\\'")}','${d.certificate?.issued_date||''}')">
+          <i class="fas fa-eye"></i> View & Download Certificate
+        </button>
+      `:''}
+      ${!hasCert&&quizReq&&!quizPass?`<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="openQuizModal(${c.id},'${(c.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-question-circle"></i> Take Quiz</button>`:''}
+    </div>`;
+  });
+  html+='</div>';
+  grid.innerHTML=html;
+}
+
+async function changePassword(){
+  const oldPw=document.getElementById('cp-old').value;
+  const newPw=document.getElementById('cp-new').value;
+  const confirmPw=document.getElementById('cp-confirm').value;
+  if(!oldPw||!newPw){showAlert('changePwAlert','All fields required.');return;}
+  if(newPw.length<6){showAlert('changePwAlert','Password must be at least 6 characters.');return;}
+  if(newPw!==confirmPw){showAlert('changePwAlert','Passwords do not match.');return;}
+  const r=await api('POST','/participant/change-password',{new_password:newPw});
+  if(r.success){showAlert('changePwAlert','Password updated successfully!','success');}
+  else showAlert('changePwAlert',r.error||'Failed to change password');
+}
+
+// INIT — handle ?goto=courses from email links
+(async()=>{
+  const goto=new URLSearchParams(window.location.search).get('goto');
+  if(goto==='courses'){
+    showSection('courses');
+  } else {
+    loadOverview();
+  }
+})();
+</script>
+</body>
+</html>

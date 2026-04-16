@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Corporate Admin Dashboard – Smart LMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--navy:#004d40;--navy2:#003330;--teal:#00897b;--orange:#ff6b35;--green:#43a047;--bg:#f0fdf4;--white:#fff;--text:#263238;--muted:#78909c;--brd:#d7ede8;--shadow:0 2px 12px rgba(0,77,64,0.09);--sid-w:240px;--top-h:60px;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);font-size:14px;}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sid-w);background:var(--navy);display:flex;flex-direction:column;z-index:200;overflow-y:auto;}
+.sb-header{padding:16px 18px;background:var(--navy2);display:flex;align-items:center;gap:10px;min-height:var(--top-h);border-bottom:1px solid rgba(255,255,255,0.08);}
+.sb-header .sb-name{font-size:13px;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;}
+.sb-section{font-size:10px;color:rgba(255,255,255,0.35);padding:18px 18px 6px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 18px;color:rgba(255,255,255,0.72);font-size:13px;cursor:pointer;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all 0.15s;}
+.nav-item i{width:18px;text-align:center;font-size:14px;}
+.nav-item:hover{background:rgba(255,255,255,0.07);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,0.13);color:#fff;border-left:3px solid var(--teal);}
+.sb-footer{margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,0.08);}
+.sb-user{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.8);font-size:13px;}
+.sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;}
+.topbar{position:fixed;top:0;left:var(--sid-w);right:0;height:var(--top-h);background:var(--white);border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:100;box-shadow:var(--shadow);}
+.page-title{font-family:'Poppins',sans-serif;font-size:16px;font-weight:600;color:var(--navy);}
+.logout-btn{display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--brd);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--muted);cursor:pointer;}
+.logout-btn:hover{border-color:var(--teal);color:var(--teal);}
+.main{margin-left:var(--sid-w);margin-top:var(--top-h);padding:24px;min-height:calc(100vh - var(--top-h));}
+.section{display:none;}.section.active{display:block;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-bottom:24px;}
+.stat-card{background:#fff;border-radius:16px;padding:20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow);border:1px solid var(--brd);}
+.stat-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;}
+.ic-teal{background:linear-gradient(135deg,#00897b,#004d40);}
+.ic-orange{background:linear-gradient(135deg,#ff6b35,#e53935);}
+.ic-green{background:linear-gradient(135deg,#43a047,#00897b);}
+.ic-blue{background:linear-gradient(135deg,#1565c0,#0d47a1);}
+.stat-info .num{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;color:var(--navy);}
+.stat-info .lbl{font-size:12px;color:var(--muted);}
+.card{background:#fff;border-radius:16px;padding:22px;box-shadow:var(--shadow);border:1px solid var(--brd);margin-bottom:20px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.card-title{font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);}
+table{width:100%;border-collapse:collapse;}
+th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--brd);text-align:left;}
+td{padding:12px 12px;border-bottom:1px solid var(--brd);font-size:13px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f0fdf4;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge.active{background:#e8f5e9;color:#2e7d32;}
+.badge.pending{background:#fff3e0;color:#e65100;}
+.badge.inactive{background:#fdecea;color:#c62828;}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;font-family:'Inter',sans-serif;}
+.btn-primary{background:linear-gradient(135deg,#00897b,#004d40);color:#fff;}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-outline{background:transparent;border:1.5px solid var(--brd);color:var(--text);}
+.btn-outline:hover{border-color:var(--teal);color:var(--teal);}
+.btn-danger{background:#e53935;color:#fff;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:7px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.15s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--teal);}
+.form-group textarea{min-height:80px;resize:vertical;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;}
+.alert.error{background:#fdecea;color:#c62828;border:1px solid #f5c6c6;}
+.alert.success{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:300;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex!important;}
+.modal-box{max-height:90vh;overflow-y:auto;background:#fff;border-radius:16px;padding:24px;width:100%;max-width:550px;}
+.tab-nav{display:flex;gap:4px;background:#f0fdf4;border-radius:12px;padding:4px;margin-bottom:20px;}
+.tab-btn{flex:1;padding:8px 16px;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--muted);}
+.tab-btn.active{background:var(--teal);color:#fff;}
+.toast{position:fixed;bottom:24px;right:24px;background:#263238;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;z-index:500;opacity:0;transform:translateY(20px);transition:all 0.3s;pointer-events:none;}
+.toast.show{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+<div class="sidebar" id="sidebar">
+  <div class="sb-header">
+    <div><div class="sb-name" id="sbCompanyName">Corporate Admin</div><div style="font-size:11px;color:rgba(255,255,255,0.45);">Training Management</div></div>
+  </div>
+  <button class="nav-item active" onclick="showSection('overview')"><i class="fas fa-th-large"></i>Overview</button>
+  <span class="sb-section">Participants</span>
+  <button class="nav-item" onclick="showSection('participants')"><i class="fas fa-users"></i>All Participants</button>
+  <button class="nav-item" onclick="showSection('add-participant')"><i class="fas fa-user-plus"></i>Add Participant</button>
+  <button class="nav-item" onclick="showSection('bulk-upload')"><i class="fas fa-file-excel"></i>Bulk Upload (XLS)</button>
+  <span class="sb-section">Courses</span>
+  <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Available Courses</button>
+  <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-bar"></i>Progress Report</button>
+  <span class="sb-section">Account</span>
+  <button class="nav-item" onclick="showSection('settings')"><i class="fas fa-cog"></i>Settings / Branding</button>
+  <div class="sb-footer">
+    <div class="sb-user"><div class="sb-avatar" id="sbAvatar">C</div><div id="sbUserInfo"></div></div>
+    <button onclick="logout()" style="margin-top:12px;background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-sign-out-alt"></i>Logout</button>
+  </div>
+</div>
+
+<div class="topbar">
+  <span class="page-title" id="pageTitle">Overview</span>
+  <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i>Logout</button>
+</div>
+
+<div class="main">
+  <!-- OVERVIEW -->
+  <div class="section active" id="sec-overview">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon ic-teal"><i class="fas fa-users"></i></div><div class="stat-info"><div class="num" id="st-total">—</div><div class="lbl">Total Participants</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-green"><i class="fas fa-user-check"></i></div><div class="stat-info"><div class="num" id="st-active">—</div><div class="lbl">Active</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-orange"><i class="fas fa-book-open"></i></div><div class="stat-info"><div class="num" id="st-courses">—</div><div class="lbl">Courses Assigned</div></div></div>
+      <div class="stat-card"><div class="stat-icon ic-blue"><i class="fas fa-envelope-open-text"></i></div><div class="stat-info"><div class="num" id="st-pending">—</div><div class="lbl">Pending Login</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Recent Participants</span><button class="btn btn-primary btn-sm" onclick="showSection('add-participant')"><i class="fas fa-user-plus"></i> Add Participant</button></div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr><th>Name</th><th>Email</th><th>Courses</th><th>Status</th><th>Added</th></tr></thead>
+        <tbody id="recentParticipantsTbody"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ALL PARTICIPANTS -->
+  <div class="section" id="sec-participants">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">All Participants <span id="versionTag" style="font-size:10px;background:#ff6b35;color:#fff;padding:2px 7px;border-radius:10px;font-family:monospace;margin-left:6px;">v3</span></span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="loadParticipants()"><i class="fas fa-rotate-right"></i></button>
+          <button class="btn btn-primary btn-sm" onclick="showSection('add-participant')"><i class="fas fa-plus"></i> Add</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;"><table style="table-layout:fixed;width:100%;">
+        <colgroup>
+          <col style="width:44px"/>
+          <col style="width:14%"/>
+          <col style="width:17%"/>
+          <col style="width:11%"/>
+          <col style="width:18%"/>
+          <col style="width:9%"/>
+          <col style="width:9%"/>
+          <col style="width:18%"/>
+        </colgroup>
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Contact</th><th>Assigned Courses</th><th>Status</th><th>Login</th><th>Actions</th></tr></thead>
+        <tbody id="participantsTbody"><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i></td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ADD PARTICIPANT -->
+  <div class="section" id="sec-add-participant">
+    <div class="card" style="max-width:600px;">
+      <div class="card-header"><span class="card-title">Add New Participant</span></div>
+      <div class="alert" id="addParticipantAlert"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Full Name <span style="color:red;">*</span></label><input type="text" id="p-name" placeholder="John Doe"/></div>
+        <div class="form-group"><label>Email <span style="color:red;">*</span></label><input type="email" id="p-email" placeholder="john@company.com"/></div>
+      </div>
+      <div class="form-group"><label>Contact</label><input type="text" id="p-contact" placeholder="+91 98765..."/></div>
+      <div class="form-group">
+        <label>Assign Courses</label>
+        <div id="addCoursesCheckboxes" style="border:1px solid var(--brd);border-radius:8px;padding:12px;max-height:180px;overflow-y:auto;">
+          <p style="color:var(--muted);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading courses...</p>
+        </div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #a5d6a7;border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;">
+        <i class="fas fa-info-circle" style="color:var(--teal);"></i> A <strong>One-Time Password</strong> will be auto-generated and sent to the participant's email with login instructions.
+      </div>
+      <button class="btn btn-primary" onclick="addParticipant()"><i class="fas fa-user-plus"></i> Add Participant & Send Email</button>
+    </div>
+  </div>
+
+  <!-- BULK UPLOAD -->
+  <div class="section" id="sec-bulk-upload">
+    <div class="card" style="max-width:700px;">
+      <div class="card-header"><span class="card-title">Bulk Upload Participants (XLS/CSV)</span></div>
+      <div style="background:#fffde7;border:1px solid #f9a825;border-radius:10px;padding:14px;margin-bottom:20px;font-size:13px;">
+        <strong><i class="fas fa-info-circle"></i> How it works:</strong><br/>
+        1. Upload an Excel or CSV file (Name, Email, Contact columns).<br/>
+        2. Assign courses to all participants.<br/>
+        3. Click "Upload" — login credentials will be sent to each participant by email.<br/>
+        <div style="margin-top:10px;">
+          <a href="/bulk_upload_participants_sample.xlsx" download style="display:inline-flex;align-items:center;gap:6px;background:#1a237e;color:#fff;padding:7px 14px;border-radius:7px;font-size:12px;text-decoration:none;font-weight:600;">
+            <i class="fas fa-file-excel"></i> Download Sample Excel File
+          </a>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Upload Excel (.xlsx) or CSV File</label>
+        <input type="file" id="bulkFile" accept=".csv,.xlsx,.xls" onchange="parseBulkFile(event)" style="padding:8px;"/>
+        <small style="color:var(--muted);">Required columns: Name, Email, Contact | Both Excel and CSV formats are supported</small>
+      </div>
+      <div class="form-group">
+        <label>Or Paste Data (JSON format)</label>
+        <textarea id="bulkJson" placeholder='[{"name":"John Doe","email":"john@company.com","contact":"9876543210"},{"name":"Jane Smith","email":"jane@company.com"}]' style="min-height:120px;font-family:monospace;font-size:12px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Assign Courses to ALL participants</label>
+        <div id="bulkCoursesCheckboxes" style="border:1px solid var(--brd);border-radius:8px;padding:12px;max-height:150px;overflow-y:auto;">
+          <p style="color:var(--muted);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading courses...</p>
+        </div>
+      </div>
+      <div class="alert" id="bulkAlert"></div>
+      <div id="bulkPreview" style="display:none;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;" id="bulkPreviewCount"></div>
+        <div style="overflow-x:auto;max-height:200px;"><table><thead><tr><th>Name</th><th>Email</th><th>Contact</th></tr></thead><tbody id="bulkPreviewTbody"></tbody></table></div>
+      </div>
+      <button class="btn btn-primary" onclick="submitBulkUpload()"><i class="fas fa-upload"></i> Upload & Send Emails</button>
+    </div>
+    <!-- Bulk Results -->
+    <div class="card" style="max-width:700px;display:none;" id="bulkResultsCard">
+      <div class="card-header"><span class="card-title">Upload Results</span></div>
+      <div id="bulkResults"></div>
+    </div>
+  </div>
+
+  <!-- COURSES -->
+  <div class="section" id="sec-courses">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Available Courses</span></div>
+      <div id="corpCoursesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
+    </div>
+  </div>
+
+  <!-- PROGRESS REPORT (tabbed: By Participant / By Course) -->
+  <div class="section" id="sec-progress">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-chart-bar" style="margin-right:6px;"></i>Progress Report</span>
+        <button class="btn btn-outline btn-sm" onclick="refreshProgress()"><i class="fas fa-rotate-right"></i> Refresh</button>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:20px;background:#f0fdf4;border-radius:10px;padding:4px;width:fit-content;">
+        <button id="tab-by-part" onclick="switchProgressTab('participant')" style="padding:7px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:var(--teal);color:#fff;transition:all 0.2s;">
+          <i class="fas fa-user"></i> By Participant
+        </button>
+        <button id="tab-by-course" onclick="switchProgressTab('course')" style="padding:7px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all 0.2s;">
+          <i class="fas fa-book-open"></i> By Course
+        </button>
+      </div>
+
+      <!-- By Participant view -->
+      <div id="progress-tab-participant">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="position:relative;flex:1;max-width:320px;">
+            <i class="fas fa-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;"></i>
+            <input id="progressPartSearch" type="text" placeholder="Search participant name…" oninput="filterProgressByName()" style="width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;transition:border 0.2s;" onfocus="this.style.borderColor='var(--teal)'" onblur="this.style.borderColor='var(--brd)'"/>
+          </div>
+          <span id="progressPartCount" style="font-size:12px;color:var(--muted);white-space:nowrap;"></span>
+        </div>
+        <div id="progressByPartContainer"></div>
+      </div>
+
+      <!-- By Course view -->
+      <div id="progress-tab-course" style="display:none;">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Select a course to see all participant progress.</p>
+        <div id="progressCoursesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS / BRANDING -->
+  <div class="section" id="sec-settings">
+    <div class="card" style="max-width:520px;">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-cog" style="margin-right:6px;"></i>Settings &amp; Branding</span>
+      </div>
+      <div id="settingsAlert" class="alert"></div>
+
+      <!-- Company Logo for Certificate -->
+      <div style="border:1.5px solid var(--brd);border-radius:12px;padding:18px;margin-bottom:18px;">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px;">
+          <i class="fas fa-image" style="color:var(--teal);margin-right:6px;"></i>Company Logo for Certificates
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+          This logo will appear on the <strong>left side</strong> of every certificate issued to your participants, representing your company's branding.
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+          <div id="corpLogoPreviewWrap" style="width:100px;height:60px;border:1.5px dashed var(--brd);border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f8faff;overflow:hidden;">
+            <img id="corpLogoPreview" src="" alt="" style="max-width:96px;max-height:56px;object-fit:contain;display:none;" onerror="this.style.display='none'"/>
+            <i id="corpLogoPlaceholder" class="fas fa-building" style="font-size:24px;color:#b0bec5;"></i>
+          </div>
+          <div style="flex:1;">
+            <input type="file" id="corpLogoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="width:100%;font-size:13px;margin-bottom:8px;" onchange="previewCorpLogo(this)"/>
+            <button class="btn btn-primary btn-sm" onclick="uploadCorpLogo()"><i class="fas fa-upload"></i> Upload Logo</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);">Recommended: PNG or SVG, transparent background, min 200×80px</div>
+      </div>
+
+      <!-- Certificate preview note -->
+      <div style="background:#f0fdf4;border:1px solid #a5d6a7;border-radius:10px;padding:12px 14px;font-size:12px;color:#2e7d32;">
+        <i class="fas fa-certificate" style="margin-right:6px;"></i>
+        <strong>How it appears:</strong> Your logo shows on the left side of the certificate header. The right side shows the platform's "CERTIFIED LEARNING MANAGEMENT PROFESSIONAL DEVELOPMENT" branding set by the super admin.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Modal -->
+<div class="modal-overlay" id="progressModalOverlay" style="display:none;align-items:center;justify-content:center;padding:16px;">
+  <div class="modal-box" style="max-width:720px;width:100%;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);" id="progressModalTitle">Course Progress</span>
+      <button onclick="closeProgressModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
+    </div>
+    <div id="progressModalSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
+    <div id="progressModalBody"></div>
+  </div>
+</div>
+
+<!-- Assign Course Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" id="assignCourseModal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);" id="assignModalTitle">Assign Courses</span>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
+    </div>
+    <div class="alert" id="assignAlert"></div>
+    <input type="hidden" id="assign-pid"/>
+    <div class="form-group">
+      <label>Select Courses to Add</label>
+      <div id="assign-courses-checkboxes" style="border:1px solid var(--brd);border-radius:8px;padding:12px;max-height:260px;overflow-y:auto;">
+        <p style="color:var(--muted);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading courses...</p>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px;"><i class="fas fa-info-circle"></i> Already assigned courses are shown but cannot be re-selected.</p>
+    </div>
+    <button class="btn btn-primary" onclick="assignCourse()"><i class="fas fa-link"></i> Assign Selected Courses</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN=()=>localStorage.getItem('corp_token')||'';
+const USER=()=>{try{return JSON.parse(localStorage.getItem('corp_user')||'{}')}catch{return{};}};
+
+// Role guard — must be logged in as corporate
+(function(){
+  const t=localStorage.getItem('corp_token');
+  if(!t){window.location.href='corporate-login.html';return;}
+  try{
+    const payload=JSON.parse(atob(t.split('.')[1]));
+    if(payload.role!=='corporate'){localStorage.removeItem('corp_token');localStorage.removeItem('corp_user');window.location.href='corporate-login.html';}
+  }catch{window.location.href='corporate-login.html';}
+})();
+
+const BASE='/api/v1';
+async function api(method,path,body=null){
+  const h={'Content-Type':'application/json','Authorization':'Bearer '+TOKEN()};
+  const opts={method,headers:h};
+  if(body)opts.body=JSON.stringify(body);
+  try{
+    const r=await fetch(BASE+path,opts);
+    if(r.status===401||r.status===403){
+      if(r.status===401){localStorage.removeItem('corp_token');localStorage.removeItem('corp_user');window.location.href='corporate-login.html';}
+      const d=await r.json();
+      return{success:false,error:d.error||'Access denied'};
+    }
+    return r.json();
+  }
+  catch{return{success:false,error:'Network error — check server is running'};}
+}
+function fmt(v){return v===null||v===undefined?'—':v;}
+function dateFmt(d){return d?new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—';}
+function showToast(m,t=''){const el=document.getElementById('toast');el.textContent=m;el.className='toast show '+(t||'');setTimeout(()=>el.className='toast',3000);}
+function showAlert(id,m,t='error'){const el=document.getElementById(id);if(!el)return;el.textContent=m;el.className='alert '+t;el.style.display='block';setTimeout(()=>{if(el)el.style.display='none';},6000);}
+function logout(){localStorage.removeItem('corp_token');localStorage.removeItem('corp_user');window.location.href='corporate-login.html';}
+function openModal(id){document.getElementById('modalOverlay').classList.add('open');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+
+const sectionTitles={overview:'Overview',participants:'All Participants','add-participant':'Add Participant','bulk-upload':'Bulk Upload',courses:'Available Courses',progress:'Progress Report',settings:'Settings / Branding'};
+function showSection(name){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const sec=document.getElementById('sec-'+name);if(sec)sec.classList.add('active');
+  document.getElementById('pageTitle').textContent=sectionTitles[name]||name;
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.textContent.trim()===sectionTitles[name])n.classList.add('active');});
+  const loaders={overview:loadOverview,participants:loadParticipants,'add-participant':loadCourseCheckboxes,'bulk-upload':loadBulkCourseCheckboxes,courses:loadCorpCourses,progress:()=>switchProgressTab('participant'),settings:loadCorpSettings};
+  if(loaders[name])loaders[name]();
+}
+
+// ── SETTINGS / BRANDING ──────────────────────────────────────────────────────
+async function loadCorpSettings(){
+  const r=await api('GET','/branding');
+  const logo=(r.data||r)?.corp_logo||'';
+  if(logo){
+    const img=document.getElementById('corpLogoPreview');
+    const ph=document.getElementById('corpLogoPlaceholder');
+    if(img){img.src=logo;img.style.display='block';}
+    if(ph)ph.style.display='none';
+  }
+}
+function previewCorpLogo(input){
+  if(!input.files||!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=document.getElementById('corpLogoPreview');
+    const ph=document.getElementById('corpLogoPlaceholder');
+    if(img){img.src=e.target.result;img.style.display='block';}
+    if(ph)ph.style.display='none';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+async function uploadCorpLogo(){
+  const fileInput=document.getElementById('corpLogoFile');
+  if(!fileInput||!fileInput.files||!fileInput.files[0]){showAlert('settingsAlert','Please select an image file first.');return;}
+  const fd=new FormData();
+  fd.append('logo',fileInput.files[0]);
+  const r=await fetch(API('/corporate/settings/logo'),{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
+  const data=await r.json();
+  if(data.success||data.logo_path){
+    showAlert('settingsAlert','Company logo uploaded successfully! It will appear on all new certificates.','success');
+    if(data.logo_path||data.data?.logo_path){
+      const path=data.logo_path||data.data?.logo_path;
+      const img=document.getElementById('corpLogoPreview');
+      const ph=document.getElementById('corpLogoPlaceholder');
+      if(img){img.src=path;img.style.display='block';}
+      if(ph)ph.style.display='none';
+    }
+  } else {
+    showAlert('settingsAlert',data.error||'Upload failed. Please try again.');
+  }
+}
+
+// Init user info
+const u=USER();
+if(u.name){
+  document.getElementById('sbCompanyName').textContent=u.name;
+  document.getElementById('sbUserInfo').textContent=u.name;
+  document.getElementById('sbAvatar').textContent=u.name[0]?.toUpperCase()||'C';
+}
+
+async function loadOverview(){
+  const r=await api('GET','/corporate/participants');
+  const participants=r.data||[];
+  const total=participants.length;
+  const active=participants.filter(p=>p.status==='Active').length;
+  const pending=participants.filter(p=>p.first_login).length;
+  let totalCourses=0;
+  participants.forEach(p=>{if(p.assigned_courses)totalCourses+=p.assigned_courses.length;});
+  document.getElementById('st-total').textContent=total;
+  document.getElementById('st-active').textContent=active;
+  document.getElementById('st-courses').textContent=totalCourses;
+  document.getElementById('st-pending').textContent=pending;
+  // Recent 5
+  const recent=participants.slice(0,5);
+  document.getElementById('recentParticipantsTbody').innerHTML=recent.length?recent.map(p=>`
+    <tr>
+      <td><strong>${fmt(p.name)}</strong></td>
+      <td>${fmt(p.email)}</td>
+      <td>${p.assigned_courses?p.assigned_courses.map(c=>c.name).join(', '):'—'}</td>
+      <td><span class="badge ${(p.status||'pending').toLowerCase()}">${p.status||'Pending'}</span></td>
+      <td>${dateFmt(p.created_at)}</td>
+    </tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);">No participants yet</td></tr>';
+}
+
+async function loadParticipants(){
+  const tbody=document.getElementById('participantsTbody');
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+  const r=await api('GET','/corporate/participants');
+  if(!r.success){
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#e53935;padding:20px;">Error: ${r.error||'Unknown error'}</td></tr>`;
+    return;
+  }
+  const participants=r.data||[];
+  tbody.innerHTML='';
+  if(!participants.length){
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">No participants yet.</td></tr>';
+    return;
+  }
+  participants.forEach((p,i)=>{
+    const tr=document.createElement('tr');
+
+    // #
+    const t1=document.createElement('td');t1.textContent=i+1;tr.appendChild(t1);
+
+    // Name
+    const t2=document.createElement('td');
+    const s=document.createElement('strong');s.textContent=p.name||'—';t2.appendChild(s);tr.appendChild(t2);
+
+    // Email
+    const t3=document.createElement('td');t3.textContent=p.email||'—';t3.style.maxWidth='160px';t3.style.overflow='hidden';t3.style.textOverflow='ellipsis';t3.style.whiteSpace='nowrap';tr.appendChild(t3);
+
+    // Contact
+    const t4=document.createElement('td');t4.textContent=p.contact||'—';tr.appendChild(t4);
+
+    // Assigned Courses
+    const t5=document.createElement('td');t5.style.maxWidth='180px';
+    if(p.assigned_courses&&p.assigned_courses.length){
+      p.assigned_courses.forEach(c=>{
+        const pill=document.createElement('span');
+        pill.textContent=c.name;
+        pill.style.cssText='display:inline-block;background:#e0f7f5;color:#00695c;border-radius:12px;padding:2px 8px;font-size:11px;margin:2px;';
+        t5.appendChild(pill);
+      });
+    } else {
+      const none=document.createElement('span');none.textContent='None';none.style.color='var(--muted)';t5.appendChild(none);
+    }
+    tr.appendChild(t5);
+
+    // Status
+    const t6=document.createElement('td');
+    const badge=document.createElement('span');badge.className='badge '+(p.status||'pending').toLowerCase();badge.textContent=p.status||'Pending';t6.appendChild(badge);tr.appendChild(t6);
+
+    // Login
+    const t7=document.createElement('td');
+    const lbadge=document.createElement('span');lbadge.className=p.first_login?'badge pending':'badge active';lbadge.textContent=p.first_login?'Not yet':'Logged In';t7.appendChild(lbadge);tr.appendChild(t7);
+
+    // Actions
+    const t8=document.createElement('td');t8.style.whiteSpace='nowrap';
+
+    const btnAdd=document.createElement('button');
+    btnAdd.className='btn btn-sm btn-outline';btnAdd.innerHTML='<i class="fas fa-plus"></i> Add Course';
+    btnAdd.style.cssText='font-size:11px;padding:4px 8px;margin-right:4px;';
+    btnAdd.onclick=()=>openAssignCourse(p.id,p.name,p.assigned_courses?p.assigned_courses.map(c=>c.id):[]);
+    t8.appendChild(btnAdd);
+
+    const btnResend=document.createElement('button');
+    btnResend.className='btn btn-sm';btnResend.innerHTML='<i class="fas fa-paper-plane"></i>';
+    btnResend.style.cssText='background:#1565c0;color:#fff;font-size:11px;padding:4px 8px;margin-right:4px;';
+    btnResend.title='Resend Email';btnResend.onclick=()=>resendCredentials(p.id,p.email);
+    t8.appendChild(btnResend);
+
+    const btnDel=document.createElement('button');
+    btnDel.className='btn btn-sm btn-danger';btnDel.innerHTML='<i class="fas fa-trash"></i>';
+    btnDel.style.cssText='font-size:11px;padding:4px 8px;';
+    btnDel.title='Delete';btnDel.onclick=()=>deleteParticipant(p.id,p.name);
+    t8.appendChild(btnDel);
+
+    tr.appendChild(t8);
+    tbody.appendChild(tr);
+  });
+}
+
+let allCoursesList=[];
+let coursesLoadError='';
+async function loadCoursesList(force=false){
+  if(allCoursesList.length>0&&!force)return;
+  coursesLoadError='';
+  try{
+    const r=await api('GET','/corporate/my-courses');
+    if(!r.success){
+      coursesLoadError=r.error||'Could not load courses';
+      allCoursesList=[];
+      return;
+    }
+    // r.data may be array or null/undefined
+    allCoursesList=Array.isArray(r.data)?r.data:[];
+  }catch(e){
+    coursesLoadError='Network error loading courses';
+    allCoursesList=[];
+  }
+}
+async function loadCourseCheckboxes(){
+  await loadCoursesList(true);
+  const el=document.getElementById('addCoursesCheckboxes');
+  if(coursesLoadError){
+    el.innerHTML=`<p style="color:#c62828;font-size:13px;">⚠️ ${coursesLoadError}</p>`;return;
+  }
+  el.innerHTML=allCoursesList.length?allCoursesList.map(c=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;border-bottom:1px solid var(--brd);">
+      <input type="checkbox" class="add-course-chk" value="${c.id}" style="width:14px;height:14px;"/>
+      <span><strong>${c.name}</strong> ${c.price>0?'<span style="color:var(--teal);">(₹'+Number(c.price).toLocaleString()+')</span>':'<span style="color:var(--green);">(Free)</span>'} ${c.duration?'· '+c.duration:''}</span>
+    </label>`).join(''):'<p style="color:var(--muted);font-size:13px;">No courses assigned to your account yet. Please ask your administrator to assign courses.</p>';
+}
+async function loadBulkCourseCheckboxes(){
+  await loadCoursesList(true);
+  const el=document.getElementById('bulkCoursesCheckboxes');
+  if(coursesLoadError){
+    el.innerHTML=`<p style="color:#c62828;font-size:13px;">⚠️ ${coursesLoadError}</p>`;return;
+  }
+  el.innerHTML=allCoursesList.length?allCoursesList.map(c=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:13px;border-bottom:1px solid var(--brd);">
+      <input type="checkbox" class="bulk-course-chk" value="${c.id}" style="width:14px;height:14px;"/>
+      <span><strong>${c.name}</strong> ${c.price>0?'<span style="color:var(--teal);">(₹'+Number(c.price).toLocaleString()+')</span>':'<span style="color:var(--green);">(Free)</span>'} ${c.duration?'· '+c.duration:''}</span>
+    </label>`).join(''):'<p style="color:var(--muted);font-size:13px;">No courses assigned to your account yet. Please ask your administrator to assign courses.</p>';
+}
+
+async function addParticipant(){
+  const name=document.getElementById('p-name').value.trim();
+  const email=document.getElementById('p-email').value.trim();
+  const contact=document.getElementById('p-contact').value.trim();
+  if(!name||!email){showAlertSticky('addParticipantAlert','Name and Email are required.');return;}
+  const courseIds=[];
+  document.querySelectorAll('.add-course-chk:checked').forEach(c=>courseIds.push(parseInt(c.value)));
+  const btn=document.querySelector('[onclick="addParticipant()"]');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Adding...';}
+  const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:courseIds});
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant';}
+  if(r.success){
+    showAlertSticky('addParticipantAlert',`✅ Participant added! Login credentials sent to ${email}.`,'success');
+    document.getElementById('p-name').value='';
+    document.getElementById('p-email').value='';
+    document.getElementById('p-contact').value='';
+    document.querySelectorAll('.add-course-chk').forEach(c=>c.checked=false);
+    // Auto-navigate to All Participants after 2 seconds
+    setTimeout(()=>showSection('participants'),2000);
+  }else{
+    showAlertSticky('addParticipantAlert',r.error||'Failed to add participant. Check if email already exists.');
+  }
+}
+
+async function loadCorpCourses(){
+  const grid=document.getElementById('corpCoursesGrid');
+  grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i><p style="margin-top:12px;">Loading courses...</p></div>';
+  // Always force-refresh when viewing courses so new allowed courses show immediately
+  await loadCoursesList(true);
+  if(coursesLoadError){
+    grid.innerHTML=`<div style="text-align:center;padding:40px;color:#c62828;grid-column:1/-1;"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;"></i><p><strong>Error loading courses:</strong><br>${coursesLoadError}</p><button class="btn btn-outline btn-sm" onclick="loadCorpCourses()" style="margin-top:12px;"><i class="fas fa-rotate-right"></i> Retry</button></div>`;
+    return;
+  }
+  if(!allCoursesList.length){
+    grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-book-open" style="font-size:48px;margin-bottom:16px;display:block;opacity:0.25;"></i><p style="font-size:15px;font-weight:600;margin-bottom:6px;">No Courses Assigned Yet</p><p style="font-size:13px;">Your administrator has not assigned any courses to your account yet.<br>Please contact your Super Admin.</p></div>';
+    return;
+  }
+  grid.innerHTML=allCoursesList.map(c=>`
+    <div style="background:#fff;border-radius:16px;border:1px solid var(--brd);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;">
+      <div style="height:90px;background:linear-gradient(135deg,var(--navy),var(--teal));display:flex;align-items:center;justify-content:center;padding:0 16px;">
+        <i class="fas fa-book-open" style="color:rgba(255,255,255,0.3);font-size:36px;"></i>
+      </div>
+      <div style="padding:16px;flex:1;display:flex;flex-direction:column;">
+        <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;">${c.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${c.category_name||'General'}${c.duration?' · <i class="fas fa-clock" style="margin-right:3px;"></i>'+c.duration:''}</div>
+        ${c.description?`<p style="font-size:12px;color:var(--muted);margin-bottom:10px;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.description}</p>`:'<div style="flex:1;"></div>'}
+        ${c.trainer_name?`<div style="font-size:12px;margin-bottom:10px;padding:6px 10px;background:#f0fdf9;border-radius:8px;color:#00695c;"><i class="fas fa-user-tie" style="margin-right:6px;"></i><strong>${c.trainer_name}</strong></div>`:''}
+        ${c.avg_rating>0?`<div style="font-size:12px;color:#f59e0b;margin-bottom:8px;"><i class="fas fa-star" style="margin-right:3px;"></i>${Number(c.avg_rating).toFixed(1)} rating</div>`:''}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:10px;border-top:1px solid var(--brd);">
+          <div style="font-size:16px;font-weight:700;color:${c.price>0?'var(--navy)':'var(--green)'};">${c.price>0?'₹'+Number(c.price).toLocaleString():'Free'}</div>
+          <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${c.status==='Active'||c.status==='active'?'#e8f5e9':'#fff3e0'};color:${c.status==='Active'||c.status==='active'?'#2e7d32':'#e65100'};">${c.status||'Active'}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── PROGRESS REPORT ──────────────────────────────────────────────────────────
+let _currentProgressTab = 'participant';
+
+function switchProgressTab(tab){
+  _currentProgressTab = tab;
+  const pTab = document.getElementById('progress-tab-participant');
+  const cTab = document.getElementById('progress-tab-course');
+  const pBtn = document.getElementById('tab-by-part');
+  const cBtn = document.getElementById('tab-by-course');
+  if(tab==='participant'){
+    pTab.style.display='block'; cTab.style.display='none';
+    pBtn.style.background='var(--teal)'; pBtn.style.color='#fff';
+    cBtn.style.background='transparent'; cBtn.style.color='var(--muted)';
+    loadProgressByParticipant();
+  } else {
+    pTab.style.display='none'; cTab.style.display='block';
+    cBtn.style.background='var(--teal)'; cBtn.style.color='#fff';
+    pBtn.style.background='transparent'; pBtn.style.color='var(--muted)';
+    loadProgressCourses();
+  }
+}
+
+function refreshProgress(){ switchProgressTab(_currentProgressTab); }
+
+// ── BY PARTICIPANT ────────────────────────────────────────────────────────────
+let _allProgressParticipants = [];
+
+async function loadProgressByParticipant(){
+  const container = document.getElementById('progressByPartContainer');
+  container.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
+  const searchEl = document.getElementById('progressPartSearch');
+  if(searchEl) searchEl.value='';
+  const r = await api('GET', '/corporate/progress/by-participant');
+  if(!r.success){
+    container.innerHTML=`<div style="text-align:center;padding:40px;color:#c62828;">${r.error||'Failed to load progress'}</div>`;
+    return;
+  }
+  _allProgressParticipants = r.data||[];
+  if(!_allProgressParticipants.length){
+    container.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-users" style="font-size:40px;opacity:0.2;display:block;margin-bottom:12px;"></i><p>No participants enrolled in any course yet.</p></div>';
+    return;
+  }
+
+  // Summary stats (always shown, not affected by search)
+  const totalPart = _allProgressParticipants.length;
+  const allCoursesDone = _allProgressParticipants.filter(p=>{
+    const courses = p.courses||[];
+    return courses.length>0 && courses.every(c=>parseInt(c.total_modules)===0||parseInt(c.completed_modules)>=parseInt(c.total_modules));
+  }).length;
+  const totalCourseEnrollments = _allProgressParticipants.reduce((s,p)=>s+(p.courses||[]).length,0);
+
+  container.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+      <div style="background:#f0fdf4;border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:var(--navy);">${totalPart}</div>
+        <div style="font-size:12px;color:var(--muted);">Total Participants</div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:#43a047;">${allCoursesDone}</div>
+        <div style="font-size:12px;color:var(--muted);">All Courses Completed</div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid var(--brd);border-radius:10px;padding:14px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:var(--orange);">${totalCourseEnrollments}</div>
+        <div style="font-size:12px;color:var(--muted);">Total Enrollments</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#f0fdf4;">
+          <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;white-space:nowrap;">#</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;min-width:140px;">Participant</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;">Course-wise Progress</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;white-space:nowrap;">Overall</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;white-space:nowrap;">Status</th>
+        </tr>
+      </thead>
+      <tbody id="progressPartTbody"></tbody>
+    </table></div>`;
+
+  renderProgressRows(_allProgressParticipants);
+}
+
+function renderProgressRows(list){
+  const tbody = document.getElementById('progressPartTbody');
+  if(!tbody) return;
+  const countEl = document.getElementById('progressPartCount');
+  if(countEl) countEl.textContent = list.length + ' of ' + _allProgressParticipants.length + ' participant' + (_allProgressParticipants.length!==1?'s':'');
+
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="5" style="padding:32px;text-align:center;color:var(--muted);"><i class="fas fa-search" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>No participants match your search.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((p,i)=>{
+    const courses = p.courses||[];
+    const overallPct = courses.length>0
+      ? Math.round(courses.reduce((s,c)=>{
+          const tot=parseInt(c.total_modules)||0;
+          const done=parseInt(c.completed_modules)||0;
+          let cp=tot>0?Math.round(done/tot*100):0;
+          if(cp===0 && c.scorm_score!==null && c.scorm_score!==undefined){
+            const sMax=parseInt(c.scorm_score_max)||100;
+            cp=sMax>0?Math.round((parseInt(c.scorm_score)||0)/sMax*100):0;
+          }
+          return s+cp;
+        },0)/courses.length)
+      : 0;
+    const overallCol = overallPct===100?'#43a047':overallPct>=60?'var(--orange)':'#e53935';
+    const statusBadge = p.status==='Active'
+      ?'<span style="background:#e8f5e9;color:#2e7d32;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;">Active</span>'
+      :'<span style="background:#fff3e0;color:#e65100;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;">'+(p.status||'Pending')+'</span>';
+
+    const courseBars = courses.map(c=>{
+      const tot=parseInt(c.total_modules)||0;
+      const done=parseInt(c.completed_modules)||0;
+      let pct=tot>0?Math.round(done/tot*100):0;
+      if(pct===0 && c.scorm_score!==null && c.scorm_score!==undefined){
+        const sMax=parseInt(c.scorm_score_max)||100;
+        pct=sMax>0?Math.round((parseInt(c.scorm_score)||0)/sMax*100):0;
+      }
+      const col=pct===100?'#43a047':pct>=60?'var(--orange)':'#1565c0';
+      const certIcon=c.certificate_no?'<span title="Certificate Issued" style="color:#43a047;margin-left:4px;font-size:11px;">🏆</span>':'';
+      const scormTxt=c.scorm_score!==null&&c.scorm_score!==undefined
+        ?`<span style="font-size:10px;color:#1565c0;margin-left:4px;">[Score: ${c.scorm_score}/${c.scorm_score_max||100}]</span>`:'';
+      return`<div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+          <span style="font-size:12px;font-weight:600;color:var(--navy);">${c.course_name}${certIcon}${scormTxt}</span>
+          <span style="font-size:11px;font-weight:700;color:${col};">${pct}%</span>
+        </div>
+        <div style="background:#eee;border-radius:8px;height:8px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${col};border-radius:8px;transition:width 0.4s;"></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">${done} of ${tot} modules done${c.last_accessed?' · Last active: '+new Date(c.last_accessed).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):''}</div>
+      </div>`;
+    }).join('');
+
+    return`<tr style="border-bottom:1px solid var(--brd);vertical-align:top;">
+      <td style="padding:12px 14px;color:var(--muted);font-size:12px;">${i+1}</td>
+      <td style="padding:12px 14px;">
+        <div style="font-weight:700;color:var(--navy);">${p.name}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${p.email}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${courses.length} course${courses.length!==1?'s':''} assigned</div>
+      </td>
+      <td style="padding:12px 14px;min-width:280px;">${courseBars||'<span style="font-size:12px;color:var(--muted);">No courses assigned</span>'}</td>
+      <td style="padding:12px 14px;white-space:nowrap;">
+        <div style="display:flex;align-items:center;gap:6px;min-width:90px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:conic-gradient(${overallCol} ${overallPct*3.6}deg,#eee 0);display:flex;align-items:center;justify-content:center;position:relative;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${overallCol};">${overallPct}%</div>
+          </div>
+        </div>
+      </td>
+      <td style="padding:12px 14px;">${statusBadge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterProgressByName(){
+  const q = (document.getElementById('progressPartSearch')?.value||'').toLowerCase().trim();
+  const filtered = q ? _allProgressParticipants.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.email||'').toLowerCase().includes(q)) : _allProgressParticipants;
+  renderProgressRows(filtered);
+}
+
+// ── BY COURSE ─────────────────────────────────────────────────────────────────
+async function loadProgressCourses(){
+  const grid=document.getElementById('progressCoursesGrid');
+  grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
+  await loadCoursesList(true);
+  if(!allCoursesList.length){
+    grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">No courses assigned to your account yet.</div>';
+    return;
+  }
+  grid.innerHTML=allCoursesList.map(c=>`
+    <div style="background:#fff;border-radius:14px;border:1px solid var(--brd);padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;">
+      <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:var(--navy);">${c.name}</div>
+      <div style="font-size:12px;color:var(--muted);">${c.category_name||'General'}${c.duration?' · '+c.duration:''}</div>
+      <button class="btn btn-primary btn-sm" onclick="openCourseProgressModal(${c.id},${JSON.stringify(c.name)})" style="margin-top:auto;width:100%;justify-content:center;">
+        <i class="fas fa-chart-bar"></i> View Participant Progress
+      </button>
+    </div>`).join('');
+}
+
+function closeProgressModal(){document.getElementById('progressModalOverlay').style.display='none';}
+
+async function openCourseProgressModal(courseId, courseName){
+  const overlay=document.getElementById('progressModalOverlay');
+  document.getElementById('progressModalTitle').innerHTML=`<i class="fas fa-chart-bar" style="color:var(--teal);margin-right:8px;"></i>Progress — <strong>${courseName}</strong>`;
+  document.getElementById('progressModalSummary').innerHTML='';
+  document.getElementById('progressModalBody').innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  overlay.style.display='flex';
+  const r=await api('GET',`/corporate/courses/${courseId}/progress`);
+  const users=r.data?.users||[];
+  const total=users.length;
+  const completed=users.filter(u=>u.progress_pct===100).length;
+  const avg=total>0?Math.round(users.reduce((s,u)=>s+u.progress_pct,0)/total):0;
+  document.getElementById('progressModalSummary').innerHTML=`
+    <div style="text-align:center;padding:10px;background:#f0fdf4;border-radius:10px;border:1px solid var(--brd);">
+      <div style="font-size:22px;font-weight:700;color:var(--navy);">${total}</div>
+      <div style="font-size:12px;color:var(--muted);">Participants</div>
+    </div>
+    <div style="text-align:center;padding:10px;background:#f0fdf4;border-radius:10px;border:1px solid var(--brd);">
+      <div style="font-size:22px;font-weight:700;color:#43a047;">${completed}</div>
+      <div style="font-size:12px;color:var(--muted);">Completed</div>
+    </div>
+    <div style="text-align:center;padding:10px;background:#f0fdf4;border-radius:10px;border:1px solid var(--brd);">
+      <div style="font-size:22px;font-weight:700;color:var(--orange);">${avg}%</div>
+      <div style="font-size:12px;color:var(--muted);">Avg. Progress</div>
+    </div>`;
+  if(!users.length){
+    document.getElementById('progressModalBody').innerHTML='<p style="text-align:center;color:var(--muted);padding:24px;">No participants enrolled in this course yet.</p>';
+    return;
+  }
+  const passingPct = r.data?.passing_percentage || 0;
+  document.getElementById('progressModalBody').innerHTML=`
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#f0fdf4;">
+        <th style="padding:9px 12px;text-align:left;color:var(--navy);font-weight:600;">#</th>
+        <th style="padding:9px 12px;text-align:left;color:var(--navy);font-weight:600;">Participant</th>
+        <th style="padding:9px 12px;text-align:left;color:var(--navy);font-weight:600;">Modules</th>
+        <th style="padding:9px 12px;text-align:left;color:var(--navy);font-weight:600;min-width:110px;">Progress</th>
+        <th style="padding:9px 12px;text-align:left;color:var(--navy);font-weight:600;">SCORM Score</th>
+        <th style="padding:9px 12px;text-align:left;color:var(--navy);font-weight:600;">Quiz</th>
+        <th style="padding:9px 12px;text-align:left;color:var(--navy);font-weight:600;">Certificate</th>
+        <th style="padding:9px 12px;text-align:left;color:var(--navy);font-weight:600;">Last Active</th>
+      </tr></thead>
+      <tbody>${users.map((u,i)=>{
+        const pct=u.progress_pct||0;
+        const col=pct===100?'#43a047':pct>=60?'var(--orange)':'#e53935';
+        const last=u.last_accessed?new Date(u.last_accessed).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'Never';
+        // SCORM score display
+        let scormHtml='<span style="color:var(--muted);font-size:11px;">—</span>';
+        if(u.scorm_score!==null&&u.scorm_score!==undefined){
+          const sPct=u.scorm_score_pct||0;
+          const sCol=passingPct>0?(sPct>=passingPct?'#2e7d32':'#c62828'):'#1565c0';
+          scormHtml=`<span style="font-weight:700;color:${sCol};font-size:12px;">${u.scorm_score}/${u.scorm_score_max||100}</span><span style="font-size:10px;color:${sCol};"> (${sPct}%)</span>`;
+        }
+        // Quiz status display
+        let quizHtml='<span style="color:var(--muted);font-size:11px;">—</span>';
+        if(u.quiz_passed===true) quizHtml='<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">✅ Passed</span>';
+        else if(u.quiz_passed===false) quizHtml=`<span style="background:#fdecea;color:#c62828;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">❌ Failed</span>${u.quiz_score!==null?`<div style="font-size:10px;color:var(--muted);">${u.quiz_score}/${u.quiz_total}</div>`:''}`;
+        // Passing status badge
+        let statusBadge='';
+        if(u.passing_status==='pass') statusBadge='<span style="background:#e8f5e9;color:#2e7d32;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;margin-left:4px;">PASS</span>';
+        else if(u.passing_status==='fail') statusBadge='<span style="background:#fdecea;color:#c62828;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;margin-left:4px;">FAIL</span>';
+        // Certificate
+        const certHtml=u.certificate_no
+          ?`<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;" title="${u.certificate_no}">🏆 Issued</span>`
+          :'<span style="color:var(--muted);font-size:11px;">—</span>';
+        return`<tr style="border-bottom:1px solid var(--brd);">
+          <td style="padding:9px 12px;color:var(--muted);">${i+1}</td>
+          <td style="padding:9px 12px;"><strong>${u.name}</strong><div style="font-size:11px;color:var(--muted);">${u.email}</div></td>
+          <td style="padding:9px 12px;"><span style="font-weight:600;">${u.completed_modules}</span><span style="color:var(--muted);"> / ${u.total_modules}</span></td>
+          <td style="padding:9px 12px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="flex:1;height:7px;background:#eee;border-radius:8px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${col};border-radius:8px;"></div></div>
+              <span style="font-size:11px;font-weight:700;color:${col};min-width:32px;">${pct}%</span>
+            </div>
+            ${statusBadge}
+          </td>
+          <td style="padding:9px 12px;">${scormHtml}</td>
+          <td style="padding:9px 12px;">${quizHtml}</td>
+          <td style="padding:9px 12px;">${certHtml}</td>
+          <td style="padding:9px 12px;color:var(--muted);font-size:12px;">${last}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+    ${passingPct>0?`<div style="margin-top:12px;font-size:12px;color:var(--muted);background:#fffde7;border:1px solid #ffe0b2;border-radius:8px;padding:8px 12px;"><i class="fas fa-trophy" style="color:#e65100;"></i> Passing score for this course: <strong>${passingPct}%</strong></div>`:''}
+    `;
+}
+
+// Close progress modal on overlay click
+document.getElementById('progressModalOverlay').addEventListener('click',function(e){if(e.target===this)closeProgressModal();});
+
+// Validate that a name looks like real text (not binary garbage / hash)
+function isValidParticipantName(name){
+  if(!name||name.length<1||name.length>100) return false;
+  // Count characters outside normal printable range (Unicode > U+02FF means rare symbols / binary)
+  let badCount=0;
+  for(let i=0;i<name.length;i++){
+    const cp=name.charCodeAt(i);
+    // Allow: standard ASCII printable (32-126), common accented Latin (128-767)
+    // Reject if many chars are unusual Unicode symbols (>767) or non-printable
+    if(cp<32||(cp>767&&cp!==8217&&cp!==8216&&cp!==8220&&cp!==8221)) badCount++;
+  }
+  // If more than 25% of characters are unusual, name is likely garbled
+  if(badCount/name.length>0.25) return false;
+  // Name must contain at least one letter
+  if(!/[a-zA-Z\u00C0-\u024F]/.test(name)) return false;
+  return true;
+}
+
+// Validate email format
+function isValidEmail(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
+// Parse bulk CSV/Excel file
+function parseBulkFile(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const reader=new FileReader();
+  if(ext==='xlsx'||ext==='xls'){
+    // Excel file — use SheetJS
+    reader.onload=function(e){
+      try{
+        const data=new Uint8Array(e.target.result);
+        // raw:false forces all cells to strings; codepage fix for .xls encoding
+        const wb=XLSX.read(data,{type:'array',raw:false,codepage:65001});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});
+        if(!rows||rows.length<2){showAlert('bulkAlert','Excel file is empty or has no data rows.');return;}
+        // Find header row (first non-empty row with "name"/"email")
+        let headerRow=0;
+        for(let ri=0;ri<Math.min(rows.length,5);ri++){
+          const trial=(rows[ri]||[]).map(c=>String(c).toLowerCase().trim());
+          if(trial.some(c=>c.includes('name')||c.includes('email'))){headerRow=ri;break;}
+        }
+        const firstRow=(rows[headerRow]||[]).map(c=>String(c).toLowerCase().trim());
+        // Map columns - find name/email/contact by header
+        let nameCol=0,emailCol=1,contactCol=2;
+        firstRow.forEach((h,i)=>{
+          if(h.includes('name')&&!h.includes('company')&&!h.includes('user')) nameCol=i;
+          else if(h.includes('email')|| h.includes('mail')) emailCol=i;
+          else if(h.includes('contact')||h.includes('phone')||h.includes('mobile')||h.includes('no')) contactCol=i;
+        });
+        const participants=[];
+        const skipped=[];
+        for(let i=headerRow+1;i<rows.length;i++){
+          const r=rows[i];
+          // Skip completely empty rows
+          if(!r||r.every(c=>!String(c).trim())) continue;
+          const name=String(r[nameCol]||'').trim();
+          const email=String(r[emailCol]||'').trim().toLowerCase();
+          const contact=String(r[contactCol]||'').replace(/\D/g,'').slice(0,15); // digits only
+          if(!name&&!email) continue;
+          if(!isValidParticipantName(name)){
+            skipped.push(`Row ${i+1}: invalid name — "${name.substring(0,30)}..."`);
+            continue;
+          }
+          if(!isValidEmail(email)){
+            skipped.push(`Row ${i+1}: invalid email — "${email.substring(0,40)}"`);
+            continue;
+          }
+          participants.push({name,email,contact});
+        }
+        if(participants.length>0){
+          document.getElementById('bulkJson').value=JSON.stringify(participants,null,2);
+          showBulkPreview(participants);
+          let msg=`✅ ${participants.length} participant${participants.length!==1?'s':''} parsed from Excel.`;
+          if(skipped.length) msg+=` ⚠️ ${skipped.length} row(s) skipped (invalid data).`;
+          showAlert('bulkAlert',msg,'success');
+          if(skipped.length) console.warn('[BulkUpload] Skipped rows:\n'+skipped.join('\n'));
+        } else {
+          let msg='No valid participants found.';
+          if(skipped.length) msg+=' '+skipped.length+' row(s) had invalid name/email and were skipped.';
+          msg+=' Ensure columns are: Name, Email, Contact (Mobile).';
+          showAlert('bulkAlert',msg);
+        }
+      }catch(err){showAlert('bulkAlert','Error reading Excel file: '+err.message);}
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // CSV file
+    reader.onload=function(e){
+      const text=e.target.result;
+      const lines=text.split('\n').filter(l=>l.trim());
+      const hasHeader=(lines[0]||'').toLowerCase().includes('name')||(lines[0]||'').toLowerCase().includes('email');
+      const startIdx=hasHeader?1:0;
+      const participants=[];
+      const skipped=[];
+      for(let i=startIdx;i<lines.length;i++){
+        const cols=lines[i].split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+        const name=cols[0]||'';
+        const email=(cols[1]||'').toLowerCase();
+        const contact=(cols[2]||'').replace(/\D/g,'').slice(0,15);
+        if(!name&&!email) continue;
+        if(!isValidParticipantName(name)){skipped.push(`Row ${i+1}: "${name.substring(0,30)}"`);continue;}
+        if(!isValidEmail(email)){skipped.push(`Row ${i+1}: bad email "${email.substring(0,30)}"`);continue;}
+        participants.push({name,email,contact});
+      }
+      if(participants.length>0){
+        document.getElementById('bulkJson').value=JSON.stringify(participants,null,2);
+        showBulkPreview(participants);
+        let msg=`✅ ${participants.length} participant${participants.length!==1?'s':''} parsed from CSV.`;
+        if(skipped.length) msg+=` ⚠️ ${skipped.length} row(s) skipped.`;
+        showAlert('bulkAlert',msg,'success');
+      } else {
+        showAlert('bulkAlert','No valid data found in CSV. Format: Name, Email, Contact');
+      }
+    };
+    reader.readAsText(file,'UTF-8');
+  }
+}
+function showBulkPreview(participants){
+  document.getElementById('bulkPreview').style.display='block';
+  document.getElementById('bulkPreviewCount').textContent=participants.length+' participants ready to upload';
+  document.getElementById('bulkPreviewTbody').innerHTML=participants.map((p,i)=>`
+    <tr>
+      <td style="color:var(--muted);font-size:12px;">${i+1}</td>
+      <td style="font-weight:600;">${p.name}</td>
+      <td style="color:var(--muted);">${p.email}</td>
+      <td style="color:var(--muted);">${p.contact||'—'}</td>
+    </tr>`).join('');
+  // Update thead if not already updated
+  const thead=document.querySelector('#bulkPreview thead tr');
+  if(thead&&thead.children.length<4) thead.innerHTML='<th>#</th><th>Name</th><th>Email</th><th>Contact</th>';
+}
+async function submitBulkUpload(){
+  let participants=[];
+  try{participants=JSON.parse(document.getElementById('bulkJson').value||'[]');}
+  catch{showAlert('bulkAlert','Invalid JSON format. Please check your data.');return;}
+  if(!participants.length){showAlert('bulkAlert','No participant data found. Please upload a file first.');return;}
+  const courseIds=[];
+  document.querySelectorAll('.bulk-course-chk:checked').forEach(c=>courseIds.push(parseInt(c.value)));
+
+  // Show uploading state on button
+  const btn=document.querySelector('[onclick="submitBulkUpload()"]');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Uploading...';}
+
+  const r=await api('POST','/corporate/participants/bulk',{participants,course_ids:courseIds});
+
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-upload"></i> Upload & Send Emails';}
+
+  if(r.success){
+    const d=r.data;
+    const successCount=d.success||0;
+    const failedCount=d.failed||0;
+
+    // Show persistent results (no auto-hide)
+    const resultsEl=document.getElementById('bulkResultsCard');
+    resultsEl.style.display='block';
+    document.getElementById('bulkResults').innerHTML=`
+      <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="background:#e8f5e9;padding:14px 24px;border-radius:10px;text-align:center;min-width:90px;">
+          <div style="font-size:28px;font-weight:700;color:#2e7d32;">${successCount}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">✅ Uploaded</div>
+        </div>
+        <div style="background:#fdecea;padding:14px 24px;border-radius:10px;text-align:center;min-width:90px;">
+          <div style="font-size:28px;font-weight:700;color:#c62828;">${failedCount}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">❌ Failed</div>
+        </div>
+        ${successCount>0?`<div style="display:flex;align-items:center;"><button class="btn btn-primary btn-sm" onclick="showSection('participants')" style="padding:10px 18px;"><i class="fas fa-users"></i> View All Participants</button></div>`:''}
+      </div>
+      ${(d.results||[]).length?`<div style="overflow-x:auto;max-height:220px;"><table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Note</th></tr></thead><tbody>
+        ${(d.results||[]).map(r2=>`<tr>
+          <td>${r2.name||'—'}</td>
+          <td>${r2.email}</td>
+          <td><span class="badge ${r2.status==='success'?'active':'inactive'}">${r2.status==='success'?'✅ Success':'❌ Failed'}</span></td>
+          <td style="font-size:11px;color:var(--muted);">${r2.error||'Uploaded & email sent'}</td>
+        </tr>`).join('')}
+      </tbody></table></div>`:''}`;
+
+    // Reset form
+    document.getElementById('bulkJson').value='';
+    document.getElementById('bulkPreview').style.display='none';
+    document.getElementById('bulkFile').value='';
+
+    // If all successful, auto-navigate to participants after 2s
+    if(successCount>0&&failedCount===0){
+      showToast(`✅ ${successCount} participants uploaded successfully!`,'success');
+      setTimeout(()=>showSection('participants'),1800);
+    } else {
+      showToast(`Upload done: ${successCount} success, ${failedCount} failed.`, successCount>0?'success':'');
+    }
+  }else{
+    showAlert('bulkAlert',r.error||'Bulk upload failed. Please try again.');
+  }
+}
+
+async function openAssignCourse(participantId, participantName, alreadyAssignedIds=[]){
+  document.getElementById('assign-pid').value=participantId;
+  document.getElementById('assignModalTitle').innerHTML=`<i class="fas fa-link" style="color:var(--teal);margin-right:8px;"></i>Add Courses — <strong>${participantName}</strong>`;
+  const box=document.getElementById('assign-courses-checkboxes');
+  box.innerHTML='<p style="color:var(--muted);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading courses...</p>';
+  openModal('assignCourseModal');
+  await loadCoursesList(true);
+  if(!allCoursesList.length){
+    box.innerHTML='<p style="color:var(--muted);font-size:13px;">No courses available — contact admin.</p>';
+    return;
+  }
+  const assignedSet=new Set(alreadyAssignedIds.map(Number));
+  box.innerHTML=allCoursesList.map(c=>{
+    const assigned=assignedSet.has(Number(c.id));
+    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:${assigned?'default':'pointer'};font-size:13px;border-bottom:1px solid var(--brd);opacity:${assigned?'0.55':'1'};">
+      <input type="checkbox" class="assign-course-chk" value="${c.id}" ${assigned?'checked disabled':''} style="width:14px;height:14px;"/>
+      <span><strong>${c.name}</strong> ${c.price>0?'<span style="color:var(--teal);">(₹'+Number(c.price).toLocaleString()+')</span>':'<span style="color:var(--green);">(Free)</span>'} ${c.duration?'· '+c.duration:''} ${assigned?'<span style="font-size:11px;color:var(--muted);">(already assigned)</span>':''}</span>
+    </label>`;
+  }).join('');
+}
+async function assignCourse(){
+  const pid=document.getElementById('assign-pid').value;
+  const newCourseIds=[];
+  document.querySelectorAll('.assign-course-chk:checked:not(:disabled)').forEach(c=>newCourseIds.push(parseInt(c.value)));
+  if(!newCourseIds.length){showAlertSticky('assignAlert','Please select at least one new course to assign.');return;}
+  const btn=document.querySelector('[onclick="assignCourse()"]');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Assigning...';}
+  const r=await api('POST',`/corporate/participants/${pid}/assign-course`,{course_ids:newCourseIds});
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Assign Selected Courses';}
+  if(r.success){showToast(`✅ ${newCourseIds.length} course(s) assigned successfully!`,'success');closeModal();loadParticipants();}
+  else showAlertSticky('assignAlert',r.error||'Failed to assign course(s). Please try again.');
+}
+
+async function deleteParticipant(participantId, name){
+  if(!confirm(`"${name}" ko permanently delete karna chahte ho?\n\nYeh action undo nahi ho sakti — participant aur unka sara progress delete ho jayega.`))return;
+  const r=await api('DELETE',`/corporate/participants/${participantId}`);
+  if(r.success){showToast(`✅ ${name} deleted successfully!`,'success');loadParticipants();}
+  else showToast('Error: '+(r.error||'Could not delete participant.'),'');
+}
+
+async function resendCredentials(participantId,email){
+  if(!confirm(`Resend login credentials to ${email}?`))return;
+  showToast('Sending credentials...','');
+}
+
+// Sticky alert — does not auto-hide (for critical errors)
+function showAlertSticky(id,msg,type='error'){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.innerHTML=msg+' <span onclick="this.parentElement.style.display=\'none\'" style="cursor:pointer;float:right;font-weight:bold;">✕</span>';
+  el.className='alert '+(type==='success'?'success':'error');
+  el.style.display='block';
+}
+
+// INIT — load courses on startup so Assign Course modal works immediately
+(async()=>{
+  await loadCoursesList(true);
+  loadOverview();
+})();
+</script>
+</body>
+</html>

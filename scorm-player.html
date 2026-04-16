@@ -115,7 +115,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
     <p id="errorMsg">Unable to load SCORM content. Please contact your administrator.</p>
     <button class="btn btn-exit" onclick="goBack()" style="margin-top:8px;"><i class="fas fa-arrow-left"></i> Go Back</button>
   </div>
-  <iframe id="scormFrame" title="SCORM Content" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe>
+  <iframe id="scormFrame" title="SCORM Content"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-downloads allow-modals allow-orientation-lock allow-pointer-lock allow-presentation"
+    allowfullscreen="true"
+    allow="autoplay; fullscreen; picture-in-picture; encrypted-media; camera; microphone"
+    referrerpolicy="no-referrer-when-downgrade"
+  ></iframe>
 </div>
 
 <!-- COMPLETION BANNER -->
@@ -416,6 +421,7 @@ function exitSCORM() {
   setTimeout(() => {
     if (role === 'student') window.location.href = 'student-dashboard.html';
     else if (role === 'trainer') window.location.href = 'trainer-dashboard.html';
+    else if (role === 'participant') window.location.href = 'participant-dashboard.html';
     else window.location.href = 'admin-dashboard.html';
   }, 300);
 }

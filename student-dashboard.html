@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
 :root{
   --navy:#1a237e;--navy2:#111b60;--blue:#1565c0;--orange:#ff6b35;--orange2:#e55a2b;
@@ -200,10 +201,11 @@ tr:hover td{background:#f8f9ff;}
   <span class="sb-section">Main</span>
   <button class="nav-item active" onclick="showSection('overview')"><i class="fas fa-th-large"></i>Dashboard</button>
   <span class="sb-section">Learning</span>
-  <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>My Courses</button>
+  <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Courses</button>
   <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-line"></i>My Progress</button>
   <button class="nav-item" onclick="showSection('exams')"><i class="fas fa-file-pen"></i>Exams & Results</button>
   <button class="nav-item" onclick="showSection('assignments')"><i class="fas fa-tasks"></i>Assignments</button>
+  <button class="nav-item" onclick="showSection('queries')"><i class="fas fa-question-circle"></i>My Queries</button>
   <span class="sb-section">School</span>
   <button class="nav-item" onclick="showSection('attendance')"><i class="fas fa-calendar-check"></i>Attendance</button>
   <button class="nav-item" onclick="showSection('timetable')"><i class="fas fa-clock"></i>Timetable</button>
@@ -278,13 +280,100 @@ tr:hover td{background:#f8f9ff;}
     </div>
   </div>
 
-  <!-- ── MY COURSES ── -->
-  <div class="section" id="sec-courses">
-    <div class="card-header" style="margin-bottom:18px;">
-      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">My Courses</span>
+  <!-- ── MY COURSES (Admin/Trainer Assigned Only) ── -->
+  <div class="section" id="sec-mycourses">
+    <div style="margin-bottom:20px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">My Assigned Courses</span>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px;">Courses assigned to you by your admin or trainer.</p>
     </div>
-    <div class="course-grid" id="coursesGrid">
+    <div id="myAssignedCoursesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
       <div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>
+    </div>
+  </div>
+
+  <!-- ── COURSE CATALOG ── -->
+  <div class="section" id="sec-catalog">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">Course Catalog</span>
+        <p style="font-size:13px;color:var(--muted);margin-top:4px;">Browse and purchase courses directly.</p>
+      </div>
+      <input type="text" id="catalogSearch" placeholder="🔍 Search courses..." onkeyup="filterCatalog()" style="padding:9px 14px;border:1.5px solid var(--brd);border-radius:10px;font-size:13px;min-width:220px;outline:none;"/>
+    </div>
+    <div id="catalogGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;">
+      <div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>
+    </div>
+  </div>
+
+  <!-- ── QUERIES ── -->
+  <div class="section" id="sec-queries">
+    <div style="margin-bottom:20px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">My Queries</span>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px;">Submit questions to Admin or your Trainer. Responses appear in Query History.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;">
+      <!-- Submit to Admin -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-user-shield" style="color:var(--navy);margin-right:7px;"></i>Submit Query to Admin</span>
+        </div>
+        <div class="alert" id="queryAdminAlert"></div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-size:13px;font-weight:600;color:var(--text);">Your Question <span style="color:red;">*</span></label>
+          <textarea id="queryAdminQuestion" placeholder="Ask admin anything — enrollment, fees, schedule..." style="width:100%;padding:10px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;font-family:inherit;min-height:90px;resize:vertical;outline:none;"></textarea>
+        </div>
+        <button class="btn btn-sm" onclick="submitQueryTo('admin')" style="background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;">
+          <i class="fas fa-paper-plane"></i> Submit to Admin
+        </button>
+      </div>
+      <!-- Submit to Trainer -->
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-chalkboard-teacher" style="color:var(--pink);margin-right:7px;"></i>Submit Query to Trainer</span>
+        </div>
+        <div class="alert" id="queryTrainerAlert"></div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label style="font-size:13px;font-weight:600;color:var(--text);">Your Question <span style="color:red;">*</span></label>
+          <textarea id="queryTrainerQuestion" placeholder="Ask your trainer about course topics, assignments..." style="width:100%;padding:10px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;font-family:inherit;min-height:90px;resize:vertical;outline:none;"></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="submitQueryTo('trainer')" style="display:inline-flex;align-items:center;gap:7px;">
+          <i class="fas fa-paper-plane"></i> Submit to Trainer
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Query History</span><button class="btn btn-sm btn-outline" onclick="loadMyQueries()"><i class="fas fa-rotate-right"></i></button></div>
+      <div id="queriesList"><div style="text-align:center;padding:24px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- ── COURSES (E-Learning content) ── -->
+  <div class="section" id="sec-courses">
+    <!-- Tab Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">Courses</span>
+      <div style="display:flex;background:#f0f4ff;border-radius:12px;padding:4px;gap:4px;">
+        <button id="tab-all" onclick="switchCourseTab('all')"
+          style="padding:8px 22px;border-radius:9px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;background:var(--navy);color:#fff;">
+          <i class="fas fa-th-large" style="margin-right:6px;"></i>All Courses
+        </button>
+        <button id="tab-mine" onclick="switchCourseTab('mine')"
+          style="padding:8px 22px;border-radius:9px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--muted);">
+          <i class="fas fa-bookmark" style="margin-right:6px;"></i>My Courses
+        </button>
+      </div>
+    </div>
+    <!-- All Courses Tab -->
+    <div id="tab-content-all">
+      <div class="course-grid" id="allCoursesGrid">
+        <div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>
+      </div>
+    </div>
+    <!-- My Courses Tab -->
+    <div id="tab-content-mine" style="display:none;">
+      <div class="course-grid" id="myCoursesGrid">
+        <div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>
+      </div>
     </div>
   </div>
 
@@ -480,6 +569,49 @@ tr:hover td{background:#f8f9ff;}
       <button class="btn btn-primary" onclick="submitAssignment()"><i class="fas fa-upload"></i> Submit</button>
     </div>
   </div>
+
+  <!-- Course Detail Modal -->
+  <div class="modal-box" id="courseDetailModal" style="display:none;max-width:680px;padding:0;overflow:hidden;">
+    <!-- Banner -->
+    <div id="cdm-banner" style="height:100px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;">
+      <div>
+        <div id="cdm-title" style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:#fff;line-height:1.3;"></div>
+        <div id="cdm-meta" style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px;"></div>
+      </div>
+      <button onclick="closeModal()" style="background:rgba(0,0,0,0.3);border:none;color:#fff;font-size:20px;cursor:pointer;border-radius:50%;width:32px;height:32px;line-height:1;flex-shrink:0;">&times;</button>
+    </div>
+    <!-- Intro Video -->
+    <div id="cdm-video-section" style="display:none;background:#000;">
+      <video id="cdm-video" controls style="width:100%;max-height:300px;display:block;background:#000;"></video>
+    </div>
+    <div id="cdm-youtube-section" style="display:none;background:#000;position:relative;padding-top:56.25%;">
+      <iframe id="cdm-youtube" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen allow="autoplay;fullscreen"></iframe>
+    </div>
+    <!-- Course Info -->
+    <div style="padding:20px 22px 22px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div id="cdm-price-wrap" style="font-size:22px;font-weight:700;color:var(--navy);"></div>
+        <div id="cdm-rating-wrap" style="font-size:13px;color:#f59e0b;"></div>
+      </div>
+      <div id="cdm-trainer-wrap" style="display:none;padding:14px;background:#f0f4ff;border-radius:12px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+          <div id="cdm-trainer-avatar" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--blue));display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+            <i class="fas fa-user-tie" style="color:#fff;font-size:18px;"></i>
+          </div>
+          <div>
+            <div id="cdm-trainer-name" style="font-size:14px;font-weight:700;color:var(--navy);"></div>
+            <div id="cdm-trainer-expertise" style="font-size:11px;color:var(--muted);margin-top:1px;"></div>
+          </div>
+        </div>
+        <div id="cdm-trainer-bio" style="font-size:12px;color:var(--text);line-height:1.65;display:none;border-top:1px solid rgba(26,35,126,0.1);padding-top:8px;margin-top:4px;"></div>
+      </div>
+      <div id="cdm-desc" style="font-size:13px;color:var(--text);line-height:1.75;margin-bottom:18px;white-space:pre-line;"></div>
+      <button id="cdm-enroll-btn" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;font-size:15px;border-radius:10px;"></button>
+      <div id="cdm-enrolled-badge" style="display:none;text-align:center;padding:10px;background:#e8f5e9;border-radius:10px;color:#2e7d32;font-weight:600;font-size:13px;margin-top:10px;">
+        <i class="fas fa-check-circle"></i> You are already enrolled in this course
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -509,7 +641,14 @@ function showAlert(id,m,t='error'){const el=document.getElementById(id);if(!el)r
 function logout(){localStorage.clear();window.location.href='student-login.html';}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
 function openModal(id){document.getElementById('modalOverlay').classList.add('open');document.querySelectorAll('.modal-box').forEach(m=>m.style.display='none');document.getElementById(id).style.display='block';}
-function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  // Stop video playback when modal closes
+  const v = document.getElementById('cdm-video');
+  if (v) { v.pause(); v.src = ''; }
+  const yt = document.getElementById('cdm-youtube');
+  if (yt) yt.src = '';
+}
 document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 /* ── INIT USER ── */
@@ -521,7 +660,7 @@ if(u.name){
 }
 
 /* ── SECTION NAVIGATION ── */
-const sectionTitles={overview:'Dashboard',courses:'My Courses',progress:'My Progress',exams:'Exams & Results',assignments:'Assignments',attendance:'Attendance',timetable:'Timetable',materials:'Study Materials',scorm:'E-Learning (SCORM)',notifications:'Notifications',profile:'My Profile'};
+const sectionTitles={overview:'Dashboard',queries:'My Queries',courses:'Courses',progress:'My Progress',exams:'Exams & Results',assignments:'Assignments',attendance:'Attendance',timetable:'Timetable',materials:'Study Materials',scorm:'E-Learning (SCORM)',notifications:'Notifications',profile:'My Profile'};
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -532,7 +671,7 @@ function showSection(name){
   document.querySelectorAll('.nav-item').forEach(n=>{
     if(n.textContent.trim()===sectionTitles[name])n.classList.add('active');
   });
-  const loaders={overview:loadOverview,courses:loadCourses,progress:loadProgress,exams:loadExams,assignments:loadAssignments,attendance:loadAttendance,timetable:loadTimetable,materials:loadMaterials,scorm:loadScorm,notifications:loadNotifications,profile:loadProfile};
+  const loaders={overview:loadOverview,queries:loadMyQueries,courses:loadCourses,progress:loadProgress,exams:loadExams,assignments:loadAssignments,attendance:loadAttendance,timetable:loadTimetable,materials:loadMaterials,scorm:loadScorm,notifications:loadNotifications,profile:loadProfile};
   if(loaders[name])loaders[name]();
 }
 
@@ -608,26 +747,245 @@ function buildProgressChart(data){
   progressChart=new Chart(ctx,{type:'doughnut',data:{labels:courses.map(c=>c.title?.substring(0,14)||'Course'),datasets:[{data:courses.map(c=>c.percentage||0),backgroundColor:['#e91e8c','#9c27b0','#7c4dff','#1a8fe3','#43a047','#ff6b35']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
 }
 
-/* ── COURSES ── */
-async function loadCourses(){
-  const r=await api('GET','/courses/enrolled');
-  const rows=(r.data||[]);
-  document.getElementById('coursesGrid').innerHTML=rows.length?
-    rows.map(c=>`
-      <div class="crs-card">
-        <div class="crs-banner" style="background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div>
-        <div class="crs-body">
-          <div class="crs-title">${fmt(c.title||c.course_title)}</div>
-          <div class="crs-meta"><i class="fas fa-chalkboard-user"></i> ${fmt(c.trainer_name||'—')} &nbsp;|&nbsp; <i class="fas fa-layer-group"></i> ${fmt(c.batch_name||'—')}</div>
-          <div class="prog-bar"><div class="prog-fill" style="width:${c.progress||0}%;background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div></div>
-          <div class="prog-lbl" style="font-size:12px;color:var(--muted);">${c.progress||0}% complete</div>
-          ${statusBadge(c.status||'active')}
-          <button class="crs-btn" onclick="viewCourse(${c.course_id||c.id})"><i class="fas fa-play-circle"></i> Continue Learning</button>
-        </div>
-      </div>`).join(''):
-    '<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-book-open"></i><p>No courses enrolled yet. Contact your admin.</p></div>';
+/* ── COURSES — Tab switch ── */
+let _activeCourseTab = 'all';
+let _allCoursesCache = null;
+let _enrolledCache   = null;
+
+function switchCourseTab(tab) {
+  _activeCourseTab = tab;
+  // Tab button styles
+  const btnAll  = document.getElementById('tab-all');
+  const btnMine = document.getElementById('tab-mine');
+  const contAll  = document.getElementById('tab-content-all');
+  const contMine = document.getElementById('tab-content-mine');
+  if (tab === 'all') {
+    btnAll.style.background  = 'var(--navy)';  btnAll.style.color  = '#fff';
+    btnMine.style.background = 'transparent';  btnMine.style.color = 'var(--muted)';
+    contAll.style.display  = 'block';
+    contMine.style.display = 'none';
+  } else {
+    btnMine.style.background = 'var(--pink)';  btnMine.style.color  = '#fff';
+    btnAll.style.background  = 'transparent';  btnAll.style.color  = 'var(--muted)';
+    contAll.style.display  = 'none';
+    contMine.style.display = 'block';
+  }
+  // Render if cache is available
+  if (_allCoursesCache !== null) renderCourseGrids();
 }
-function viewCourse(id){showToast('Opening course content…');}
+
+function _buildCourseCard(c, isEnrolled, progress) {
+  const gradients = [
+    'linear-gradient(135deg,#e91e8c,#9c27b0)',
+    'linear-gradient(135deg,#1565c0,#0097a7)',
+    'linear-gradient(135deg,#e53935,#ff6f00)',
+    'linear-gradient(135deg,#2e7d32,#00897b)',
+    'linear-gradient(135deg,#7c4dff,#6a1fd8)',
+    'linear-gradient(135deg,#ff6b35,#e53935)',
+  ];
+  const grad = gradients[c.id % gradients.length];
+  return `<div class="crs-card" onclick="openCourseDetail(${c.id})" style="border:1px solid var(--brd);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);background:#fff;display:flex;flex-direction:column;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(26,35,126,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow='var(--shadow)'">
+    <div class="crs-banner" style="background:${grad};height:90px;position:relative;display:flex;align-items:center;justify-content:center;">
+      <i class="fas fa-book-open" style="font-size:32px;color:rgba(255,255,255,0.5);"></i>
+      ${isEnrolled
+        ? '<span style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.45);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;"><i class="fas fa-check"></i> Enrolled</span>'
+        : (c.intro_video||c.demo_video_path ? '<span style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.45);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;"><i class="fas fa-play-circle"></i> Preview</span>' : '')}
+    </div>
+    <div class="crs-body" style="padding:14px 16px 16px;flex:1;display:flex;flex-direction:column;gap:6px;">
+      <div class="crs-title" style="font-family:Poppins,sans-serif;font-size:14px;font-weight:700;color:var(--navy);line-height:1.3;">${fmt(c.name||c.title)}</div>
+      <div class="crs-meta" style="font-size:12px;color:var(--muted);"><i class="fas fa-tag"></i> ${fmt(c.category||c.category_name||'General')} &nbsp;|&nbsp; <i class="fas fa-clock"></i> ${fmt(c.duration||'—')}</div>
+      ${c.description ? `<div style="font-size:12px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.description}</div>` : ''}
+      ${isEnrolled
+        ? `<div class="prog-bar" style="height:6px;background:#eee;border-radius:10px;overflow:hidden;margin:4px 0 2px;">
+             <div style="width:${progress}%;height:100%;background:${grad};border-radius:10px;transition:width 0.4s;"></div>
+           </div>
+           <div style="font-size:11px;color:var(--muted);">${progress}% complete</div>`
+        : ''}
+      <div style="flex:1;"></div>
+      ${isEnrolled
+        ? `<button class="crs-btn" onclick="event.stopPropagation();viewCourse(${c.id})"
+             style="margin-top:8px;width:100%;padding:9px;border-radius:9px;border:none;background:${grad};color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+             <i class="fas fa-play-circle"></i> Continue Learning
+           </button>`
+        : `<button class="crs-btn" onclick="event.stopPropagation();openCourseDetail(${c.id})"
+             style="margin-top:8px;width:100%;padding:9px;border-radius:9px;border:none;background:${grad};color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+             <i class="fas fa-info-circle"></i> View Details & Enroll
+           </button>`}
+    </div>
+  </div>`;
+}
+
+function renderCourseGrids() {
+  const allGrid  = document.getElementById('allCoursesGrid');
+  const mineGrid = document.getElementById('myCoursesGrid');
+  const all      = _allCoursesCache || [];
+  const enrolled = _enrolledCache   || [];
+
+  const enrolledIds = new Set(enrolled.map(e => e.course_id || e.id));
+  const enrolledMap = {};
+  enrolled.forEach(e => { enrolledMap[e.course_id || e.id] = e; });
+
+  // ── ALL COURSES tab ──
+  if (all.length === 0) {
+    allGrid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;text-align:center;padding:48px;color:var(--muted);"><i class="fas fa-book-open" style="font-size:40px;margin-bottom:12px;display:block;opacity:0.3;"></i><p>No courses are available at the moment.</p></div>';
+  } else {
+    allGrid.innerHTML = all.map(c => {
+      const isEnrolled = enrolledIds.has(c.id);
+      const progress   = enrolledMap[c.id]?.progress || 0;
+      return _buildCourseCard(c, isEnrolled, progress);
+    }).join('');
+  }
+
+  // ── MY COURSES tab — enrolled courses only ──
+  const myCourses = all.filter(c => enrolledIds.has(c.id));
+  if (myCourses.length === 0) {
+    mineGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:56px 24px;color:var(--muted);">
+      <i class="fas fa-bookmark" style="font-size:48px;margin-bottom:16px;display:block;opacity:0.2;"></i>
+      <p style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:8px;">You are not enrolled in any course yet</p>
+      <p style="font-size:13px;">Please ask the admin to enroll you in a course, and it will appear here.</p>
+      <button onclick="switchCourseTab('all')"
+        style="margin-top:16px;padding:10px 24px;border-radius:10px;border:none;background:var(--navy);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
+        <i class="fas fa-th-large"></i> Browse All Courses
+      </button>
+    </div>`;
+  } else {
+    mineGrid.innerHTML = myCourses.map(c => {
+      const progress = enrolledMap[c.id]?.progress || 0;
+      return _buildCourseCard(c, true, progress);
+    }).join('');
+  }
+}
+
+async function loadCourses() {
+  const allGrid  = document.getElementById('allCoursesGrid');
+  const mineGrid = document.getElementById('myCoursesGrid');
+  const spinner  = '<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>';
+  allGrid.innerHTML  = spinner;
+  mineGrid.innerHTML = spinner;
+
+  try {
+    const [allR, enrollR] = await Promise.all([
+      api('GET', '/courses'),
+      api('GET', '/courses/enrolled')
+    ]);
+    _allCoursesCache = allR.data   || [];
+    _enrolledCache   = enrollR.data || [];
+    renderCourseGrids();
+  } catch(e) {
+    const errHtml = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#c62828;"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>Could not load courses: ${e.message}</p></div>`;
+    allGrid.innerHTML  = errHtml;
+    mineGrid.innerHTML = errHtml;
+  }
+}
+
+function viewCourse(id) { showToast('Opening course content…'); }
+
+/* ── COURSE DETAIL MODAL ── */
+function openCourseDetail(courseId) {
+  const all = _allCoursesCache || [];
+  const c = all.find(x => x.id === courseId);
+  if (!c) { showToast('Course not found','error'); return; }
+
+  const enrolled = _enrolledCache || [];
+  const enrolledIds = new Set(enrolled.map(e => e.course_id || e.id));
+  const isEnrolled = enrolledIds.has(courseId);
+
+  const gradients = [
+    'linear-gradient(135deg,#e91e8c,#9c27b0)',
+    'linear-gradient(135deg,#1565c0,#0097a7)',
+    'linear-gradient(135deg,#e53935,#ff6f00)',
+    'linear-gradient(135deg,#2e7d32,#00897b)',
+    'linear-gradient(135deg,#7c4dff,#6a1fd8)',
+    'linear-gradient(135deg,#ff6b35,#e53935)',
+  ];
+  const grad = gradients[c.id % gradients.length];
+
+  // Banner
+  document.getElementById('cdm-banner').style.background = grad;
+  document.getElementById('cdm-title').textContent = c.name || c.title || '—';
+  document.getElementById('cdm-meta').textContent =
+    [(c.category||c.category_name||'General'), c.duration ? c.duration : null].filter(Boolean).join('  •  ');
+
+  // Video
+  const videoPath = c.intro_video || c.demo_video_path || '';
+  const videoSec = document.getElementById('cdm-video-section');
+  const ytSec = document.getElementById('cdm-youtube-section');
+  videoSec.style.display = 'none';
+  ytSec.style.display = 'none';
+  document.getElementById('cdm-video').src = '';
+  document.getElementById('cdm-youtube').src = '';
+
+  if (videoPath) {
+    const isYoutube = videoPath.includes('youtube.com') || videoPath.includes('youtu.be');
+    if (isYoutube) {
+      ytSec.style.display = 'block';
+      document.getElementById('cdm-youtube').src = videoPath;
+    } else {
+      videoSec.style.display = 'block';
+      document.getElementById('cdm-video').src = videoPath;
+    }
+  }
+
+  // Price
+  const price = parseFloat(c.price) || 0;
+  document.getElementById('cdm-price-wrap').innerHTML = price > 0
+    ? `<span style="color:var(--navy);">₹${Number(price).toLocaleString()}</span>`
+    : `<span style="color:var(--green);font-size:18px;"><i class="fas fa-tag"></i> FREE</span>`;
+
+  // Rating
+  const ratingEl = document.getElementById('cdm-rating-wrap');
+  ratingEl.innerHTML = c.avg_rating > 0
+    ? `★ ${Number(c.avg_rating).toFixed(1)} <span style="color:var(--muted);">rating</span>`
+    : '';
+
+  // Trainer
+  const trainerWrap = document.getElementById('cdm-trainer-wrap');
+  if (c.trainer_name) {
+    trainerWrap.style.display = 'block';
+    document.getElementById('cdm-trainer-name').textContent = c.trainer_name;
+    document.getElementById('cdm-trainer-expertise').textContent = c.trainer_expertise || 'Trainer';
+    // Photo
+    const avatarEl = document.getElementById('cdm-trainer-avatar');
+    if (c.trainer_photo) {
+      avatarEl.innerHTML = `<img src="${c.trainer_photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user-tie\\' style=\\'color:#fff;font-size:18px;\\'></i>'"/>`;
+    } else {
+      avatarEl.innerHTML = '<i class="fas fa-user-tie" style="color:#fff;font-size:18px;"></i>';
+    }
+    // Bio
+    const bioEl = document.getElementById('cdm-trainer-bio');
+    if (c.trainer_bio) {
+      bioEl.textContent = c.trainer_bio;
+      bioEl.style.display = 'block';
+    } else {
+      bioEl.style.display = 'none';
+    }
+  } else {
+    trainerWrap.style.display = 'none';
+  }
+
+  // Description
+  document.getElementById('cdm-desc').textContent = c.description || 'No description available.';
+
+  // Enroll button / enrolled badge
+  const enrollBtn = document.getElementById('cdm-enroll-btn');
+  const enrolledBadge = document.getElementById('cdm-enrolled-badge');
+  if (isEnrolled) {
+    enrollBtn.style.display = 'none';
+    enrolledBadge.style.display = 'block';
+  } else {
+    enrolledBadge.style.display = 'none';
+    enrollBtn.style.display = 'flex';
+    enrollBtn.style.background = grad;
+    if (price > 0) {
+      enrollBtn.innerHTML = `<i class="fas fa-shopping-cart"></i>&nbsp; Buy Now — ₹${Number(price).toLocaleString()}`;
+    } else {
+      enrollBtn.innerHTML = `<i class="fas fa-plus-circle"></i>&nbsp; Enroll Free`;
+    }
+    enrollBtn.onclick = () => { closeModal(); purchaseCourse(c.id, c.name||c.title, price); };
+  }
+
+  openModal('courseDetailModal');
+}
 
 /* ── PROGRESS ── */
 let progOChart,examPChart;
@@ -753,12 +1111,21 @@ async function loadMaterials(){
   const r=await api('GET',path);
   const rows=r.data||[];
   document.getElementById('matTbody').innerHTML=rows.length?
-    rows.map((m,i)=>`<tr>
-      <td>${i+1}</td><td>${fmt(m.title)}</td>
-      <td><span class="badge pending">${fmt(m.type||'—')}</span></td>
-      <td>${fmt(m.course_title||m.module_name||'—')}</td>
-      <td><a href="${m.file_path_or_url||'#'}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-download"></i> Open</a></td>
-    </tr>`).join(''):
+    rows.map((m,i)=>{
+      const isPDF=(m.type||'').toUpperCase()==='PDF'||(m.file_path_or_url||'').toLowerCase().endsWith('.pdf');
+      const typeColor=isPDF?'#e53935':'var(--blue)';
+      const typeIcon=isPDF?'fa-file-pdf':'fa-file-alt';
+      const actionBtn=isPDF
+        ?`<a href="${m.file_path_or_url||'#'}" download class="btn btn-sm" style="background:#e53935;color:#fff;text-decoration:none;" title="Download PDF"><i class="fas fa-download"></i> Download PDF</a>`
+        :`<a href="${m.file_path_or_url||'#'}" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> Open</a>`;
+      return`<tr>
+        <td>${i+1}</td>
+        <td><i class="fas ${typeIcon}" style="color:${typeColor};margin-right:6px;"></i>${fmt(m.title)}</td>
+        <td><span style="background:${isPDF?'#fdecea':'#e8eaf6'};color:${typeColor};font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;">${fmt(m.type||'—')}</span></td>
+        <td>${fmt(m.course_title||m.module_name||'—')}</td>
+        <td>${actionBtn}</td>
+      </tr>`;
+    }).join(''):
     '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No materials available.</td></tr>';
 }
 
@@ -786,27 +1153,33 @@ async function loadScorm(){
     const color=statusColor[st]||'#546e7a';
     const icon=statusIcon[st]||'fa-circle';
     const score=t.score_raw!=null?`${t.score_raw}/${t.score_max||100}`:null;
+    const isVideo=(p.content_type||'scorm')==='video';
+    const iconBg=isVideo?'linear-gradient(135deg,#e91e8c,#f06292)':'linear-gradient(135deg,#e91e8c,#9c27b0)';
+    const iconClass=isVideo?'fa-video':'fa-cube';
+    const typeTag=isVideo?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:1px 6px;font-weight:600;">VIDEO</span>`:`<span style="font-size:10px;background:#9c27b020;color:#9c27b0;border-radius:4px;padding:1px 6px;font-weight:600;">SCORM</span>`;
+    const actionBtn=isVideo
+      ?`<a href="${p.upload_path}" target="_blank" class="btn btn-primary" style="text-align:center;justify-content:center;"><i class="fas fa-play"></i> Watch Video</a>`
+      :`<a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" class="btn btn-primary" style="text-align:center;justify-content:center;"><i class="fas fa-${st==='incomplete'?'rotate-right':'play'}"></i> ${st==='incomplete'?'Resume':'Launch'}</a>`;
     return`<div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);border:1.5px solid var(--brd);display:flex;flex-direction:column;gap:10px;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#e91e8c,#9c27b0);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i class="fas fa-cube" style="color:#fff;font-size:18px;"></i>
+        <div style="width:42px;height:42px;border-radius:10px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas ${iconClass}" style="color:#fff;font-size:18px;"></i>
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:14px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.package_name||'SCORM Module'}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">${typeTag}</div>
+          <div style="font-weight:700;font-size:14px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.package_name||'Module'}</div>
           <div style="font-size:11px;color:var(--muted);">${p.course_name||'—'} ${p.module_name?'• '+p.module_name:''}</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:12px;">
+      ${!isVideo?`<div style="display:flex;align-items:center;gap:8px;font-size:12px;">
         <i class="fas ${icon}" style="color:${color};"></i>
         <span style="color:${color};font-weight:600;text-transform:capitalize;">${st}</span>
         ${score?`<span style="margin-left:auto;color:var(--muted);">Score: <strong>${score}</strong></span>`:''}
       </div>
       <div style="background:var(--brd);border-radius:4px;height:5px;overflow:hidden;">
         <div style="background:linear-gradient(90deg,#e91e8c,#9c27b0);height:100%;width:${st==='passed'||st==='completed'?100:st==='incomplete'?50:0}%;"></div>
-      </div>
-      <a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" class="btn btn-primary" style="text-align:center;justify-content:center;">
-        <i class="fas fa-${st==='incomplete'?'rotate-right':'play'}"></i> ${st==='incomplete'?'Resume':'Launch'}
-      </a>
+      </div>`:''}
+      ${actionBtn}
     </div>`;
   }).join('');
 }
@@ -884,6 +1257,204 @@ async function loadSiteSettings(){
     const sm={facebook:'sf-fb',instagram:'sf-ig',linkedin:'sf-li',twitter:'sf-tw',youtube:'sf-yt',whatsapp:'sf-wa'};
     Object.entries(sm).forEach(([key,id])=>{const el=document.getElementById(id);if(el&&data['social_'+key]){el.href=data['social_'+key];el.style.display='inline-flex';}});
   }catch{}
+}
+
+/* ── MY ASSIGNED COURSES ── */
+async function loadMyCourses(){
+  const grid=document.getElementById('myAssignedCoursesGrid');
+  grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
+  const r=await api('GET','/student/mycourses');
+  const courses=r.data||[];
+  if(!courses.length){
+    grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-book-open" style="font-size:48px;opacity:0.3;display:block;margin-bottom:16px;"></i><p>No courses assigned yet.<br><small>Contact your admin or trainer.</small></p></div>';
+    return;
+  }
+  grid.innerHTML=courses.map(c=>{
+    const total=parseInt(c.total_modules)||0;
+    const done=parseInt(c.completed_modules)||0;
+    const pct=total>0?Math.round(done/total*100):0;
+    const hrs=Math.floor((parseInt(c.time_spent_seconds)||0)/3600);
+    const mins=Math.floor(((parseInt(c.time_spent_seconds)||0)%3600)/60);
+    return`<div style="background:#fff;border-radius:16px;border:1px solid var(--brd);overflow:hidden;box-shadow:var(--shadow);">
+      ${c.thumbnail?`<img src="${c.thumbnail}" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'"/>`:`<div style="height:100px;background:linear-gradient(135deg,#1a237e,#e91e8c);display:flex;align-items:center;justify-content:center;"><i class="fas fa-book-open" style="color:#fff;font-size:36px;"></i></div>`}
+      <div style="padding:16px;">
+        <div style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);margin-bottom:4px;">${c.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${c.trainer_name?'<i class="fas fa-user-tie" style="margin-right:4px;"></i>'+c.trainer_name:''}${c.duration?' · '+c.duration:''}</div>
+        ${c.avg_rating>0?`<div style="font-size:12px;color:#f59e0b;margin-bottom:8px;">★ ${Number(c.avg_rating).toFixed(1)}</div>`:''}
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;"><span>${done}/${total} modules</span><span>${pct}%</span></div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=40?'var(--orange)':'var(--pink)'};"></div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;"><i class="fas fa-clock" style="margin-right:4px;"></i> Time spent: ${hrs}h ${mins}m</div>
+        ${c.certificate_validity_days>0?`<div style="font-size:11px;color:var(--orange);margin-bottom:10px;"><i class="fas fa-certificate"></i> Certificate valid for ${c.certificate_validity_days} days</div>`:''}
+        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="showSection('scorm')"><i class="fas fa-play"></i> Continue Learning</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── COURSE CATALOG ── */
+let allCatalogCourses=[];
+async function loadCatalog(){
+  const grid=document.getElementById('catalogGrid');
+  grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
+  const r=await fetch('/api/v1/catalog');
+  const d=await r.json();
+  allCatalogCourses=d.data||[];
+  renderCatalog(allCatalogCourses);
+}
+function filterCatalog(){
+  const q=document.getElementById('catalogSearch').value.toLowerCase();
+  renderCatalog(allCatalogCourses.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.description||'').toLowerCase().includes(q)||(c.category_name||'').toLowerCase().includes(q)));
+}
+function renderCatalog(courses){
+  const grid=document.getElementById('catalogGrid');
+  if(!courses.length){grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><p>No courses found.</p></div>';return;}
+  grid.innerHTML=courses.map(c=>`
+    <div style="background:#fff;border-radius:16px;border:1px solid var(--brd);overflow:hidden;box-shadow:var(--shadow);">
+      ${c.thumbnail?`<img src="${c.thumbnail}" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'"/>`:`<div style="height:100px;background:linear-gradient(135deg,#1565c0,#e91e8c);display:flex;align-items:center;justify-content:center;"><i class="fas fa-book-open" style="color:#fff;font-size:36px;"></i></div>`}
+      <div style="padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+          <div style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);flex:1;">${c.name}</div>
+          <div style="font-size:18px;font-weight:700;color:${c.price>0?'var(--navy)':'var(--green)'};margin-left:8px;white-space:nowrap;">${c.price>0?'₹'+Number(c.price).toLocaleString():'FREE'}</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${c.category_name||'General'}${c.duration?' · '+c.duration:''}</div>
+        ${c.avg_rating>0?`<div style="font-size:12px;color:#f59e0b;margin-bottom:6px;">★ ${Number(c.avg_rating).toFixed(1)} <span style="color:var(--muted);">(${c.rating_count||0} reviews)</span></div>`:''}
+        ${c.description?`<p style="font-size:12px;color:var(--muted);margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.description}</p>`:''}
+        ${c.trainer_name?`<div style="padding:10px 12px;background:#f8faff;border-radius:10px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:${c.trainer_bio?'6px':'0'};">
+            ${c.trainer_photo?`<img src="${c.trainer_photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'"/>`:'<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--blue));display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class=\'fas fa-user-tie\' style=\'color:#fff;font-size:13px;\'></i></div>'}
+            <div><div style="font-size:12px;font-weight:600;color:var(--navy);">${c.trainer_name}</div><div style="font-size:11px;color:var(--muted);">${c.trainer_expertise||'Trainer'}</div></div>
+          </div>
+          ${c.trainer_bio?`<div style="font-size:11px;color:var(--text);line-height:1.55;border-top:1px solid #e3e8f0;padding-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.trainer_bio}</div>`:''}
+        </div>`:''}
+        ${c.demo_video_path?`<button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:8px;" onclick="openDemoVideo('${c.demo_video_path}','${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-play-circle"></i> Watch Demo</button>`:''}
+        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="purchaseCourse(${c.id},'${c.name.replace(/'/g,"\\'")}',${c.price})">
+          <i class="fas fa-${c.price>0?'shopping-cart':'plus'}"></i> ${c.price>0?'Buy Now – ₹'+Number(c.price).toLocaleString():'Enroll Free'}
+        </button>
+      </div>
+    </div>`).join('');
+}
+function openDemoVideo(url,title){
+  // Show in a simple modal/alert for now - can be enhanced
+  const isYoutube=url.includes('youtube.com')||url.includes('youtu.be');
+  const w=window.open('','_blank','width=800,height=500');
+  w.document.write(`<html><head><title>Demo: ${title}</title><style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;}</style></head><body>${isYoutube?`<iframe width="780" height="440" src="${url}" frameborder="0" allow="autoplay;fullscreen" allowfullscreen></iframe>`:`<video controls autoplay style="max-width:100%;max-height:100vh;"><source src="${url}"/></video>`}</body></html>`);
+}
+async function purchaseCourse(courseId,courseName,price){
+  if(price<=0){
+    // Free course — enroll directly
+    if(!confirm(`Enroll in "${courseName}" for Free?`))return;
+    const r=await api('POST',`/courses/${courseId}/purchase`,{payment_source:'free',payment_ref:'free-'+Date.now()});
+    if(r.success){showToast('✅ Enrolled successfully! Check "My Courses" tab.','success');loadCourses();}
+    else showToast(r.error||'Failed to enroll','error');
+    return;
+  }
+  // Paid course — use Razorpay (Test Mode)
+  // NOTE: Replace 'rzp_test_YOUR_KEY_HERE' with your actual Razorpay Test Key ID
+  const RAZORPAY_KEY='rzp_test_YOUR_KEY_HERE';
+  const user=USER();
+  const options={
+    key: RAZORPAY_KEY,
+    amount: price*100, // in paise
+    currency: 'INR',
+    name: 'Smart LMS – Connecting Dot',
+    description: `Enrollment: ${courseName}`,
+    image: '/logo.png',
+    prefill:{
+      name: user.name||'Student',
+      email: user.email||'',
+      contact: user.contact||''
+    },
+    notes:{ course_id: courseId, course_name: courseName },
+    theme:{ color:'#1a237e' },
+    handler: async function(response){
+      // Payment successful — record enrollment
+      const payRef=response.razorpay_payment_id||('rzp-'+Date.now());
+      const r=await api('POST',`/courses/${courseId}/purchase`,{
+        payment_source:'razorpay',
+        payment_ref:payRef,
+        razorpay_payment_id:response.razorpay_payment_id||''
+      });
+      if(r.success){
+        showToast('✅ Payment successful! Enrolled in "'+courseName+'". Check "My Courses" tab.','success');
+        loadCourses();
+      } else {
+        showToast(r.error||'Payment recorded but enrollment failed. Contact support.','error');
+      }
+    },
+    modal:{
+      ondismiss: function(){ showToast('Payment cancelled.',''); }
+    }
+  };
+  try{
+    const rzp=new Razorpay(options);
+    rzp.on('payment.failed',function(resp){
+      showToast('Payment failed: '+(resp.error?.description||'Unknown error'),'error');
+    });
+    rzp.open();
+  } catch(e){
+    // Razorpay not loaded or key not set — fallback to direct enrollment
+    if(!confirm(`Razorpay test mode: Purchase "${courseName}" for ₹${Number(price).toLocaleString()}?\n\n⚠️ Note: This is a TEST enrollment (Razorpay key not configured). Replace 'rzp_test_YOUR_KEY_HERE' with your actual key for live payments.`))return;
+    const r=await api('POST',`/courses/${courseId}/purchase`,{payment_source:'test',payment_ref:'test-'+Date.now()});
+    if(r.success){showToast('✅ Test enrollment recorded! Check "My Courses" tab.','success');loadCourses();}
+    else showToast(r.error||'Failed to enroll','error');
+  }
+}
+
+/* ── STUDENT QUERIES ── */
+async function loadMyQueries(){
+  const el=document.getElementById('queriesList');
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+  const r=await api('GET','/queries/my');
+  const queries=r.data||[];
+  if(!queries.length){
+    el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);">No queries raised yet. Use the form above to ask your trainer.</div>';
+    return;
+  }
+  el.innerHTML=queries.map(q=>`
+    <div style="border:1px solid ${q.status==='answered'?'#a5d6a7':'var(--brd)'};border-radius:12px;padding:14px;margin-bottom:12px;background:${q.status==='answered'?'#f1fdf4':'#fff'};">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:600;color:var(--navy);flex:1;">${q.question}</div>
+        <span class="badge ${q.status==='answered'?'active':'pending'}" style="margin-left:8px;flex-shrink:0;">${q.status||'pending'}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:${q.answer?'10px':'0'};">${q.course_name?'📚 '+q.course_name+' · ':''} ${q.trainer_name?'👤 '+q.trainer_name+' · ':''} 🕐 ${dateFmt(q.created_at)}</div>
+      ${q.answer?`<div style="background:#f0fdf4;border-left:3px solid var(--green);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;color:#1b5e20;">
+        <strong>Trainer's Response:</strong><br>${q.answer}
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Answered: ${dateFmt(q.answered_at)}</div>
+      </div>`:''}
+    </div>`).join('');
+}
+async function submitQuery(){
+  const question=document.getElementById('queryQuestion').value.trim();
+  if(!question){showAlert('queryAlert','Please enter your question.');return;}
+  const r=await api('POST','/queries',{question});
+  if(r.success){
+    showAlert('queryAlert','Query submitted! Your trainer will respond soon.','success');
+    document.getElementById('queryQuestion').value='';
+    loadMyQueries();
+  }else showAlert('queryAlert',r.error||'Failed to submit query');
+}
+
+/* ── SUBMIT QUERY TO ADMIN OR TRAINER ── */
+async function submitQueryTo(target){
+  const qId=target==='admin'?'queryAdminQuestion':'queryTrainerQuestion';
+  const alertId=target==='admin'?'queryAdminAlert':'queryTrainerAlert';
+  const question=document.getElementById(qId)?.value?.trim();
+  if(!question){
+    const el=document.getElementById(alertId);
+    if(el){el.textContent='Please enter your question.';el.className='alert error';el.style.display='block';setTimeout(()=>{el.style.display='none';},4000);}
+    return;
+  }
+  const r=await api('POST','/queries',{question,target_role:target});
+  const el=document.getElementById(alertId);
+  if(r.success){
+    if(el){el.textContent=target==='admin'?'✅ Query submitted to Admin!':'✅ Query submitted to Trainer!';el.className='alert success';el.style.display='block';setTimeout(()=>{el.style.display='none';},4000);}
+    document.getElementById(qId).value='';
+    loadMyQueries();
+  } else {
+    if(el){el.textContent=r.error||'Failed to submit query. Please try again.';el.className='alert error';el.style.display='block';setTimeout(()=>{el.style.display='none';},5000);}
+  }
 }
 
 /* ── INIT ── */
