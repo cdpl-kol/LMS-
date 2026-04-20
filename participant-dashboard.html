@@ -609,16 +609,36 @@ async function viewCertificate(certNo, courseName, issuedDate){
   const participantName=USER().name||'Participant';
   const date=issuedDate?new Date(issuedDate).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}):'—';
 
-  // Fetch logos (super admin logo + corporate logo)
+  // Helper: convert image path to base64 data URL (works in about:blank window)
+  const toDataUrl = async rawPath => {
+    if(!rawPath) return '';
+    try{
+      const origin = window.location.origin;
+      const url = rawPath.startsWith('http') ? rawPath : origin + (rawPath.startsWith('/') ? rawPath : '/' + rawPath);
+      const resp = await fetch(url);
+      if(!resp.ok) return '';
+      const blob = await resp.blob();
+      return await new Promise(resolve=>{
+        const reader = new FileReader();
+        reader.onload  = ()=>resolve(reader.result);
+        reader.onerror = ()=>resolve('');
+        reader.readAsDataURL(blob);
+      });
+    }catch(e){ return ''; }
+  };
+
+  // Fetch logos and convert to base64 so they embed correctly in the certificate window
   let superLogo='', corpLogo='';
   try{
     const br=await api('GET','/branding');
     const bd=br.data||br;
-    superLogo=bd.super_logo||'';
-    corpLogo=bd.corp_logo||'';
+    [superLogo, corpLogo] = await Promise.all([
+      toDataUrl(bd.super_logo||''),
+      toDataUrl(bd.corp_logo||'')
+    ]);
   }catch(e){}
 
-  // Build left-side header: corporate logo image OR SmartLMS text
+  // Build left-side header: corporate logo OR SmartLMS text fallback
   const leftHeader = corpLogo
     ? `<img src="${corpLogo}" alt="Company Logo" style="max-height:48px;max-width:160px;object-fit:contain;filter:brightness(0) invert(1);"/>`
     : `<div style="font-family:'Cinzel',serif;font-size:20px;color:#fff;font-weight:700;letter-spacing:2px;">Smart<span style="color:${gold};">LMS</span></div>`;
@@ -626,7 +646,7 @@ async function viewCertificate(certNo, courseName, issuedDate){
   // Build right-side header: super admin logo + CLMPD text
   const rightHeader = superLogo
     ? `<div style="display:flex;align-items:center;gap:10px;">
-        <img src="${superLogo}" alt="Logo" style="max-height:40px;max-width:100px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;"/>
+        <img src="${superLogo}" alt="Site Logo" style="max-height:40px;max-width:100px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;"/>
         <div style="font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>
        </div>`
     : `<div style="font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>`;

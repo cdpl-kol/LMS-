@@ -406,7 +406,7 @@ async function uploadCorpLogo(){
   if(!fileInput||!fileInput.files||!fileInput.files[0]){showAlert('settingsAlert','Please select an image file first.');return;}
   const fd=new FormData();
   fd.append('logo',fileInput.files[0]);
-  const r=await fetch(API('/corporate/settings/logo'),{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
+  const r=await fetch(BASE+'/corporate/settings/logo',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
   const data=await r.json();
   if(data.success||data.logo_path){
     showAlert('settingsAlert','Company logo uploaded successfully! It will appear on all new certificates.','success');

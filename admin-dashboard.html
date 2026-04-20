@@ -2996,7 +2996,7 @@ function renderCertTable(rows){
       <td style="font-weight:500;">${c.course_name||'—'}</td>
       <td><span style="font-family:monospace;font-size:12px;background:#f0f4ff;padding:3px 8px;border-radius:4px;color:var(--blue);">${c.certificate_no||'—'}</span></td>
       <td>${c.issued_date ? new Date(c.issued_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
-      <td><button onclick="adminViewCert('${c.certificate_no}','${(c.participant_name||'').replace(/'/g,"\\'")}','${(c.course_name||'').replace(/'/g,"\\'")}','${c.issued_date||''}')" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</button></td>
+      <td><button onclick="adminViewCert('${c.certificate_no}','${(c.participant_name||'').replace(/'/g,"\\'")}','${(c.course_name||'').replace(/'/g,"\\'")}','${c.issued_date||''}','${(c.corp_logo_path||'').replace(/'/g,"\\'")}');" class="btn btn-sm btn-outline"><i class="fas fa-eye"></i> View</button></td>
     </tr>
   `).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;"><i class="fas fa-certificate" style="font-size:32px;opacity:0.2;display:block;margin-bottom:10px;"></i>No certificates issued yet.</td></tr>';
 }
@@ -3013,24 +3013,60 @@ function filterCertTable(){
   ));
 }
 
+// Convert image path to base64 data URL — works inside about:blank certificate window
+async function imgToDataUrl(rawPath){
+  if(!rawPath) return '';
+  try{
+    const origin = window.location.origin;
+    const url = rawPath.startsWith('http') ? rawPath : origin + (rawPath.startsWith('/') ? rawPath : '/' + rawPath);
+    const resp = await fetch(url);
+    if(!resp.ok) return '';
+    const blob = await resp.blob();
+    return await new Promise(resolve=>{
+      const reader = new FileReader();
+      reader.onload  = ()=>resolve(reader.result);
+      reader.onerror = ()=>resolve('');
+      reader.readAsDataURL(blob);
+    });
+  }catch(e){ return ''; }
+}
+
+// Fetch super admin logo (from Site Settings) and cache as base64
+let _cachedSuperLogo = null;
+async function getSuperLogo(){
+  if(_cachedSuperLogo !== null) return _cachedSuperLogo;
+  try{
+    const br = await api('GET','/branding');
+    const bd = br.data || br;
+    _cachedSuperLogo = await imgToDataUrl(bd.super_logo || '');
+  }catch(e){ _cachedSuperLogo = ''; }
+  return _cachedSuperLogo;
+}
+
 // Preview the fixed sample certificate design
-function previewSampleCert(){
+async function previewSampleCert(){
+  const superLogo = await getSuperLogo();
   renderCertWindow({
     participant_name: 'Participant Name',
     course_name: 'Sample Course Name',
     certificate_no: 'CERT-SAMPLE-2024',
     issued_date: new Date().toISOString(),
-    corporate_name: ''
+    super_logo: superLogo,
+    corp_logo: ''
   });
 }
 
-// Admin view: pass data directly (no extra API call needed)
-function adminViewCert(certNo, participantName, courseName, issuedDate){
+// Admin view: convert both logos to base64 then render certificate
+async function adminViewCert(certNo, participantName, courseName, issuedDate, corpLogoPath){
+  const superLogo = await getSuperLogo();
+  const corpLogo  = await imgToDataUrl(corpLogoPath || '');
   renderCertWindow({
     participant_name: participantName,
     course_name: courseName,
     certificate_no: certNo,
-    issued_date: issuedDate
+    issued_date: issuedDate,
+    super_logo: superLogo,
+    corp_logo: corpLogo
   });
 }
 
@@ -3039,6 +3075,23 @@ function renderCertWindow(d){
   const accent = '#1a237e';
   const gold   = '#b8960c';
   const date   = d.issued_date ? new Date(d.issued_date).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+  // Logos are already base64 data URLs — safe to embed directly in about:blank window
+  const corpLogoUrl  = d.corp_logo  || '';
+  const superLogoUrl = d.super_logo || '';
+
+  // Left side: corporate logo OR SmartLMS text fallback
+  const leftHeader = corpLogoUrl
+    ? `<img src="${corpLogoUrl}" alt="Company Logo" style="max-height:48px;max-width:160px;object-fit:contain;filter:brightness(0) invert(1);"/>`
+    : `<div style="font-family:'Cinzel',serif;font-size:20px;color:#fff;font-weight:700;letter-spacing:2px;">Smart<span style="color:${gold};">LMS</span></div>`;
+
+  // Right side: super admin site logo + CLMPD text
+  const rightHeader = superLogoUrl
+    ? `<div style="display:flex;align-items:center;gap:10px;">
+        <img src="${superLogoUrl}" alt="Site Logo" style="max-height:40px;max-width:100px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;"/>
+        <div style="font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>
+       </div>`
+    : `<div style="font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>`;
+
   const w = window.open('','_blank','width=960,height=700');
   w.document.open();
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
@@ -3059,10 +3112,6 @@ function renderCertWindow(d){
     .orn-bl{bottom:8px;left:12px;} .orn-br{bottom:8px;right:12px;}
     /* Header band */
     .cert-header{background:linear-gradient(135deg,${accent},#1565c0);margin:-44px -64px 28px;padding:22px 64px;display:flex;align-items:center;justify-content:space-between;}
-    .cert-logo{font-family:'Cinzel',serif;font-size:20px;color:#fff;font-weight:700;letter-spacing:2px;}
-    .cert-logo span{color:${gold};}
-    .cert-header-right{font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;}
-    /* Title */
     .cert-title{font-family:'Cinzel',serif;font-size:34px;font-weight:700;color:${accent};letter-spacing:2px;margin-bottom:4px;}
     .cert-title-sub{font-size:11px;color:${gold};letter-spacing:6px;text-transform:uppercase;margin-bottom:22px;font-weight:700;}
     /* Divider */
@@ -3106,8 +3155,8 @@ function renderCertWindow(d){
 
           <!-- Header -->
           <div class="cert-header">
-            <div class="cert-logo">Smart<span>LMS</span></div>
-            <div class="cert-header-right">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>
+            ${leftHeader}
+            ${rightHeader}
           </div>
 
           <!-- Title -->

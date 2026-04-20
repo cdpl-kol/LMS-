@@ -16,7 +16,29 @@
       "Bash(curl -s http://localhost:3001/api/v1/corporate/2/allowed-courses -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4')",
       "Bash(curl -s -X POST http://localhost:3001/api/v1/corporate/participants/4/assign-course -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4' -H 'Content-Type: application/json' -d '{\"course_id\":31,\"corporate_id\":2}')",
       "Bash(curl -s -X POST http://localhost:3001/api/v1/corporate/participants/4/assign-course -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZW1haWwiOm51bGwsImlhdCI6MTc3NjE3MDM4MiwiZXhwIjoxNzc2MTk5MTgyfQ.SkVSUnDdZrZMyyjExpwOGPzm-rocJH3I2pZ3Ee_5KJ4' -H 'Content-Type: application/json' -d '{\"course_id\":34,\"corporate_id\":2}')",
-      "Bash(node -e \"console.log\\('Server file OK'\\)\")"
+      "Bash(node -e \"console.log\\('Server file OK'\\)\")",
+      "Bash(npm --version)",
+      "Bash(ipconfig)",
+      "Bash(java -version)",
+      "Read(//c/Program Files/Android/**)",
+      "Read(//c/Users/Aadil Shaikh/AppData/Local/Android/**)",
+      "Bash(npm install *)",
+      "Bash(npx cap *)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" GRADLE_OPTS=\"-Djava.net.preferIPv4Stack=true\" ./gradlew assembleDebug --no-daemon)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug --stacktrace)",
+      "Bash(cmd //c \"set JAVA_HOME=C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr && gradlew.bat assembleDebug\")",
+      "Bash(cmd //c \"cd /d \\\\\"C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\android\\\\\" && set JAVA_HOME=C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr && gradlew.bat assembleDebug\")",
+      "Bash(cmd //c \"cd /d C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\android && set JAVA_HOME=C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr && gradlew.bat assembleDebug\")",
+      "Bash(powershell -Command 'Set-Location '\\\\''C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\android'\\\\''; $env:JAVA_HOME = '\\\\''C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr'\\\\''; .\\\\gradlew.bat assembleDebug')",
+      "Bash(powershell -Command 'Set-Location '\\\\''C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\android'\\\\''; $env:JAVA_HOME = '\\\\''C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr'\\\\''; $env:GRADLE_OPTS = '\\\\''-Djava.nio.channels.spi.SelectorProvider=sun.nio.ch.WindowsSelectorProvider'\\\\''; .\\\\gradlew.bat assembleDebug')",
+      "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/java\" -version)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files/Microsoft/**)",
+      "Bash(powershell -Command 'Set-Location '\\\\''C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\android'\\\\''; $env:JAVA_HOME = '\\\\''C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr'\\\\''; .\\\\gradlew.bat assembleDebug 2>&1')",
+      "Bash(cmd //c /tmp/build_apk.bat)",
+      "Bash(cmd //c \"C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\build_apk.bat\")",
+      "Bash(powershell -Command ' *)"
     ]
   }
 }

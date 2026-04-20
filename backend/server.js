@@ -1074,7 +1074,7 @@ app.get('/api/v1/participant-certificates', auth, adminOnly, async (req,res)=>{
   try{
     const r=await pool.query(`
       SELECT pc.*, cp.name AS participant_name, cp.email AS participant_email,
-             c.name AS course_name, co.name AS corporate_name
+             c.name AS course_name, co.name AS corporate_name, co.logo_path AS corp_logo_path
       FROM participant_certificates pc
       JOIN corporate_participants cp ON pc.participant_id=cp.id
       JOIN courses c ON pc.course_id=c.id

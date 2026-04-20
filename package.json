@@ -1,0 +1,12 @@
+{
+  "name": "lms-app",
+  "version": "1.0.0",
+  "description": "Smart LMS - Connecting Dot Mobile App",
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}
