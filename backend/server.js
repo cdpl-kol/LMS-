@@ -508,6 +508,19 @@ async function initDB() {
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS passing_percentage INTEGER DEFAULT 0`).catch(()=>{});
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS requires_pass BOOLEAN DEFAULT FALSE`).catch(()=>{});
 
+    // ── NEW: Student quiz attempts table ─────────────────────────────────────
+    await client.query(`CREATE TABLE IF NOT EXISTS student_quiz_attempts (
+      id SERIAL PRIMARY KEY,
+      student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+      course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+      score INTEGER DEFAULT 0,
+      total_questions INTEGER DEFAULT 0,
+      passed BOOLEAN DEFAULT FALSE,
+      answers JSONB,
+      attempted_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(student_id, course_id)
+    )`).catch(()=>{});
+
     // ── NEW: Participant quiz attempts table ──────────────────────────────────
     await client.query(`CREATE TABLE IF NOT EXISTS participant_quiz_attempts (
       id SERIAL PRIMARY KEY,
@@ -850,9 +863,9 @@ app.get('/api/v1/dashboard/stats', auth, async (req, res) => {
 
 app.get('/api/v1/analytics/trends', auth, async (req, res) => {
   try {
-    const monthly = await pool.query(`SELECT TO_CHAR(created_at,'Mon YYYY') AS month, COUNT(*) AS count FROM students WHERE created_at > NOW() - INTERVAL '6 months' GROUP BY month, DATE_TRUNC('month',created_at) ORDER BY DATE_TRUNC('month',created_at)`);
-    const batchDist = await pool.query(`SELECT b.name AS batch, COUNT(s.id) AS students FROM batches b LEFT JOIN students s ON s.batch_id=b.id GROUP BY b.id, b.name ORDER BY b.id LIMIT 8`);
-    const courseDist = await pool.query(`SELECT c.name AS course, COUNT(s.id) AS students FROM courses c LEFT JOIN students s ON s.course_id=c.id GROUP BY c.id, c.name ORDER BY students DESC LIMIT 6`);
+    const monthly = await pool.query(`SELECT TO_CHAR(created_at,'Mon YYYY') AS month, COUNT(*) AS count FROM students WHERE created_at > NOW() - INTERVAL '12 months' GROUP BY month, DATE_TRUNC('month',created_at) ORDER BY DATE_TRUNC('month',created_at)`);
+    const batchDist = await pool.query(`SELECT b.name AS name, COUNT(s.id) AS count FROM batches b LEFT JOIN students s ON s.batch_id=b.id GROUP BY b.id, b.name ORDER BY b.id LIMIT 8`);
+    const courseDist = await pool.query(`SELECT c.name AS name, COUNT(s.id) AS count FROM courses c LEFT JOIN students s ON s.course_id=c.id GROUP BY c.id, c.name ORDER BY count DESC LIMIT 6`);
     ok(res, { monthly: monthly.rows, batchDist: batchDist.rows, courseDist: courseDist.rows });
   } catch(e) { err(res, e.message); }
 });
@@ -963,6 +976,29 @@ app.put('/api/v1/me', auth, async (req,res)=>{ try{ const {id,role}=req.user; co
 // Profile photo upload
 app.post('/api/v1/me/photo', auth, (req,res)=>{ req.uploadFolder='profiles'; upload.single('photo')(req,res,async(e)=>{ if(e)return err(res,e.message,400); if(!req.file)return err(res,'No file',400); const photoPath='/uploads/profiles/'+req.file.filename; const {id,role}=req.user; const tbl=role==='trainer'?'trainers':'students'; await pool.query(`UPDATE ${tbl} SET profile_photo=$1 WHERE id=$2`,[photoPath,id]); ok(res,{profile_photo:photoPath}); });});
 
+// ── CSV REPORT EXPORTS ────────────────────────────────────────────────────────
+function toCSV(rows){
+  if(!rows.length)return'No data';
+  const headers=Object.keys(rows[0]);
+  const escape=v=>{const s=v==null?'':String(v);return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:s;};
+  return[headers.join(','),...rows.map(r=>headers.map(h=>escape(r[h])).join(','))].join('\n');
+}
+function csvRes(res,name,rows){
+  res.setHeader('Content-Type','text/csv');
+  res.setHeader('Content-Disposition',`attachment; filename="${name}-${new Date().toISOString().slice(0,10)}.csv"`);
+  res.send(toCSV(rows));
+}
+// token-based auth for direct window.open downloads
+function authToken(req){
+  const t=req.query.token||req.headers.authorization?.replace('Bearer ','');
+  if(!t)return null;
+  try{return jwt.verify(t,process.env.JWT_SECRET||'lms_secret_key_2024_secure');}catch{return null;}
+}
+app.get('/api/v1/reports/students', async (req,res)=>{ const u=authToken(req); if(!u||u.role!=='admin')return res.status(401).send('Unauthorized'); try{ const r=await pool.query(`SELECT s.id,s.name,s.email,s.contact,c.name AS course,b.name AS batch,s.status,s.created_at AS enrolled_on FROM students s LEFT JOIN courses c ON s.course_id=c.id LEFT JOIN batches b ON s.batch_id=b.id ORDER BY s.id`); csvRes(res,'students-report',r.rows); }catch(e){res.status(500).send(e.message);}});
+app.get('/api/v1/reports/fees', async (req,res)=>{ const u=authToken(req); if(!u||u.role!=='admin')return res.status(401).send('Unauthorized'); try{ const r=await pool.query(`SELECT s.name AS student,s.email,f.amount,f.payment_date,f.payment_mode,f.receipt_no,f.status,f.remarks FROM fee_payments f JOIN students s ON f.student_id=s.id ORDER BY f.created_at DESC`); csvRes(res,'fees-report',r.rows); }catch(e){res.status(500).send(e.message);}});
+app.get('/api/v1/reports/attendance', async (req,res)=>{ const u=authToken(req); if(!u||u.role!=='admin')return res.status(401).send('Unauthorized'); try{ const r=await pool.query(`SELECT s.name AS student,s.email,b.name AS batch,a.date,a.status,COALESCE(t.name,'Admin') AS marked_by FROM attendance a JOIN students s ON a.student_id=s.id LEFT JOIN batches b ON a.batch_id=b.id LEFT JOIN trainers t ON a.marked_by=t.id ORDER BY a.date DESC`); csvRes(res,'attendance-report',r.rows); }catch(e){res.status(500).send(e.message);}});
+app.get('/api/v1/reports/certificates', async (req,res)=>{ const u=authToken(req); if(!u||u.role!=='admin')return res.status(401).send('Unauthorized'); try{ const r=await pool.query(`SELECT s.name AS student,s.email,c.name AS course,cert.certificate_no,cert.issued_on,cert.created_at FROM certificates cert JOIN students s ON cert.student_id=s.id JOIN courses c ON cert.course_id=c.id ORDER BY cert.created_at DESC`).catch(()=>({rows:[]})); csvRes(res,'certificates-report',r.rows); }catch(e){res.status(500).send(e.message);}});
+
 // ── REPORT ────────────────────────────────────────────────────────────────────
 app.get('/api/v1/report', auth, staffOnly, async (req,res)=>{ const {course,batch,from,to,status}=req.query; let q=`SELECT s.name,s.email,s.contact,c.name AS course,b.name AS batch,s.created_at AS enrolled_on,s.status FROM students s LEFT JOIN courses c ON s.course_id=c.id LEFT JOIN batches b ON s.batch_id=b.id WHERE 1=1`; const params=[]; if(course&&course!=='All') {params.push(course);q+=` AND c.name=$${params.length}`;} if(batch&&batch!=='All') {params.push(batch);q+=` AND b.name=$${params.length}`;} if(status&&status!=='All') {params.push(status);q+=` AND s.status=$${params.length}`;} if(from){params.push(from);q+=` AND s.created_at>=$${params.length}`;} if(to){params.push(to);q+=` AND s.created_at<=$${params.length}`;} q+=' ORDER BY s.id'; try{const r=await pool.query(q,params); ok(res,r.rows);}catch(e){err(res,e.message);}});
 
@@ -1003,7 +1039,61 @@ app.put('/api/v1/assignments/grade/:subId', auth, requireRole('admin','trainer')
 
 // ── PROGRESS ──────────────────────────────────────────────────────────────────
 app.post('/api/v1/progress/complete', auth, studentOnly, async (req,res)=>{ try{ const {module_id}=req.body; await pool.query('INSERT INTO student_progress(student_id,module_id,completed,completed_at) VALUES($1,$2,TRUE,NOW()) ON CONFLICT(student_id,module_id) DO UPDATE SET completed=TRUE,completed_at=NOW()',[req.user.id,module_id]); ok(res,{},'Module marked complete'); }catch(e){err(res,e.message);}});
-app.get('/api/v1/progress/me', auth, studentOnly, async (req,res)=>{ try{ const courseR=await pool.query(`SELECT c.id,c.name FROM courses c JOIN students s ON s.course_id=c.id WHERE s.id=$1`,[req.user.id]); const r=await pool.query(`SELECT m.id,m.name,m.order_no,COALESCE(sp.completed,FALSE) AS completed,sp.completed_at FROM modules m LEFT JOIN student_progress sp ON sp.module_id=m.id AND sp.student_id=$1 WHERE m.course_id=(SELECT course_id FROM students WHERE id=$1) ORDER BY m.order_no`,[req.user.id]); const total=r.rows.length; const done=r.rows.filter(x=>x.completed).length; const pct=total>0?Math.round((done/total)*100):0; const courses=courseR.rows.map(c=>({id:c.id,title:c.name,percentage:pct,completed_modules:done,total_modules:total})); ok(res,{modules:r.rows,total,completed:done,percentage:pct,overall_percentage:pct,courses}); }catch(e){err(res,e.message);}});
+app.get('/api/v1/progress/me', auth, studentOnly, async (req,res)=>{
+  try{
+    const sid=req.user.id;
+    // All enrolled courses: direct course_id + batch course + purchased
+    const courseR=await pool.query(`
+      SELECT DISTINCT c.id, c.name
+      FROM (
+        SELECT course_id FROM students WHERE id=$1 AND course_id IS NOT NULL
+        UNION
+        SELECT b.course_id FROM students s JOIN batches b ON s.batch_id=b.id WHERE s.id=$1 AND b.course_id IS NOT NULL
+        UNION
+        SELECT course_id FROM course_purchases WHERE student_id=$1
+      ) enr JOIN courses c ON c.id=enr.course_id ORDER BY c.name
+    `,[sid]);
+    const courses=courseR.rows;
+    if(!courses.length) return ok(res,{courses:[],overall_percentage:0});
+
+    // Per-course progress
+    const progR=await pool.query(`
+      SELECT c.id AS course_id,
+        COUNT(DISTINCT m.id) AS total_modules,
+        COUNT(DISTINCT CASE WHEN sp.completed THEN m.id END) AS completed_modules,
+        COALESCE(SUM(sp.time_spent_seconds),0) AS time_spent_seconds,
+        MAX(sp.last_accessed) AS last_accessed
+      FROM (
+        SELECT course_id FROM students WHERE id=$1 AND course_id IS NOT NULL
+        UNION
+        SELECT b.course_id FROM students s JOIN batches b ON s.batch_id=b.id WHERE s.id=$1 AND b.course_id IS NOT NULL
+        UNION
+        SELECT course_id FROM course_purchases WHERE student_id=$1
+      ) enr
+      JOIN courses c ON c.id=enr.course_id
+      LEFT JOIN modules m ON m.course_id=c.id
+      LEFT JOIN student_progress sp ON sp.student_id=$1 AND sp.module_id=m.id
+      GROUP BY c.id
+    `,[sid]);
+    const pm={};
+    for(const row of progR.rows) pm[row.course_id]=row;
+
+    // Certificate status per course
+    const certR=await pool.query(`SELECT course_id,certificate_no,issued_date FROM certificates WHERE student_id=$1`,[sid]);
+    const certMap={};
+    for(const c of certR.rows) certMap[c.course_id]=c;
+
+    const result=courses.map(c=>{
+      const p=pm[c.id]||{};
+      const total=parseInt(p.total_modules)||0;
+      const done=parseInt(p.completed_modules)||0;
+      const pct=total>0?Math.round((done/total)*100):0;
+      return{id:c.id,title:c.name,total_modules:total,completed_modules:done,percentage:pct,time_spent_seconds:parseInt(p.time_spent_seconds)||0,last_accessed:p.last_accessed||null,certificate_no:certMap[c.id]?.certificate_no||null,certificate_date:certMap[c.id]?.issued_date||null};
+    });
+    const overall=result.length>0?Math.round(result.reduce((a,c)=>a+c.percentage,0)/result.length):0;
+    ok(res,{courses:result,overall_percentage:overall});
+  }catch(e){err(res,e.message);}
+});
 
 // ── CERTIFICATES ──────────────────────────────────────────────────────────────
 app.post('/api/v1/certificates/issue', auth, adminOnly, async (req,res)=>{ try{ const {student_id,course_id,batch_id}=req.body; const certNo='CDPL-'+Date.now(); const r=await pool.query('INSERT INTO certificates(student_id,course_id,batch_id,certificate_no) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *',[student_id,course_id,batch_id,certNo]); if(r.rows[0]){ const s=await pool.query('SELECT name,email FROM students WHERE id=$1',[student_id]); if(s.rows[0]) await sendEmail(s.rows[0].email,'Certificate Issued - Smart LMS',`<h2>Congratulations ${s.rows[0].name}!</h2><p>Your completion certificate (${certNo}) has been issued.</p><small>Connecting Dot Consultancy Pvt. Ltd.</small>`); } ok(res,r.rows[0]||{},'Certificate issued'); }catch(e){err(res,e.message);}});
@@ -1013,7 +1103,7 @@ app.get('/api/v1/certificates/student/:id', auth, async (req,res)=>{ try{ const 
 app.get('/api/v1/fees', auth, adminOnly, async (req,res)=>{ try{ const r=await pool.query(`SELECT f.*,s.name AS student FROM fee_payments f JOIN students s ON f.student_id=s.id ORDER BY f.created_at DESC`); ok(res,r.rows); }catch(e){err(res,e.message);}});
 app.get('/api/v1/fees/student/:id', auth, async (req,res)=>{ try{ const sid=req.user.role==='student'?req.user.id:req.params.id; const r=await pool.query('SELECT * FROM fee_payments WHERE student_id=$1 ORDER BY created_at DESC',[sid]); const total=await pool.query('SELECT COALESCE(SUM(amount),0) AS total FROM fee_payments WHERE student_id=$1 AND status=$2',[sid,'Paid']); ok(res,{payments:r.rows,totalPaid:+total.rows[0].total}); }catch(e){err(res,e.message);}});
 app.post('/api/v1/fees', auth, adminOnly, async (req,res)=>{ try{ const {student_id,amount,payment_date,payment_mode,status,remarks}=req.body; const rcpt='RCPT-'+Date.now(); const r=await pool.query('INSERT INTO fee_payments(student_id,amount,payment_date,payment_mode,receipt_no,status,remarks) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *',[student_id,amount,payment_date,payment_mode||'Cash',rcpt,status||'Paid',remarks||'']); ok(res,r.rows[0]); }catch(e){err(res,e.message);}});
-app.get('/api/v1/fees/report', auth, adminOnly, async (req,res)=>{ try{ const r=await pool.query(`SELECT s.name AS student,s.email,f.amount,f.payment_date,f.payment_mode,f.receipt_no,f.status FROM fee_payments f JOIN students s ON f.student_id=s.id ORDER BY f.created_at DESC`); const total=await pool.query("SELECT COALESCE(SUM(amount),0) AS total FROM fee_payments WHERE status='Paid'"); ok(res,{records:r.rows,totalPaid:+total.rows[0].total}); }catch(e){err(res,e.message);}});
+app.get('/api/v1/fees/report', auth, adminOnly, async (req,res)=>{ try{ const r=await pool.query(`SELECT s.name AS student,s.email,f.amount,f.payment_date,f.payment_mode,f.receipt_no,f.status FROM fee_payments f JOIN students s ON f.student_id=s.id ORDER BY f.created_at DESC`); const totals=await pool.query("SELECT COALESCE(SUM(CASE WHEN LOWER(status)='paid' THEN amount ELSE 0 END),0) AS paid_total, COALESCE(SUM(CASE WHEN LOWER(status)='pending' THEN amount ELSE 0 END),0) AS pending_total, COALESCE(SUM(CASE WHEN LOWER(status)='overdue' THEN amount ELSE 0 END),0) AS overdue_total FROM fee_payments"); ok(res,{records:r.rows,paid_total:+totals.rows[0].paid_total,pending_total:+totals.rows[0].pending_total,overdue_total:+totals.rows[0].overdue_total}); }catch(e){err(res,e.message);}});
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 app.get('/api/v1/notifications', auth, async (req,res)=>{ try{ const r=await pool.query('SELECT * FROM notifications WHERE user_id=$1 AND role=$2 ORDER BY created_at DESC LIMIT 20',[req.user.id,req.user.role]); const unread=r.rows.filter(n=>!n.is_read).length; ok(res,{notifications:r.rows,unread}); }catch(e){err(res,e.message);}});
@@ -1155,19 +1245,32 @@ app.get('/api/v1/participant/certificate/view/:certNo', auth, requireRole('parti
 // ── FEES UPDATE ────────────────────────────────────────────────────────────────
 app.put('/api/v1/fees/:id', auth, adminOnly, async (req,res)=>{ try{ const {status,payment_date,remarks}=req.body; const r=await pool.query('UPDATE fee_payments SET status=$1,payment_date=$2,remarks=$3 WHERE id=$4 RETURNING *',[status||'Paid',payment_date||new Date().toISOString().slice(0,10),remarks||'',req.params.id]); ok(res,r.rows[0]); }catch(e){err(res,e.message);}});
 
-// ── STUDENT: ENROLLED COURSES ─────────────────────────────────────────────────
+// ── STUDENT: ENROLLED COURSES (admin-assigned + self-purchased) ───────────────
 app.get('/api/v1/courses/enrolled', auth, studentOnly, async (req,res)=>{
   try{
     const r=await pool.query(`
-      SELECT c.id AS course_id, c.name AS title, c.description, c.thumbnail,
-             b.name AS batch_name, b.id AS batch_id, t.name AS trainer_name, s.status,
+      SELECT DISTINCT c.id AS course_id, c.id, c.name AS title, c.description, c.thumbnail,
+             c.duration, c.intro_video, c.demo_video_path, c.course_type,
+             c.avg_rating, c.certificate_validity_days,
+             cat.name AS category, cat.name AS category_name,
+             b.name AS batch_name, b.id AS batch_id,
+             COALESCE(t2.name, t.name) AS trainer_name,
+             COALESCE(tr2.expertise, t.expertise) AS trainer_expertise,
+             COALESCE(tr2.bio, t.bio) AS trainer_bio,
+             COALESCE(tr2.profile_photo, t.profile_photo) AS trainer_photo,
+             s.status,
              COALESCE((SELECT COUNT(*) FROM modules WHERE course_id=c.id),0) AS total_modules,
-             COALESCE((SELECT COUNT(*) FROM student_progress sp JOIN modules m ON sp.module_id=m.id WHERE m.course_id=c.id AND sp.student_id=s.id AND sp.completed=TRUE),0) AS completed_modules
+             COALESCE((SELECT COUNT(*) FROM student_progress sp2 JOIN modules m2 ON sp2.module_id=m2.id WHERE m2.course_id=c.id AND sp2.student_id=s.id AND sp2.completed=TRUE),0) AS completed_modules
       FROM students s
-      JOIN courses c ON s.course_id=c.id
       LEFT JOIN batches b ON s.batch_id=b.id
       LEFT JOIN trainers t ON b.trainer_id=t.id
-      WHERE s.id=$1
+      LEFT JOIN courses c ON c.id=s.course_id
+        OR c.id=(SELECT course_id FROM batches WHERE id=s.batch_id LIMIT 1)
+        OR c.id IN (SELECT course_id FROM course_purchases WHERE student_id=s.id)
+      LEFT JOIN categories cat ON c.category_id=cat.id
+      LEFT JOIN trainers tr2 ON c.linked_trainer_id=tr2.id
+      LEFT JOIN trainers t2 ON c.linked_trainer_id=t2.id
+      WHERE s.id=$1 AND c.id IS NOT NULL
     `,[req.user.id]);
     const rows=r.rows.map(row=>({...row,progress:+row.total_modules>0?Math.round((+row.completed_modules/+row.total_modules)*100):0}));
     ok(res,rows);
@@ -1250,6 +1353,55 @@ app.get('/api/v1/batches/my', auth, trainerOnly, async (req,res)=>{
       FROM batches b LEFT JOIN courses c ON b.course_id=c.id
       WHERE b.trainer_id=$1 ORDER BY b.id
     `,[req.user.id]);
+    ok(res,r.rows);
+  }catch(e){err(res,e.message);}
+});
+
+// ── TRAINER: MY STATS (courses + students) ───────────────────────────────────
+app.get('/api/v1/trainer/my-stats', auth, trainerOnly, async (req,res)=>{
+  try{
+    const tid=req.user.id;
+    // Courses: linked directly OR via batches
+    const cR=await pool.query(`
+      SELECT COUNT(DISTINCT c.id) AS courses_count
+      FROM courses c
+      WHERE c.linked_trainer_id=$1
+         OR c.id IN (SELECT course_id FROM batches WHERE trainer_id=$1 AND course_id IS NOT NULL)
+    `,[tid]);
+    // Students: in trainer's batches
+    const sR=await pool.query(`
+      SELECT COUNT(DISTINCT s.id) AS students_count
+      FROM students s
+      JOIN batches b ON s.batch_id=b.id
+      WHERE b.trainer_id=$1
+    `,[tid]);
+    // Batches
+    const bR=await pool.query(`SELECT COUNT(*) AS batches_count FROM batches WHERE trainer_id=$1`,[tid]);
+    ok(res,{
+      courses_count: parseInt(cR.rows[0]?.courses_count)||0,
+      students_count: parseInt(sR.rows[0]?.students_count)||0,
+      batches_count: parseInt(bR.rows[0]?.batches_count)||0
+    });
+  }catch(e){err(res,e.message);}
+});
+
+// ── TRAINER: MY COURSES (linked directly + via batches) ──────────────────────
+app.get('/api/v1/trainer/my-courses', auth, trainerOnly, async (req,res)=>{
+  try{
+    const tid=req.user.id;
+    const r=await pool.query(`
+      SELECT DISTINCT c.id, c.name, c.name AS title, cat.name AS category,
+             c.duration, c.status, c.intro_video, c.demo_video_path, c.description,
+             (SELECT COUNT(*) FROM modules WHERE course_id=c.id) AS module_count,
+             (SELECT COUNT(DISTINCT s.id) FROM students s
+              JOIN batches b ON s.batch_id=b.id
+              WHERE b.trainer_id=$1 AND (s.course_id=c.id OR b.course_id=c.id)) AS student_count
+      FROM courses c
+      LEFT JOIN categories cat ON c.category_id=cat.id
+      WHERE c.linked_trainer_id=$1
+         OR c.id IN (SELECT course_id FROM batches WHERE trainer_id=$1 AND course_id IS NOT NULL)
+      ORDER BY c.name
+    `,[tid]);
     ok(res,r.rows);
   }catch(e){err(res,e.message);}
 });
@@ -2140,6 +2292,73 @@ app.get('/api/v1/progress/student/:studentId', auth, requireRole('admin','traine
 });
 
 // Trainer: get all students progress in their batches
+// ── ADMIN: STUDENT PROGRESS BY STUDENT (rich view like corporate by-participant) ─
+app.get('/api/v1/admin/progress/by-student', auth, requireRole('admin','trainer'), async (req,res)=>{
+  try{
+    // Step 1: fetch students
+    const params=[];
+    let trainerCond='';
+    if(req.user.role==='trainer'){
+      params.push(req.user.id);
+      trainerCond=`AND s.batch_id IN (SELECT id FROM batches WHERE trainer_id=$${params.length})`;
+    }
+    const stuR = await pool.query(
+      `SELECT s.id, s.name, s.email, s.status, b.name AS batch_name
+       FROM students s
+       LEFT JOIN batches b ON s.batch_id=b.id
+       WHERE 1=1 ${trainerCond}
+       ORDER BY s.name`,
+      params
+    );
+    const students = stuR.rows;
+    if(!students.length){ return ok(res,[]); }
+    const studentIds = students.map(s=>s.id);
+
+    // Step 2: fetch flat course+progress rows for all students
+    const progR = await pool.query(`
+      SELECT
+        enr.student_id,
+        c.id AS course_id,
+        c.name AS course_name,
+        COUNT(DISTINCT m.id) AS total_modules,
+        COUNT(DISTINCT CASE WHEN sp.completed THEN sp.module_id END) AS completed_modules,
+        COALESCE(SUM(sp.time_spent_seconds),0) AS time_spent_seconds,
+        MAX(sp.last_accessed) AS last_accessed,
+        cert.certificate_no
+      FROM (
+        SELECT id AS student_id, course_id FROM students WHERE id=ANY($1) AND course_id IS NOT NULL
+        UNION
+        SELECT s.id AS student_id, b.course_id FROM students s JOIN batches b ON s.batch_id=b.id WHERE s.id=ANY($1) AND b.course_id IS NOT NULL
+        UNION
+        SELECT student_id, course_id FROM course_purchases WHERE student_id=ANY($1)
+      ) enr
+      JOIN courses c ON c.id=enr.course_id
+      LEFT JOIN modules m ON m.course_id=c.id
+      LEFT JOIN student_progress sp ON sp.student_id=enr.student_id AND sp.module_id=m.id
+      LEFT JOIN certificates cert ON cert.student_id=enr.student_id AND cert.course_id=c.id
+      GROUP BY enr.student_id, c.id, c.name, cert.certificate_no
+      ORDER BY c.name
+    `, [studentIds]);
+
+    // Step 3: group progress by student in JS
+    const progressMap={};
+    for(const row of progR.rows){
+      if(!progressMap[row.student_id]) progressMap[row.student_id]=[];
+      progressMap[row.student_id].push({
+        course_id: row.course_id,
+        course_name: row.course_name,
+        total_modules: parseInt(row.total_modules)||0,
+        completed_modules: parseInt(row.completed_modules)||0,
+        time_spent_seconds: parseInt(row.time_spent_seconds)||0,
+        last_accessed: row.last_accessed,
+        certificate_no: row.certificate_no||null
+      });
+    }
+    const result = students.map(s=>({...s, courses: progressMap[s.id]||[]}));
+    ok(res, result);
+  }catch(e){err(res,e.message);}
+});
+
 app.get('/api/v1/progress/all', auth, requireRole('admin','trainer'), async (req,res)=>{
   try{
     let q=`
@@ -3045,6 +3264,146 @@ app.get('/api/v1/bschool/batches/summary', auth, bschoolRole, async (req,res)=>{
 
 // POST alias for mark-all-read (bschool dashboard uses POST)
 app.post('/api/v1/notifications/mark-all-read', auth, async (req,res)=>{ try{ await pool.query('UPDATE notifications SET is_read=TRUE WHERE user_id=$1 AND role=$2 AND is_read=FALSE',[req.user.id,req.user.role]); ok(res,{},'All notifications marked as read'); }catch(e){err(res,e.message);}});
+
+// ── STUDENT: COURSE CONTENT (SCORM/Video/PDF per module) ─────────────────────
+async function isStudentEnrolled(studentId, courseId) {
+  const purchased = await pool.query('SELECT id FROM course_purchases WHERE student_id=$1 AND course_id=$2', [studentId, courseId]);
+  if (purchased.rows[0]) return true;
+  const assigned = await pool.query('SELECT id FROM students WHERE id=$1 AND course_id=$2', [studentId, courseId]);
+  return !!assigned.rows[0];
+}
+
+app.get('/api/v1/student/courses/:courseId/content', auth, studentOnly, async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const studentId = req.user.id;
+    const enrolled = await isStudentEnrolled(studentId, courseId);
+    if (!enrolled) return err(res, 'Not enrolled in this course', 403);
+    const modsQ = await pool.query(`SELECT id, name, COALESCE(order_no,0) AS order_no, duration FROM modules WHERE course_id=$1 ORDER BY COALESCE(order_no,0), id`, [courseId]);
+    const pkgsQ = await pool.query(`
+      SELECT sp.id, sp.module_id, sp.package_name, sp.content_type, sp.upload_path,
+             st.completion_status, st.score_raw, st.total_time
+      FROM scorm_packages sp
+      JOIN modules m ON sp.module_id = m.id AND m.course_id = $2
+      LEFT JOIN scorm_tracking st ON st.package_id = sp.id AND st.student_id = $1
+      ORDER BY sp.module_id, sp.id
+    `, [studentId, courseId]);
+    const matsQ = await pool.query(`SELECT id, module_id, title, type, file_path_or_url FROM course_materials WHERE course_id=$1 ORDER BY COALESCE(module_id,0), id`, [courseId]);
+    const ccQ = await pool.query(`SELECT id, module_id, content_type, file_path, file_name FROM course_content WHERE course_id=$1`, [courseId]).catch(() => ({ rows: [] }));
+    const progQ = await pool.query(`SELECT module_id, completed, time_spent_seconds, last_accessed FROM student_progress WHERE student_id=$1 AND module_id IN (SELECT id FROM modules WHERE course_id=$2)`, [studentId, courseId]);
+    const progMap = {}; progQ.rows.forEach(p => { progMap[p.module_id] = p; });
+    const pkgMap = {};
+    pkgsQ.rows.forEach(p => {
+      const mid = p.module_id; if (!pkgMap[mid]) pkgMap[mid] = [];
+      pkgMap[mid].push({ id: p.id, package_name: p.package_name, content_type: p.content_type, upload_path: p.upload_path,
+        tracking: p.completion_status ? { completion_status: p.completion_status, score_raw: p.score_raw, total_time: p.total_time } : null });
+    });
+    const matMap = {}; const matNoMod = [];
+    matsQ.rows.forEach(m => { if (m.module_id) { if (!matMap[m.module_id]) matMap[m.module_id] = []; matMap[m.module_id].push(m); } else matNoMod.push(m); });
+    const ccMap = {}; const ccNoMod = [];
+    ccQ.rows.forEach(c => {
+      const item = { id: 'cc-'+c.id, package_name: c.file_name||'Content', content_type: c.content_type||'scorm', upload_path: c.file_path, tracking: null };
+      if (c.module_id) { if (!ccMap[c.module_id]) ccMap[c.module_id] = []; ccMap[c.module_id].push(item); } else ccNoMod.push(item);
+    });
+    let result = modsQ.rows.map(m => ({ id: m.id, name: m.name, order_no: m.order_no, duration: m.duration,
+      progress: progMap[m.id] || null, packages: [...(pkgMap[m.id] || []), ...(ccMap[m.id] || [])], materials: matMap[m.id] || [] }));
+    if (ccNoMod.length || matNoMod.length) result.push({ id: 'general', name: 'Course Materials', order_no: 9999, duration: null, progress: null, packages: ccNoMod, materials: matNoMod });
+    ok(res, result);
+  } catch(e) { err(res, e.message); }
+});
+
+app.get('/api/v1/student/courses/:courseId/materials', auth, studentOnly, async (req, res) => {
+  try {
+    const enrolled = await isStudentEnrolled(req.user.id, req.params.courseId);
+    if (!enrolled) return err(res, 'Not enrolled', 403);
+    const r = await pool.query(`SELECT cm.*, m.name AS module_name FROM course_materials cm LEFT JOIN modules m ON cm.module_id=m.id WHERE cm.course_id=$1 ORDER BY COALESCE(cm.module_id,0), cm.id`, [req.params.courseId]);
+    ok(res, r.rows);
+  } catch(e) { err(res, e.message); }
+});
+
+app.get('/api/v1/student/courses/:courseId/quiz', auth, studentOnly, async (req, res) => {
+  try {
+    const { courseId } = req.params; const studentId = req.user.id;
+    const enrolled = await isStudentEnrolled(studentId, courseId);
+    if (!enrolled) return err(res, 'Not enrolled', 403);
+    const course = await pool.query('SELECT id, name, course_type, passing_percentage FROM courses WHERE id=$1', [courseId]);
+    if (!course.rows[0]) return err(res, 'Course not found', 404);
+    const questions = await pool.query('SELECT id, question, option_a, option_b, option_c, option_d FROM mcqs WHERE course_id=$1', [courseId]);
+    const prev = await pool.query('SELECT * FROM student_quiz_attempts WHERE student_id=$1 AND course_id=$2', [studentId, courseId]);
+    ok(res, { course: course.rows[0], questions: questions.rows, total: questions.rows.length, previous_attempt: prev.rows[0] || null });
+  } catch(e) { err(res, e.message); }
+});
+
+app.post('/api/v1/student/courses/:courseId/quiz/submit', auth, studentOnly, async (req, res) => {
+  try {
+    const { courseId } = req.params; const studentId = req.user.id; const { answers } = req.body;
+    if (!answers || typeof answers !== 'object') return err(res, 'Answers are required', 400);
+    const enrolled = await isStudentEnrolled(studentId, courseId);
+    if (!enrolled) return err(res, 'Not enrolled', 403);
+    const course = await pool.query('SELECT id, name, course_type, passing_percentage FROM courses WHERE id=$1', [courseId]);
+    if (!course.rows[0]) return err(res, 'Course not found', 404);
+    const questions = await pool.query('SELECT id, correct_answer FROM mcqs WHERE course_id=$1', [courseId]);
+    let score = 0; const total = questions.rows.length;
+    if (total === 0) return err(res, 'No quiz questions available', 400);
+    questions.rows.forEach(q => { if (answers[String(q.id)]?.toUpperCase() === q.correct_answer?.toUpperCase()) score++; });
+    const passingPct = parseInt(course.rows[0].passing_percentage) || 60;
+    const scorePct = Math.round((score / total) * 100);
+    const passed = scorePct >= passingPct;
+    await pool.query(`INSERT INTO student_quiz_attempts(student_id,course_id,score,total_questions,passed,answers) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(student_id,course_id) DO UPDATE SET score=$3,total_questions=$4,passed=$5,answers=$6,attempted_at=NOW()`,
+      [studentId, courseId, score, total, passed, JSON.stringify(answers)]);
+    let certificate = null;
+    if (passed) {
+      const existing = await pool.query('SELECT * FROM certificates WHERE student_id=$1 AND course_id=$2', [studentId, courseId]);
+      if (!existing.rows[0]) {
+        const certNo = 'CDPL-STU-' + Date.now();
+        const batchQ = await pool.query('SELECT batch_id FROM students WHERE id=$1', [studentId]);
+        const certR = await pool.query(`INSERT INTO certificates(student_id,course_id,batch_id,certificate_no) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *`, [studentId, courseId, batchQ.rows[0]?.batch_id||null, certNo]);
+        certificate = certR.rows[0] || null;
+        if (!certificate) { const re2 = await pool.query('SELECT * FROM certificates WHERE student_id=$1 AND course_id=$2',[studentId,courseId]); certificate=re2.rows[0]||null; }
+      } else certificate = existing.rows[0];
+    }
+    ok(res, { score, total, score_pct: scorePct, passed, passing_pct: passingPct, certificate });
+  } catch(e) { err(res, e.message); }
+});
+
+app.get('/api/v1/student/courses/:courseId/certificate', auth, studentOnly, async (req, res) => {
+  try {
+    const { courseId } = req.params; const studentId = req.user.id;
+    const enrolled = await isStudentEnrolled(studentId, courseId);
+    if (!enrolled) return err(res, 'Not enrolled', 403);
+    const course = await pool.query('SELECT id, name, course_type, passing_percentage, requires_pass FROM courses WHERE id=$1', [courseId]);
+    if (!course.rows[0]) return err(res, 'Course not found', 404);
+    const totalMods = await pool.query('SELECT COUNT(*) FROM modules WHERE course_id=$1', [courseId]);
+    const completedMods = await pool.query('SELECT COUNT(*) FROM student_progress WHERE student_id=$1 AND completed=TRUE AND module_id IN (SELECT id FROM modules WHERE course_id=$2)', [studentId, courseId]);
+    const totalModsCount = parseInt(totalMods.rows[0].count);
+    const completedModsCount = parseInt(completedMods.rows[0].count);
+    const allModsDone = totalModsCount === 0 || completedModsCount >= totalModsCount;
+    const quizRequired = course.rows[0].course_type === 'custom_quiz';
+    let quizPassed = !quizRequired; let quizAttempt = null;
+    if (quizRequired) {
+      const qa = await pool.query('SELECT * FROM student_quiz_attempts WHERE student_id=$1 AND course_id=$2', [studentId, courseId]);
+      quizAttempt = qa.rows[0] || null; quizPassed = qa.rows[0]?.passed || false;
+    }
+    let scormDone = false;
+    if (!quizRequired) {
+      const scormCheck = await pool.query(`SELECT COALESCE(MAX(CASE WHEN st.completion_status IN ('completed','passed') THEN 1 ELSE 0 END),0) AS done FROM scorm_tracking st JOIN scorm_packages sp ON st.package_id=sp.id JOIN modules m ON sp.module_id=m.id WHERE st.student_id=$1 AND m.course_id=$2`, [studentId, courseId]);
+      scormDone = parseInt(scormCheck.rows[0]?.done) === 1;
+    }
+    const effectivelyDone = allModsDone || scormDone;
+    const existing = await pool.query('SELECT * FROM certificates WHERE student_id=$1 AND course_id=$2', [studentId, courseId]);
+    let certificate = existing.rows[0] || null;
+    if (!certificate && effectivelyDone && quizPassed) {
+      const certNo = 'CDPL-STU-' + Date.now();
+      const batchQ = await pool.query('SELECT batch_id FROM students WHERE id=$1', [studentId]);
+      const certR = await pool.query(`INSERT INTO certificates(student_id,course_id,batch_id,certificate_no) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING *`, [studentId, courseId, batchQ.rows[0]?.batch_id||null, certNo]);
+      certificate = certR.rows[0] || null;
+      if (!certificate) { const re2 = await pool.query('SELECT * FROM certificates WHERE student_id=$1 AND course_id=$2',[studentId,courseId]); certificate=re2.rows[0]||null; }
+    }
+    ok(res, { course_id: parseInt(courseId), total_modules: totalModsCount, completed_modules: completedModsCount,
+      modules_complete: effectivelyDone, quiz_required: quizRequired, quiz_passed: quizPassed, quiz_attempt: quizAttempt,
+      certificate, eligible: effectivelyDone && quizPassed });
+  } catch(e) { err(res, e.message); }
+});
 
 // ── BACKWARD COMPAT (old API prefix) ─────────────────────────────────────────
 app.use('/api/', (req,res,next)=>{

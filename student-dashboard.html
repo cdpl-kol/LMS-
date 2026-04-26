@@ -211,6 +211,7 @@ tr:hover td{background:#f8f9ff;}
   <button class="nav-item" onclick="showSection('timetable')"><i class="fas fa-clock"></i>Timetable</button>
   <button class="nav-item" onclick="showSection('materials')"><i class="fas fa-folder-open"></i>Study Materials</button>
   <button class="nav-item" onclick="showSection('scorm')"><i class="fas fa-cube"></i>E-Learning (SCORM)</button>
+  <button class="nav-item" onclick="showSection('certificates')"><i class="fas fa-certificate"></i>My Certificates</button>
   <span class="sb-section">Account</span>
   <button class="nav-item" onclick="showSection('notifications')"><i class="fas fa-bell"></i>Notifications</button>
   <button class="nav-item" onclick="showSection('profile')"><i class="fas fa-user"></i>My Profile</button>
@@ -379,16 +380,31 @@ tr:hover td{background:#f8f9ff;}
 
   <!-- ── MY PROGRESS ── -->
   <div class="section" id="sec-progress">
-    <div class="card">
-      <div class="card-header"><span class="card-title">Module Progress — All Courses</span></div>
-      <div id="progressList"><div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+    <!-- Overall summary bar -->
+    <div id="progressOverallCard" style="display:none;background:linear-gradient(135deg,#1a237e,#4a148c);border-radius:14px;padding:24px 28px;margin-bottom:20px;color:#fff;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:13px;opacity:.75;margin-bottom:4px;">Overall Progress</div>
+          <div style="font-size:32px;font-weight:700;" id="progressOverallPct">0%</div>
+          <div style="font-size:12px;opacity:.65;" id="progressOverallSub"></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:12px;opacity:.7;margin-bottom:6px;">Across all enrolled courses</div>
+          <div style="background:rgba(255,255,255,.2);border-radius:8px;height:10px;width:220px;overflow:hidden;">
+            <div id="progressOverallBar" style="height:100%;background:linear-gradient(90deg,#e91e8c,#ff9800);border-radius:8px;transition:width .5s;width:0%;"></div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="charts-row">
-      <div class="chart-wrap">
-        <div class="card-header"><span class="card-title">Progress Overview</span></div>
+    <!-- Per-course cards -->
+    <div id="progressList"><div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+    <!-- Chart -->
+    <div class="charts-row" id="progressChartsRow" style="display:none;">
+      <div class="chart-wrap" style="flex:1;">
+        <div class="card-header"><span class="card-title">Course-wise Progress</span></div>
         <canvas id="progOverviewChart"></canvas>
       </div>
-      <div class="chart-wrap">
+      <div class="chart-wrap" style="flex:1;">
         <div class="card-header"><span class="card-title">Exam Performance</span></div>
         <canvas id="examPerfChart"></canvas>
       </div>
@@ -419,9 +435,19 @@ tr:hover td{background:#f8f9ff;}
       <div class="card-header">
         <span class="card-title">My Assignments</span>
       </div>
-      <div style="overflow-x:auto;"><table>
+      <div id="assignComingSoon" style="text-align:center;padding:48px 24px;">
+        <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#ff6b35,#e55a2b);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 8px 24px rgba(255,107,53,0.3);">
+          <i class="fas fa-tasks" style="font-size:30px;color:#fff;"></i>
+        </div>
+        <h3 style="font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:#1a237e;margin-bottom:8px;">Assignments</h3>
+        <p style="color:#78909c;font-size:14px;margin-bottom:20px;">Your assignments will appear here once your trainer publishes them.</p>
+        <span style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#ff6b35,#e55a2b);color:#fff;padding:10px 24px;border-radius:24px;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(255,107,53,0.4);">
+          <i class="fas fa-clock"></i> Arriving Soon
+        </span>
+      </div>
+      <div style="overflow-x:auto;display:none;"><table id="assignTable">
         <thead><tr><th>#</th><th>Title</th><th>Batch</th><th>Due Date</th><th>Max Marks</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody id="assignTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        <tbody id="assignTbody"></tbody>
       </table></div>
     </div>
   </div>
@@ -446,9 +472,19 @@ tr:hover td{background:#f8f9ff;}
   <div class="section" id="sec-timetable">
     <div class="card">
       <div class="card-header"><span class="card-title">Class Schedule</span></div>
-      <div style="overflow-x:auto;"><table>
+      <div id="ttComingSoon" style="text-align:center;padding:48px 24px;">
+        <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#1a237e,#1565c0);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 8px 24px rgba(26,35,126,0.3);">
+          <i class="fas fa-clock" style="font-size:30px;color:#fff;"></i>
+        </div>
+        <h3 style="font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:#1a237e;margin-bottom:8px;">Timetable</h3>
+        <p style="color:#78909c;font-size:14px;margin-bottom:20px;">Your class schedule will appear here once your admin sets it up.</p>
+        <span style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a237e,#1565c0);color:#fff;padding:10px 24px;border-radius:24px;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(26,35,126,0.35);">
+          <i class="fas fa-clock"></i> Arriving Soon
+        </span>
+      </div>
+      <div style="overflow-x:auto;display:none;"><table id="ttTable">
         <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Trainer</th><th>Batch</th><th>Room / Link</th></tr></thead>
-        <tbody id="ttTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        <tbody id="ttTbody"></tbody>
       </table></div>
     </div>
   </div>
@@ -519,6 +555,15 @@ tr:hover td{background:#f8f9ff;}
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ── MY CERTIFICATES ── -->
+  <div class="section" id="sec-certificates">
+    <div style="margin-bottom:20px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">My Certificates</span>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px;">Certificates earned by completing your courses.</p>
+    </div>
+    <div id="studentCertsGrid"></div>
   </div>
 
   <!-- ── FOOTER ── -->
@@ -614,6 +659,28 @@ tr:hover td{background:#f8f9ff;}
   </div>
 </div>
 
+<!-- Course Content Modal -->
+<div style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:600;display:none;align-items:center;justify-content:center;" id="courseContentOverlay" onclick="if(event.target===this)closeCourseContentModal()">
+  <div style="background:#fff;border-radius:20px;width:min(780px,96vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(26,35,126,0.22);overflow:hidden;">
+    <div id="ccm-header" style="background:linear-gradient(135deg,var(--navy),var(--blue));padding:20px 24px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span id="ccm-title" style="font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;"></span>
+      <button onclick="closeCourseContentModal()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">&times;</button>
+    </div>
+    <div id="ccm-body" style="overflow-y:auto;padding:20px 24px;flex:1;"></div>
+  </div>
+</div>
+
+<!-- Student Quiz Modal -->
+<div style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:650;display:none;align-items:center;justify-content:center;" id="studentQuizOverlay" onclick="if(event.target===this)closeStudentQuiz()">
+  <div style="background:#fff;border-radius:20px;width:min(700px,96vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(26,35,126,0.22);overflow:hidden;">
+    <div style="background:linear-gradient(135deg,var(--pink),var(--purple));padding:20px 24px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span id="sqm-title" style="font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;"></span>
+      <button onclick="closeStudentQuiz()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">&times;</button>
+    </div>
+    <div id="sqm-body" style="overflow-y:auto;padding:20px 24px;flex:1;"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -660,7 +727,7 @@ if(u.name){
 }
 
 /* ── SECTION NAVIGATION ── */
-const sectionTitles={overview:'Dashboard',queries:'My Queries',courses:'Courses',progress:'My Progress',exams:'Exams & Results',assignments:'Assignments',attendance:'Attendance',timetable:'Timetable',materials:'Study Materials',scorm:'E-Learning (SCORM)',notifications:'Notifications',profile:'My Profile'};
+const sectionTitles={overview:'Dashboard',queries:'My Queries',courses:'Courses',progress:'My Progress',exams:'Exams & Results',assignments:'Assignments',attendance:'Attendance',timetable:'Timetable',materials:'Study Materials',scorm:'E-Learning (SCORM)',notifications:'Notifications',profile:'My Profile',certificates:'My Certificates'};
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -671,7 +738,7 @@ function showSection(name){
   document.querySelectorAll('.nav-item').forEach(n=>{
     if(n.textContent.trim()===sectionTitles[name])n.classList.add('active');
   });
-  const loaders={overview:loadOverview,queries:loadMyQueries,courses:loadCourses,progress:loadProgress,exams:loadExams,assignments:loadAssignments,attendance:loadAttendance,timetable:loadTimetable,materials:loadMaterials,scorm:loadScorm,notifications:loadNotifications,profile:loadProfile};
+  const loaders={overview:loadOverview,queries:loadMyQueries,courses:loadCourses,progress:loadProgress,exams:loadExams,assignments:loadAssignments,attendance:loadAttendance,timetable:loadTimetable,materials:loadMaterials,scorm:loadScorm,notifications:loadNotifications,profile:loadProfile,certificates:loadStudentCertificates};
   if(loaders[name])loaders[name]();
 }
 
@@ -803,10 +870,15 @@ function _buildCourseCard(c, isEnrolled, progress) {
         : ''}
       <div style="flex:1;"></div>
       ${isEnrolled
-        ? `<button class="crs-btn" onclick="event.stopPropagation();viewCourse(${c.id})"
-             style="margin-top:8px;width:100%;padding:9px;border-radius:9px;border:none;background:${grad};color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
-             <i class="fas fa-play-circle"></i> Continue Learning
-           </button>`
+        ? `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;" onclick="event.stopPropagation()">
+             ${(c.intro_video||c.demo_video_path)?`<button onclick="openDemoVideo('${(c.intro_video||c.demo_video_path).replace(/'/g,"\\'")}','${(c.name||c.title||'').replace(/'/g,"\\'")}');event.stopPropagation();" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--brd);background:#fff;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;"><i class="fas fa-play-circle" style="color:var(--pink);"></i> Watch Intro Video</button>`:''}
+             <button onclick="openStudentCourseContent(${c.id},'${(c.name||c.title||'').replace(/'/g,"\\'")}');event.stopPropagation();" style="width:100%;padding:9px;border-radius:9px;border:none;background:${grad};color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;"><i class="fas fa-book-open"></i> Open Course</button>
+             <button onclick="toggleStudentCoursePDFs(${c.id},this);event.stopPropagation();" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid #f5c6c6;background:#fdecea;color:#c62828;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;"><i class="fas fa-file-pdf"></i> Course PDFs / Materials</button>
+             <div id="st-pdfs-${c.id}" style="display:none;"></div>
+             <button onclick="openStudentQuizModal(${c.id},'${(c.name||c.title||'').replace(/'/g,"\\'")}');event.stopPropagation();" style="width:100%;padding:8px;border-radius:8px;border:none;background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;"><i class="fas fa-question-circle"></i> Take Quiz / MCQ</button>
+             <button onclick="checkStudentCertificate(${c.id},'${(c.name||c.title||'').replace(/'/g,"\\'")}',this);event.stopPropagation();" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid #ffcc80;background:#fff3e0;color:#e65100;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;"><i class="fas fa-certificate"></i> Check Certificate</button>
+             <div id="st-cert-${c.id}"></div>
+           </div>`
         : `<button class="crs-btn" onclick="event.stopPropagation();openCourseDetail(${c.id})"
              style="margin-top:8px;width:100%;padding:9px;border-radius:9px;border:none;background:${grad};color:#fff;font-size:13px;font-weight:600;cursor:pointer;">
              <i class="fas fa-info-circle"></i> View Details & Enroll
@@ -878,7 +950,7 @@ async function loadCourses() {
   }
 }
 
-function viewCourse(id) { showToast('Opening course content…'); }
+function viewCourse(id) { openStudentCourseContent(id, (_allCoursesCache||[]).find(c=>c.id===id)?.name||'Course'); }
 
 /* ── COURSE DETAIL MODAL ── */
 function openCourseDetail(courseId) {
@@ -989,23 +1061,72 @@ function openCourseDetail(courseId) {
 
 /* ── PROGRESS ── */
 let progOChart,examPChart;
+function fmtTime(sec){
+  sec=parseInt(sec)||0;
+  if(sec<60) return sec+'s';
+  if(sec<3600) return Math.floor(sec/60)+'m '+Math.floor(sec%60)+'s';
+  return Math.floor(sec/3600)+'h '+Math.floor((sec%3600)/60)+'m';
+}
 async function loadProgress(){
   const r=await api('GET','/progress/me');
+  if(!r.success && r.error){
+    document.getElementById('progressList').innerHTML=`<div style="text-align:center;padding:32px;color:#c62828;"><i class="fas fa-exclamation-triangle"></i> Could not load progress: ${r.error}</div>`;
+    return;
+  }
   const data=r.data||{};
   const courses=data.courses||[];
+  const overall=data.overall_percentage||0;
+
+  // Overall summary
+  const overallCard=document.getElementById('progressOverallCard');
+  if(courses.length){
+    overallCard.style.display='block';
+    document.getElementById('progressOverallPct').textContent=overall+'%';
+    const totalDone=courses.reduce((a,c)=>a+(c.completed_modules||0),0);
+    const totalMods=courses.reduce((a,c)=>a+(c.total_modules||0),0);
+    document.getElementById('progressOverallSub').textContent=totalDone+' of '+totalMods+' modules completed across '+courses.length+' course'+(courses.length>1?'s':'');
+    document.getElementById('progressOverallBar').style.width=overall+'%';
+    document.getElementById('progressChartsRow').style.display='flex';
+  } else {
+    overallCard.style.display='none';
+    document.getElementById('progressChartsRow').style.display='none';
+  }
+
+  // Per-course cards
   document.getElementById('progressList').innerHTML=courses.length?
-    courses.map(c=>`
-      <div style="margin-bottom:18px;">
-        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">
-          <span>${fmt(c.title)}</span><span>${c.percentage||0}%</span>
+    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+    ${courses.map(c=>{
+      const pct=c.percentage||0;
+      const barColor=pct>=100?'#4caf50':pct>=60?'#ff9800':'#e91e8c';
+      const statusIcon=pct>=100?'<span style="color:#4caf50;font-size:12px;"><i class="fas fa-check-circle"></i> Completed</span>':pct>0?'<span style="color:#ff9800;font-size:12px;"><i class="fas fa-spinner"></i> In Progress</span>':'<span style="color:var(--muted);font-size:12px;"><i class="fas fa-clock"></i> Not Started</span>';
+      const certBadge=c.certificate_no?`<div style="margin-top:10px;padding:7px 10px;background:#e8f5e9;border-radius:8px;font-size:12px;color:#2e7d32;display:flex;align-items:center;gap:6px;"><i class="fas fa-certificate"></i> Certificate: ${c.certificate_no}</div>`:'';
+      return `<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid #f0f0f0;">
+        <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;">${fmt(c.title)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          ${statusIcon}
+          <span style="font-size:22px;font-weight:800;color:${barColor};">${pct}%</span>
         </div>
-        <div class="prog-bar"><div class="prog-fill" style="width:${c.percentage||0}%;background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px;">${c.completed_modules||0} / ${c.total_modules||0} modules completed</div>
-      </div>`).join(''):
-    '<div style="text-align:center;padding:32px;color:var(--muted);">No progress data yet.</div>';
-  // Charts
+        <div style="background:#f0f0f0;border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px;">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:6px;transition:width .6s;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);">
+          <span><i class="fas fa-layer-group" style="margin-right:4px;"></i>${c.completed_modules||0} / ${c.total_modules||0} modules</span>
+          <span><i class="fas fa-clock" style="margin-right:4px;"></i>${fmtTime(c.time_spent_seconds)}</span>
+        </div>
+        ${c.last_accessed?`<div style="font-size:11px;color:var(--muted);margin-top:6px;"><i class="fas fa-calendar-alt" style="margin-right:4px;"></i>Last accessed: ${dateFmt(c.last_accessed)}</div>`:''}
+        ${certBadge}
+      </div>`;
+    }).join('')}
+    </div>`:
+    '<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-chart-line" style="font-size:36px;margin-bottom:12px;display:block;opacity:.3;"></i>No courses enrolled yet.<br><small>Enroll in a course to track your progress here.</small></div>';
+
+  // Bar chart
   const ctx1=document.getElementById('progOverviewChart');
-  if(ctx1){if(progOChart)progOChart.destroy();progOChart=new Chart(ctx1,{type:'bar',data:{labels:courses.map(c=>c.title?.substring(0,14)||'Course'),datasets:[{label:'Progress %',data:courses.map(c=>c.percentage||0),backgroundColor:'rgba(233,30,140,0.75)',borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});}
+  if(ctx1&&courses.length){
+    if(progOChart)progOChart.destroy();
+    progOChart=new Chart(ctx1,{type:'bar',data:{labels:courses.map(c=>c.title?.substring(0,16)||'Course'),datasets:[{label:'Progress %',data:courses.map(c=>c.percentage||0),backgroundColor:courses.map(c=>c.percentage>=100?'rgba(76,175,80,.8)':c.percentage>=60?'rgba(255,152,0,.8)':'rgba(233,30,140,.8)'),borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}}}});
+  }
+  // Exam chart
   const er=await api('GET','/exam/results/me');
   const results=er.data||[];
   const ctx2=document.getElementById('examPerfChart');
@@ -1042,18 +1163,23 @@ function startExam(id){window.location.href='exam.html?id='+id;}
 async function loadAssignments(){
   const r=await api('GET','/assignments/me');
   const rows=r.data||[];
-  document.getElementById('assignTbody').innerHTML=rows.length?
-    rows.map((a,i)=>`<tr>
+  const comingSoon=document.getElementById('assignComingSoon');
+  const tableWrap=document.querySelector('#sec-assignments div[style*="overflow-x"]');
+  if(rows.length){
+    if(comingSoon)comingSoon.style.display='none';
+    if(tableWrap)tableWrap.style.display='';
+    document.getElementById('assignTbody').innerHTML=rows.map((a,i)=>`<tr>
       <td>${i+1}</td><td>${fmt(a.title)}</td><td>${fmt(a.batch_name||'—')}</td>
       <td>${dateFmt(a.due_date)}</td><td>${fmt(a.max_marks||'—')}</td>
       <td>${statusBadge(a.submission_status||'pending')}</td>
-      <td>
-        ${a.submission_status==='submitted'?
-          `<span style="font-size:12px;color:var(--green);"><i class="fas fa-check"></i> Submitted ${a.marks_obtained!==null?'('+a.marks_obtained+'/'+a.max_marks+')':''}</span>`:
-          `<button class="btn btn-primary btn-sm" onclick="openSubmitModal(${a.id})"><i class="fas fa-upload"></i> Submit</button>`}
-      </td>
-    </tr>`).join(''):
-    '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">No assignments found.</td></tr>';
+      <td>${a.submission_status==='submitted'?
+        `<span style="font-size:12px;color:#2e7d32;"><i class="fas fa-check"></i> Submitted ${a.marks_obtained!==null?'('+a.marks_obtained+'/'+a.max_marks+')':''}</span>`:
+        `<button class="btn btn-primary btn-sm" onclick="openSubmitModal(${a.id})"><i class="fas fa-upload"></i> Submit</button>`}
+      </td></tr>`).join('');
+  } else {
+    if(comingSoon)comingSoon.style.display='block';
+    if(tableWrap)tableWrap.style.display='none';
+  }
 }
 function openSubmitModal(id){document.getElementById('sa-id').value=id;openModal('submitAssignModal');}
 async function submitAssignment(){
@@ -1093,15 +1219,22 @@ async function loadTimetable(){
   const rows=r.data||[];
   const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const sorted=rows.sort((a,b)=>days.indexOf(a.day_of_week)-days.indexOf(b.day_of_week));
-  document.getElementById('ttTbody').innerHTML=sorted.length?
-    sorted.map(t=>`<tr>
+  const comingSoon=document.getElementById('ttComingSoon');
+  const tableWrap=document.querySelector('#sec-timetable div[style*="overflow-x"]');
+  if(sorted.length){
+    if(comingSoon)comingSoon.style.display='none';
+    if(tableWrap)tableWrap.style.display='';
+    document.getElementById('ttTbody').innerHTML=sorted.map(t=>`<tr>
       <td><strong>${fmt(t.day_of_week)}</strong></td>
       <td>${fmt(t.start_time)} – ${fmt(t.end_time)}</td>
       <td>${fmt(t.subject)}</td><td>${fmt(t.trainer_name||'—')}</td>
       <td>${fmt(t.batch_name||'—')}</td>
       <td>${t.room_or_link?`<a href="${t.room_or_link}" target="_blank" style="color:var(--blue);text-decoration:none;"><i class="fas fa-link"></i> ${t.room_or_link.startsWith('http')?'Join Online':t.room_or_link}</a>`:'—'}</td>
-    </tr>`).join(''):
-    '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No timetable scheduled yet.</td></tr>';
+    </tr>`).join('');
+  } else {
+    if(comingSoon)comingSoon.style.display='block';
+    if(tableWrap)tableWrap.style.display='none';
+  }
 }
 
 /* ── MATERIALS ── */
@@ -1187,8 +1320,8 @@ async function loadScorm(){
 /* ── NOTIFICATIONS ── */
 async function loadNotifications(){
   const r=await api('GET','/notifications');
-  const list=r.data||[];
-  const unread=list.filter(n=>!n.is_read).length;
+  const list=r.data?.notifications||r.data||[];
+  const unread=Array.isArray(list)?list.filter(n=>!n.is_read).length:(r.data?.unread||0);
   document.getElementById('notifBadge').style.display=unread?'block':'none';
   document.getElementById('notifList').innerHTML=list.length?
     list.map(n=>`
@@ -1457,6 +1590,327 @@ async function submitQueryTo(target){
   }
 }
 
+/* ── STUDENT COURSE CONTENT MODAL ── */
+function closeCourseContentModal(){
+  document.getElementById('courseContentOverlay').style.display='none';
+}
+function fmtScormStatus(tracking){
+  if(!tracking) return '<span style="font-size:11px;color:var(--muted);">Not started</span>';
+  const s=tracking.completion_status||'not attempted';
+  const map={'completed':'✅ Completed','passed':'✅ Passed','incomplete':'🔄 In Progress','failed':'❌ Failed','browsed':'👁 Browsed','not attempted':'Not started'};
+  const col={'completed':'#2e7d32','passed':'#2e7d32','incomplete':'#e65100','failed':'#c62828','browsed':'#1565c0','not attempted':'#78909c'};
+  return`<span style="font-size:11px;font-weight:600;color:${col[s]||'#78909c'}">${map[s]||s}</span>`;
+}
+async function openStudentCourseContent(courseId, courseName){
+  const overlay=document.getElementById('courseContentOverlay');
+  document.getElementById('ccm-title').textContent=courseName||'Course Content';
+  document.getElementById('ccm-body').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;">Loading course content…</p></div>';
+  overlay.style.display='flex';
+  const r=await api('GET',`/student/courses/${courseId}/content`);
+  if(!r.success&&r.error){
+    document.getElementById('ccm-body').innerHTML=`<div style="text-align:center;padding:40px;color:#c62828;"><i class="fas fa-triangle-exclamation" style="font-size:40px;opacity:0.5;display:block;margin-bottom:12px;"></i><p>${r.error||'Content load nahi hua.'}</p></div>`;
+    return;
+  }
+  const modules=r.data||[];
+  if(!modules.length){
+    document.getElementById('ccm-body').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-folder-open" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i><p>Is course mein abhi koi content nahi hai.<br><small>Admin se contact karein.</small></p></div>';
+    return;
+  }
+  let html='';
+  for(const mod of modules){
+    const prog=mod.progress;
+    const isModDone=prog&&prog.completed;
+    const hasStarted=prog&&prog.last_accessed;
+    const badgeHtml=isModDone?'<span style="font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;background:#e8f5e9;color:#2e7d32;">✅ Completed</span>':hasStarted?'<span style="font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;background:#fff3e0;color:#e65100;">🔄 In Progress</span>':'<span style="font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600;background:#e3f2fd;color:#1565c0;">New</span>';
+    const timeTxt=prog&&prog.time_spent_seconds>0?`${Math.floor(prog.time_spent_seconds/60)}m spent`:'';
+    html+=`<div style="border:1px solid var(--brd);border-radius:12px;margin-bottom:14px;overflow:hidden;">
+      <div style="background:#f0f4ff;padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brd);">
+        <i class="fas fa-layer-group" style="color:var(--blue);font-size:15px;"></i>
+        <span style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:var(--navy);flex:1;">${mod.name}</span>
+        ${badgeHtml}
+        ${timeTxt?`<span style="font-size:11px;color:var(--muted);margin-left:auto;"><i class="fas fa-clock"></i> ${timeTxt}</span>`:''}
+      </div>`;
+    if(mod.packages&&mod.packages.length>0){
+      for(const pkg of mod.packages){
+        const isVideo=pkg.content_type==='video';
+        const iconBg=isVideo?'#fce4ec':'#e3f2fd';
+        const iconColor=isVideo?'#c62828':'#1565c0';
+        const iconName=isVideo?'fa-film':'fa-laptop-code';
+        const typeLabel=isVideo?'Video':'SCORM';
+        const statusHtml=fmtScormStatus(pkg.tracking);
+        const encodedName=encodeURIComponent(pkg.package_name||typeLabel);
+        const actionBtn=isVideo
+          ?`<a href="${pkg.upload_path}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;text-decoration:none;background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;white-space:nowrap;"><i class="fas fa-play"></i> Watch</a>`
+          :`<a href="scorm-player.html?pkg=${pkg.id}&name=${encodedName}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;text-decoration:none;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;white-space:nowrap;"><i class="fas fa-play"></i> Launch</a>`;
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #f5f5f5;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;border-radius:8px;background:${iconBg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;"><i class="fas ${iconName}" style="color:${iconColor};"></i></div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);">${pkg.package_name||typeLabel}</div>
+              <div style="font-size:11px;color:var(--muted);">${typeLabel} · ${statusHtml}</div>
+            </div>
+          </div>
+          ${actionBtn}
+        </div>`;
+      }
+    }
+    if(mod.materials&&mod.materials.length>0){
+      for(const mat of mod.materials){
+        const isPDF=(mat.type||'').toUpperCase()==='PDF'||(mat.file_path_or_url||'').toLowerCase().endsWith('.pdf');
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #f5f5f5;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;border-radius:8px;background:${isPDF?'#fdecea':'#e8f5e9'};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;"><i class="fas ${isPDF?'fa-file-pdf':'fa-file-alt'}" style="color:${isPDF?'#c62828':'#2e7d32'};"></i></div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);">${mat.title}</div>
+              <div style="font-size:11px;color:var(--muted);">${isPDF?'PDF Document':'Resource'}</div>
+            </div>
+          </div>
+          <a href="${mat.file_path_or_url}" ${isPDF?'download':''} target="${isPDF?'_self':'_blank'}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;background:${isPDF?'#e53935':'#43a047'};color:#fff;white-space:nowrap;"><i class="fas ${isPDF?'fa-download':'fa-external-link-alt'}"></i> ${isPDF?'Download':'Open'}</a>
+        </div>`;
+      }
+    }
+    if((!mod.packages||!mod.packages.length)&&(!mod.materials||!mod.materials.length)){
+      html+=`<div style="padding:14px 16px;font-size:12px;color:var(--muted);"><i class="fas fa-info-circle"></i> No content added to this module yet.</div>`;
+    }
+    html+='</div>';
+  }
+  document.getElementById('ccm-body').innerHTML=html;
+}
+
+/* ── STUDENT: TOGGLE COURSE PDFs ── */
+async function toggleStudentCoursePDFs(courseId, btn){
+  const el=document.getElementById('st-pdfs-'+courseId);
+  if(!el) return;
+  if(el.style.display==='block'){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML='<div style="text-align:center;padding:8px;font-size:12px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  const r=await api('GET',`/student/courses/${courseId}/materials`);
+  const mats=r.data||[];
+  if(!mats.length){el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No PDF materials available for this course yet.</div>';return;}
+  el.innerHTML=mats.map(m=>{
+    const isPDF=(m.type||'').toUpperCase()==='PDF'||(m.file_path_or_url||'').toLowerCase().endsWith('.pdf');
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:#fff8f8;border-radius:8px;margin-bottom:4px;border:1px solid #fecaca;">
+      <span style="font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px;">
+        <i class="fas ${isPDF?'fa-file-pdf':'fa-file-alt'}" style="color:${isPDF?'#e53935':'#1565c0'};"></i>${m.title}
+      </span>
+      <a href="${m.file_path_or_url}" ${isPDF?'download':''} target="${isPDF?'_self':'_blank'}"
+         style="background:${isPDF?'#e53935':'#1565c0'};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;text-decoration:none;white-space:nowrap;">
+        <i class="fas fa-download"></i> ${isPDF?'Download':'Open'}
+      </a>
+    </div>`;
+  }).join('');
+}
+
+/* ── STUDENT QUIZ MODAL ── */
+let _sqCourseId=null, _sqCourseName='', _sqAnswers={};
+function closeStudentQuiz(){document.getElementById('studentQuizOverlay').style.display='none';}
+async function openStudentQuizModal(courseId, courseName){
+  _sqCourseId=courseId; _sqCourseName=courseName||''; _sqAnswers={};
+  document.getElementById('sqm-title').textContent=courseName+' — Quiz';
+  document.getElementById('sqm-body').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;">Loading quiz…</p></div>';
+  document.getElementById('studentQuizOverlay').style.display='flex';
+  const r=await api('GET',`/student/courses/${courseId}/quiz`);
+  if(!r.success){
+    document.getElementById('sqm-body').innerHTML=`<div style="text-align:center;padding:32px;color:#c62828;"><i class="fas fa-exclamation-circle" style="font-size:36px;opacity:0.5;display:block;margin-bottom:12px;"></i><p>${r.error||'Could not load quiz.'}</p></div>`;
+    return;
+  }
+  const {questions,total,previous_attempt,course}=r.data||r;
+  if(previous_attempt){
+    const pPct=Math.round((previous_attempt.score/previous_attempt.total_questions)*100);
+    const pCol=previous_attempt.passed?'#2e7d32':'#c62828';
+    const pBg=previous_attempt.passed?'#e8f5e9':'#fdecea';
+    document.getElementById('sqm-body').innerHTML=`
+      <div style="background:${pBg};border-radius:12px;padding:16px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:24px;font-weight:700;color:${pCol};">${previous_attempt.passed?'✅ Passed':'❌ Failed'}</div>
+        <div style="font-size:15px;color:${pCol};margin-top:4px;">Score: ${previous_attempt.score}/${previous_attempt.total_questions} (${pPct}%)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Attempted on ${new Date(previous_attempt.attempted_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div>
+        ${!previous_attempt.passed?`<button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="renderStudentQuizForm(${JSON.stringify(questions||[]).replace(/"/g,'&quot;')},${total||0},${parseInt(course?.passing_percentage||60)})"><i class="fas fa-redo"></i> Retry Quiz</button>`:''}
+      </div>
+      ${previous_attempt.passed?'<p style="text-align:center;font-size:13px;color:var(--muted);">You have already passed this quiz. Check your certificate below.</p>':''}`;
+    return;
+  }
+  if(!questions||!questions.length){
+    document.getElementById('sqm-body').innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-question" style="font-size:36px;opacity:0.3;display:block;margin-bottom:12px;"></i><p>No quiz questions available for this course yet.</p></div>';
+    return;
+  }
+  renderStudentQuizForm(questions, total, parseInt(course?.passing_percentage||60));
+}
+function renderStudentQuizForm(questions, total, passingPct){
+  let html=`<div style="background:#f0f4ff;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--navy);">
+    <i class="fas fa-info-circle" style="margin-right:6px;"></i> <strong>${total} Questions</strong> · Passing score: <strong>${passingPct}%</strong>
+  </div>`;
+  questions.forEach((q,i)=>{
+    html+=`<div style="margin-bottom:20px;border:1px solid var(--brd);border-radius:12px;padding:16px;background:#fff;">
+      <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px;"><span style="background:var(--navy);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;margin-right:8px;">${i+1}</span>${q.question}</div>
+      ${['A','B','C','D'].map(opt=>{
+        const optText=q['option_'+opt.toLowerCase()];
+        if(!optText) return '';
+        return`<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;margin-bottom:6px;border:1.5px solid var(--brd);transition:all 0.15s;" onmouseover="this.style.borderColor='var(--pink)'" onmouseout="this.style.borderColor='var(--brd)'">
+          <input type="radio" name="sq-q-${q.id}" value="${opt}" onchange="_sqAnswers['${q.id}']='${opt}'" style="width:16px;height:16px;accent-color:var(--pink);"/>
+          <span style="font-size:13px;"><strong style="color:var(--pink);">${opt}.</strong> ${optText}</span>
+        </label>`;
+      }).join('')}
+    </div>`;
+  });
+  html+=`<button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="submitStudentQuiz(${JSON.stringify(questions.map(q=>q.id))})">
+    <i class="fas fa-paper-plane"></i> Submit Quiz
+  </button>`;
+  document.getElementById('sqm-body').innerHTML=html;
+}
+async function submitStudentQuiz(questionIds){
+  const missing=questionIds.filter(id=>!_sqAnswers[String(id)]);
+  if(missing.length){showToast(`Please answer all questions (${missing.length} unanswered)`);return;}
+  const btn=document.querySelector('#sqm-body .btn-primary');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Submitting…';}
+  const r=await api('POST',`/student/courses/${_sqCourseId}/quiz/submit`,{answers:_sqAnswers});
+  if(!r.success){showToast(r.error||'Submission failed');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> Submit Quiz';}return;}
+  const d=r.data||r;
+  const col=d.passed?'#2e7d32':'#c62828';
+  const bg=d.passed?'#e8f5e9':'#fdecea';
+  let html=`<div style="background:${bg};border-radius:16px;padding:28px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:12px;">${d.passed?'🎉':'😔'}</div>
+    <div style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:${col};">${d.passed?'Congratulations! You Passed!':'Not Quite There Yet'}</div>
+    <div style="font-size:16px;color:${col};margin:10px 0;">Score: ${d.score}/${d.total} (${d.score_pct}%)</div>
+    <div style="font-size:13px;color:var(--muted);">Passing score: ${d.passing_pct}%</div>`;
+  if(d.certificate){
+    html+=`<div style="margin-top:20px;background:#fff;border-radius:12px;padding:16px;border:2px solid #a5d6a7;">
+      <i class="fas fa-certificate" style="font-size:36px;color:#43a047;margin-bottom:8px;display:block;"></i>
+      <div style="font-weight:700;color:#2e7d32;font-size:16px;">Certificate Issued!</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;font-family:monospace;">${d.certificate.certificate_no}</div>
+      <button class="btn btn-sm" style="margin-top:12px;background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;width:100%;justify-content:center;padding:10px;" onclick="viewStudentCertificate('${d.certificate.certificate_no}','${(_sqCourseName||'').replace(/'/g,"\\'")}','${d.certificate.issued_date||''}')">
+        <i class="fas fa-eye"></i> View & Download Certificate
+      </button>
+    </div>`;
+  }
+  if(!d.passed){html+=`<button class="btn btn-outline btn-sm" style="margin-top:16px;" onclick="openStudentQuizModal(${_sqCourseId},'${(_sqCourseName||'').replace(/'/g,"\\'")}')"><i class="fas fa-redo"></i> Try Again</button>`;}
+  html+='</div>';
+  document.getElementById('sqm-body').innerHTML=html;
+  loadCourses();
+  if(d.certificate){const el=document.getElementById('st-cert-'+_sqCourseId);if(el)el.innerHTML=`<div style="background:#e8f5e9;border-radius:8px;padding:8px 10px;font-size:12px;color:#2e7d32;text-align:center;"><i class="fas fa-certificate"></i> Certificate: ${d.certificate.certificate_no}</div>`;}
+}
+
+/* ── STUDENT: CHECK & VIEW CERTIFICATE ── */
+async function checkStudentCertificate(courseId, courseName, btn){
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Checking…';}
+  const r=await api('GET',`/student/courses/${courseId}/certificate`);
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-certificate"></i> Check Certificate';}
+  if(!r.success){showToast(r.error||'Could not check certificate');return;}
+  const d=r.data||r;
+  const el=document.getElementById('st-cert-'+courseId);
+  if(!el) return;
+  if(d.certificate){
+    el.innerHTML=`<div style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:10px;padding:10px 12px;font-size:12px;text-align:center;">
+      <i class="fas fa-certificate" style="color:#43a047;font-size:20px;display:block;margin-bottom:4px;"></i>
+      <strong style="color:#2e7d32;">Certificate Issued!</strong><br/>
+      <span style="color:var(--muted);font-size:11px;">No: ${d.certificate.certificate_no}</span>
+      <div style="margin-top:8px;">
+        <button class="btn btn-sm" style="background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;width:100%;justify-content:center;" onclick="viewStudentCertificate('${d.certificate.certificate_no}','${(courseName||'').replace(/'/g,"\\'")}','${d.certificate.issued_date||''}')">
+          <i class="fas fa-eye"></i> View & Download Certificate
+        </button>
+      </div>
+    </div>`;
+    showToast('Certificate issued!','success');
+  } else if(!d.modules_complete){
+    el.innerHTML=`<div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:10px 12px;font-size:12px;text-align:center;color:#e65100;"><i class="fas fa-hourglass-half"></i> Complete all modules first (${d.completed_modules}/${d.total_modules} done)</div>`;
+  } else if(d.quiz_required&&!d.quiz_passed){
+    el.innerHTML=`<div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:10px 12px;font-size:12px;text-align:center;color:#e65100;"><i class="fas fa-question-circle"></i> Pass the quiz to earn your certificate</div>`;
+  } else {
+    el.innerHTML=`<div style="background:#f3e5f5;border:1px solid #ce93d8;border-radius:10px;padding:10px 12px;font-size:12px;text-align:center;color:#6a1b9a;"><i class="fas fa-info-circle"></i> Not yet eligible — complete the course content first</div>`;
+  }
+}
+
+async function viewStudentCertificate(certNo, courseName, issuedDate){
+  const gold='#b8960c'; const accent='#1a237e';
+  const studentName=USER().name||'Student';
+  const date=issuedDate?new Date(issuedDate).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}):'—';
+  const toDataUrl=async rawPath=>{
+    if(!rawPath) return '';
+    try{
+      const url=rawPath.startsWith('http')?rawPath:window.location.origin+(rawPath.startsWith('/')?rawPath:'/'+rawPath);
+      const resp=await fetch(url); if(!resp.ok) return '';
+      const blob=await resp.blob();
+      return await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>resolve('');reader.readAsDataURL(blob);});
+    }catch{return '';}
+  };
+  let superLogo='';
+  try{const br=await api('GET','/branding');const bd=br.data||br;superLogo=await toDataUrl(bd.super_logo||'');}catch{}
+  // Student cert: only super admin logo centered in header
+  const certHeaderContent=superLogo
+    ?`<div style="background:#fff;border-radius:8px;padding:6px 14px;display:inline-flex;align-items:center;justify-content:center;"><img src="${superLogo}" alt="Logo" style="max-height:48px;max-width:160px;object-fit:contain;display:block;"/></div>`
+    :`<div style="font-family:'Cinzel',serif;font-size:22px;color:#fff;font-weight:700;letter-spacing:2px;">Connecting Dot<span style="color:${gold};"> Consultancy</span></div>`;
+  const w=window.open('','_blank','width=960,height=700');
+  w.document.open();
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+  <title>Certificate — ${certNo||''}</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Lato',sans-serif;background:#eef2f7;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 16px;}.cert{width:880px;max-width:100%;background:#fff;position:relative;box-shadow:0 12px 48px rgba(0,0,0,0.18);}.cert-border{padding:14px;background:linear-gradient(135deg,${gold},#e6c35a,${gold},#c9a227,${gold});}.cert-frame{background:#fff;border:4px solid ${accent};padding:10px;}.cert-inner{padding:44px 64px;text-align:center;position:relative;background:#fff;}.orn{position:absolute;font-size:28px;color:${gold};line-height:1;}.orn-tl{top:8px;left:12px;}.orn-tr{top:8px;right:12px;}.orn-bl{bottom:8px;left:12px;}.orn-br{bottom:8px;right:12px;}.cert-header{background:linear-gradient(135deg,${accent},#1565c0);margin:-44px -64px 28px;padding:22px 64px;display:flex;align-items:center;justify-content:space-between;}.cert-title{font-family:'Cinzel',serif;font-size:34px;font-weight:700;color:${accent};letter-spacing:2px;margin-bottom:4px;}.cert-title-sub{font-size:11px;color:${gold};letter-spacing:6px;text-transform:uppercase;margin-bottom:22px;font-weight:700;}.divider{display:flex;align-items:center;gap:14px;justify-content:center;margin:16px 0;}.divider-line{flex:1;height:1px;max-width:120px;background:linear-gradient(to right,transparent,${gold});}.divider-line.r{background:linear-gradient(to left,transparent,${gold});}.divider-star{color:${gold};font-size:18px;}.present-to{font-size:12px;color:#90a4ae;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;}.cert-name{font-family:'Cinzel',serif;font-size:42px;font-weight:600;color:${accent};margin-bottom:16px;letter-spacing:1px;}.cert-body{font-size:14px;color:#607d8b;line-height:1.8;margin-bottom:8px;}.cert-course{font-family:'Cinzel',serif;font-size:22px;font-weight:600;color:${accent};margin:12px auto 28px;padding:10px 28px;border-top:1px solid ${gold}44;border-bottom:1px solid ${gold}44;display:inline-block;}.cert-footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid #e8eaf6;}.cert-footer-block{text-align:center;min-width:160px;}.footer-label{font-size:10px;color:#b0bec5;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}.footer-val{font-size:13px;font-weight:700;color:#263238;}.footer-mono{font-family:monospace;font-size:12px;color:#78909c;background:#f5f5f5;padding:3px 10px;border-radius:4px;display:inline-block;}.seal{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,${accent},#1565c0);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;box-shadow:0 2px 8px rgba(26,35,126,0.3);}.seal i{color:${gold};font-size:26px;}.print-bar{margin-top:24px;display:flex;gap:12px;align-items:center;}.btn-print{padding:11px 32px;background:${accent};color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:8px;}.btn-note{font-size:11px;color:#90a4ae;}@media print{body{background:#fff;padding:0;}.print-bar{display:none!important;}.cert{width:100%!important;box-shadow:none!important;}}</style></head><body>
+  <div class="cert"><div class="cert-border"><div class="cert-frame"><div class="cert-inner">
+    <div class="orn orn-tl">❧</div><div class="orn orn-tr">❧</div><div class="orn orn-bl">❧</div><div class="orn orn-br">❧</div>
+    <div class="cert-header" style="justify-content:center;">
+      ${certHeaderContent}
+    </div>
+    <div class="cert-title">Certificate</div>
+    <div class="cert-title-sub">of Completion</div>
+    <div class="divider"><div class="divider-line"></div><span class="divider-star">✦</span><div class="divider-line r"></div></div>
+    <div class="present-to">This is to certify that</div>
+    <div class="cert-name">${studentName}</div>
+    <div class="cert-body">has successfully completed all requirements of the course</div>
+    <div class="cert-course">${courseName||'Course Name'}</div>
+    <div class="cert-footer">
+      <div class="cert-footer-block"><div class="footer-label">Date of Issue</div><div class="footer-val">${date}</div></div>
+      <div class="cert-footer-block"><div class="seal"><i class="fas fa-certificate"></i></div><div style="font-size:10px;color:#90a4ae;letter-spacing:1px;">VERIFIED</div></div>
+      <div class="cert-footer-block"><div class="footer-label">Certificate No.</div><div class="footer-mono">${certNo||'—'}</div></div>
+    </div>
+  </div></div></div></div>
+  <div class="print-bar">
+    <button class="btn-print" onclick="window.print()">🖨 Print / Save as PDF</button>
+    <span class="btn-note">Use browser Print → Save as PDF to download</span>
+  </div>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  </body></html>`);
+  w.document.close();
+}
+
+/* ── STUDENT CERTIFICATES PAGE ── */
+async function loadStudentCertificates(){
+  const grid=document.getElementById('studentCertsGrid');
+  grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
+  const r=await api('GET','/courses/enrolled');
+  const courses=r.data||[];
+  if(!courses.length){grid.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-certificate" style="font-size:48px;opacity:0.2;display:block;margin-bottom:16px;"></i><p>No enrolled courses yet.<br><small>Enroll in a course to start earning certificates.</small></p></div>';return;}
+  grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;">Checking certificates…</p></div>';
+  const certResults=await Promise.all(courses.map(c=>api('GET',`/student/courses/${c.id||c.course_id}/certificate`)));
+  let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;">';
+  courses.forEach((c,i)=>{
+    const courseId=c.id||c.course_id;
+    const courseName=c.name||c.title||'—';
+    const d=certResults[i]?.data||certResults[i]||{};
+    const hasCert=!!d.certificate;
+    const certNo=d.certificate?.certificate_no||'';
+    const modsDone=d.modules_complete;
+    const quizReq=d.quiz_required;
+    const quizPass=d.quiz_passed;
+    let statusHtml,statusColor,bgColor;
+    if(hasCert){statusHtml='🏆 Certificate Issued';statusColor='#2e7d32';bgColor='#e8f5e9';}
+    else if(!modsDone){statusHtml=`⏳ ${d.completed_modules||0}/${d.total_modules||0} modules done`;statusColor='#e65100';bgColor='#fff3e0';}
+    else if(quizReq&&!quizPass){statusHtml='📝 Quiz required';statusColor='#1565c0';bgColor='#e3f2fd';}
+    else{statusHtml='⏳ Pending';statusColor='#78909c';bgColor='#f5f5f5';}
+    html+=`<div class="card" style="margin:0;border:2px solid ${hasCert?'#a5d6a7':'var(--brd)'};position:relative;">
+      <div style="text-align:center;padding:20px 0 12px;"><i class="fas fa-certificate" style="font-size:44px;color:${hasCert?'#43a047':'#bdbdbd'};"></i></div>
+      <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px;">${courseName}</div>
+      <div style="background:${bgColor};border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;color:${statusColor};text-align:center;margin-bottom:12px;">${statusHtml}</div>
+      ${hasCert?`
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;font-family:monospace;">${certNo}</div>
+        <button class="btn btn-sm" style="width:100%;justify-content:center;background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;margin-bottom:6px;" onclick="viewStudentCertificate('${certNo}','${(courseName||'').replace(/'/g,"\\'")}','${d.certificate?.issued_date||''}')">
+          <i class="fas fa-eye"></i> View & Download Certificate
+        </button>`:''}
+      ${!hasCert&&quizReq&&!quizPass?`<button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="openStudentQuizModal(${courseId},'${(courseName||'').replace(/'/g,"\\'")}')"><i class="fas fa-question-circle"></i> Take Quiz</button>`:''}
+    </div>`;
+  });
+  html+='</div>';
+  grid.innerHTML=html;
+}
+
 /* ── INIT ── */
 (async()=>{
   await loadSiteSettings();
@@ -1465,7 +1919,7 @@ async function submitQueryTo(target){
   const cr=await api('GET','/courses/enrolled');
   const courses=cr.data||[];
   const sel=document.getElementById('matCourseFilter');
-  courses.forEach(c=>{const o=document.createElement('option');o.value=c.course_id||c.id;o.textContent=c.title||c.course_title;sel.appendChild(o);});
+  courses.forEach(c=>{const o=document.createElement('option');o.value=c.course_id||c.id;o.textContent=c.title||c.course_title||c.name;sel.appendChild(o);});
 })();
 </script>
 </body>

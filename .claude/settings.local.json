@@ -51,7 +51,8 @@
       "Bash(python \"C:\\\\Users\\\\Aadil Shaikh\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\b5288fa6-a496-47de-9643-f9af33019a7b\\\\1df54f88-8933-481d-a599-267cb6c77094\\\\skills\\\\pptx\\\\scripts\\\\office\\\\unpack.py\" SmartLMS_Marketing_Flyer.pptx unpacked_flyer/)",
       "Bash(python3 -c \"from pptx import Presentation; from pptx.util import Pt; p = Presentation\\('/c/Users/Aadil Shaikh/Downloads/LMS/SmartLMS_Marketing_Flyer.pptx'\\); print\\('Slides:', len\\(p.slides\\)\\)\")",
       "Bash(python -c \"from pptx import Presentation; p = Presentation\\('C:/Users/Aadil Shaikh/Downloads/LMS/SmartLMS_Marketing_Flyer.pptx'\\); print\\('OK'\\)\")",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(grep -E \"\\\\.html$\")"
     ]
   }
 }

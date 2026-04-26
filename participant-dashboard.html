@@ -638,15 +638,15 @@ async function viewCertificate(certNo, courseName, issuedDate){
     ]);
   }catch(e){}
 
-  // Build left-side header: corporate logo OR SmartLMS text fallback
+  // Build left-side header: corporate logo in white box OR fallback text
   const leftHeader = corpLogo
-    ? `<img src="${corpLogo}" alt="Company Logo" style="max-height:48px;max-width:160px;object-fit:contain;filter:brightness(0) invert(1);"/>`
-    : `<div style="font-family:'Cinzel',serif;font-size:20px;color:#fff;font-weight:700;letter-spacing:2px;">Smart<span style="color:${gold};">LMS</span></div>`;
+    ? `<div style="background:#fff;border-radius:8px;padding:5px 12px;display:inline-flex;align-items:center;"><img src="${corpLogo}" alt="Company Logo" style="max-height:44px;max-width:150px;object-fit:contain;display:block;"/></div>`
+    : `<div style="font-family:'Cinzel',serif;font-size:20px;color:#fff;font-weight:700;letter-spacing:2px;">Corporate</div>`;
 
-  // Build right-side header: super admin logo + CLMPD text
+  // Build right-side header: super admin logo in white box + text
   const rightHeader = superLogo
     ? `<div style="display:flex;align-items:center;gap:10px;">
-        <img src="${superLogo}" alt="Site Logo" style="max-height:40px;max-width:100px;object-fit:contain;filter:brightness(0) invert(1);opacity:0.85;"/>
+        <div style="background:#fff;border-radius:8px;padding:5px 10px;display:inline-flex;align-items:center;"><img src="${superLogo}" alt="Site Logo" style="max-height:40px;max-width:100px;object-fit:contain;display:block;"/></div>
         <div style="font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>
        </div>`
     : `<div style="font-size:11px;color:rgba(255,255,255,0.65);text-align:right;letter-spacing:.5px;">CERTIFIED LEARNING MANAGEMENT<br/>PROFESSIONAL DEVELOPMENT</div>`;
