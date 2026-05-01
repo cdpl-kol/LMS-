@@ -24,6 +24,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
 .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none;}
 .btn-back{background:rgba(255,255,255,0.12);color:#fff;}
 .btn-back:hover{background:rgba(255,255,255,0.22);}
+.btn-save{background:#1565c0;color:#fff;}
+.btn-save:hover{background:#1976d2;}
+.btn-save:disabled{background:#263238;color:rgba(255,255,255,0.4);cursor:not-allowed;}
 .btn-exit{background:#ff6b35;color:#fff;}
 .btn-exit:hover{background:#e55a2b;}
 
@@ -90,6 +93,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
   </div>
   <div class="tb-right">
     <button class="btn btn-back" onclick="goBack()"><i class="fas fa-arrow-left"></i> Back</button>
+    <button class="btn btn-save" id="saveBtn" onclick="manualSave()"><i class="fas fa-floppy-disk"></i> Save Progress</button>
     <button class="btn btn-exit" onclick="exitSCORM()"><i class="fas fa-sign-out-alt"></i> Exit</button>
   </div>
 </div>
@@ -97,30 +101,42 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
 <!-- STATUS BAR -->
 <div class="statusbar">
   <div class="status-item"><i class="fas fa-circle-check"></i>Status: <span class="status-badge badge-gray status-val" id="statusBadge">Not Started</span></div>
-  <div class="status-item"><i class="fas fa-star"></i>Score: <span class="status-val" id="scoreDisplay">—</span></div>
+  <div class="status-item"><i class="fas fa-chart-line"></i>Progress: <span class="status-val" id="progressDisplay">0%</span></div>
   <div class="status-item"><i class="fas fa-clock"></i>Time: <span class="status-val" id="timeDisplay">00:00</span></div>
   <div class="status-item" style="margin-left:auto;"><i class="fas fa-wifi"></i><span id="syncStatus" style="color:#81c784;">Saved</span></div>
+</div>
+<!-- PROGRESS BAR (thin line below status bar) -->
+<div style="height:3px;background:#1a237e;width:100%;">
+  <div id="progressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ff6b35,#e91e8c);transition:width 1s;"></div>
 </div>
 
 <!-- PLAYER -->
 <div class="player-wrap">
   <div class="overlay" id="loadingOverlay">
     <div class="spin"></div>
-    <h3>Loading SCORM Content…</h3>
+    <h3 id="loadingText">Loading Content…</h3>
     <p>Please wait while the content is being prepared</p>
   </div>
   <div class="error-box" id="errorBox">
     <i class="fas fa-triangle-exclamation error-icon"></i>
     <h3>Content Not Available</h3>
-    <p id="errorMsg">Unable to load SCORM content. Please contact your administrator.</p>
+    <p id="errorMsg">Unable to load content. Please contact your administrator.</p>
     <button class="btn btn-exit" onclick="goBack()" style="margin-top:8px;"><i class="fas fa-arrow-left"></i> Go Back</button>
   </div>
-  <iframe id="scormFrame" title="SCORM Content"
+  <!-- SCORM iframe (for .zip SCORM packages) -->
+  <iframe id="scormFrame" title="SCORM Content" style="display:none;"
     sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-downloads allow-modals allow-orientation-lock allow-pointer-lock allow-presentation"
     allowfullscreen="true"
     allow="autoplay; fullscreen; picture-in-picture; encrypted-media; camera; microphone"
     referrerpolicy="no-referrer-when-downgrade"
   ></iframe>
+  <!-- VIDEO player (for mp4/video uploads) -->
+  <div id="videoWrap" style="display:none;width:100%;height:100%;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;">
+    <video id="videoPlayer" controls controlsList="nodownload"
+      style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;outline:none;"
+      oncontextmenu="return false;">
+    </video>
+  </div>
 </div>
 
 <!-- COMPLETION BANNER -->
@@ -140,10 +156,11 @@ const TOKEN = () => localStorage.getItem('lms_token') || '';
 const BASE  = '/api/v1';
 
 // Get params from URL
-const params   = new URLSearchParams(location.search);
-const PKG_ID   = params.get('pkg');
-const PKG_NAME = decodeURIComponent(params.get('name') || 'SCORM Content');
-const ROLE     = (() => { try { return JSON.parse(localStorage.getItem('lms_user') || '{}').role; } catch { return 'student'; } })();
+const params    = new URLSearchParams(location.search);
+const PKG_ID    = params.get('pkg');
+const PKG_NAME  = decodeURIComponent(params.get('name') || 'SCORM Content');
+const COURSE_ID = params.get('course') || null;
+const ROLE      = (() => { try { return JSON.parse(localStorage.getItem('lms_user') || '{}').role; } catch { return 'student'; } })();
 
 document.getElementById('pkgTitle').textContent = PKG_NAME;
 
@@ -184,6 +201,27 @@ let initialized = false;
 let dirty = false;
 let sessionStart = Date.now();
 let saveTimer = null;
+let totalSlidesInPkg = 0;  // set after package loads
+
+// ── PER-SLIDE TIME + VISIT TRACKING ──────────────────────────────────────────
+let slideTimings = {};       // { slideId: totalSecondsSpent }
+let slideVisits  = {};       // { slideId: visitCount }
+let currentSlide = null;
+let slideStartTime = null;
+
+function recordSlideTime(slideId) {
+  if (!slideId) return;
+  if (currentSlide && slideStartTime !== null) {
+    const spent = Math.floor((Date.now() - slideStartTime) / 1000);
+    slideTimings[currentSlide] = (slideTimings[currentSlide] || 0) + spent;
+  }
+  // Increment visit count when moving to a new slide
+  if (slideId !== currentSlide) {
+    slideVisits[slideId] = (slideVisits[slideId] || 0) + 1;
+  }
+  currentSlide = slideId;
+  slideStartTime = Date.now();
+}
 
 // ── TIMER ─────────────────────────────────────────────────────────
 function getSessionTime() {
@@ -194,7 +232,7 @@ function getSessionTime() {
   return String(h).padStart(4,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.00';
 }
 
-// Update status bar
+// Update status bar (SCORM mode)
 function updateStatusBar() {
   const status = CMI['cmi.core.lesson_status'] || 'not attempted';
   const badge = document.getElementById('statusBadge');
@@ -205,9 +243,18 @@ function updateStatusBar() {
     'browsed':'badge-blue','not attempted':'badge-gray'
   }[status] || 'badge-gray');
 
-  const raw = CMI['cmi.core.score.raw'];
-  const max = CMI['cmi.core.score.max'] || 100;
-  document.getElementById('scoreDisplay').textContent = raw ? `${raw} / ${max}` : '—';
+  // Progress % — slides visited / total_slides, fallback to score_raw
+  const scormSlides = Object.entries(slideTimings)
+    .filter(([k, v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0).length;
+  const raw = parseInt(CMI['cmi.core.score.raw']) || 0;
+  let pct = 0;
+  if (totalSlidesInPkg > 0 && scormSlides > 0) {
+    pct = Math.min(100, Math.round((scormSlides / totalSlidesInPkg) * 100));
+  } else if (raw > 0) {
+    pct = Math.min(100, raw);
+  }
+  document.getElementById('progressDisplay').textContent = pct + '%';
+  document.getElementById('progressBar').style.width = pct + '%';
 }
 
 // Live timer
@@ -249,6 +296,10 @@ window.API = {
     if (CMI_READONLY.has(element)) return 'false';
     CMI[element] = value;
     dirty = true;
+    // Track per-slide time when lesson_location changes
+    if (element === 'cmi.core.lesson_location' && value) {
+      recordSlideTime(value);
+    }
     // Trigger auto-save after 3s of inactivity
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveTracking(false), 3000);
@@ -314,20 +365,60 @@ window.API_1484_11 = {
 // ── SAVE TO BACKEND ───────────────────────────────────────────────
 async function saveTracking(final) {
   if (!PKG_ID) return;
+
+  // ── Video: store watched seconds in slide_times ──
+  if (videoDuration > 0) {
+    slideTimings['video_seconds'] = videoWatched;
+    if (videoDuration > 0) slideTimings['video_duration'] = videoDuration;
+  } else {
+    // ── SCORM: flush current slide time ──
+    if (currentSlide && slideStartTime !== null) {
+      const spent = Math.floor((Date.now() - slideStartTime) / 1000);
+      slideTimings[currentSlide] = (slideTimings[currentSlide] || 0) + spent;
+      slideStartTime = Date.now();
+    }
+  }
+
   document.getElementById('syncStatus').textContent = '⟳ Saving…';
   document.getElementById('syncStatus').style.color = '#ffcc80';
+
+  // If SCORM content hasn't reported a score, use slide-based progress as score_raw
+  // This ensures dashboards show real progress instead of 0%
+  let effectiveScoreRaw = parseInt(CMI['cmi.core.score.raw']) || 0;
+  if (effectiveScoreRaw === 0 && videoDuration === 0) {
+    const visitedCount = Object.entries(slideTimings)
+      .filter(([k, v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0).length;
+    if (totalSlidesInPkg > 0 && visitedCount > 0) {
+      effectiveScoreRaw = Math.min(99, Math.round((visitedCount / totalSlidesInPkg) * 100));
+    } else if (visitedCount > 0) {
+      // total_slides unknown but slides visited — use 10% as minimum signal
+      effectiveScoreRaw = 10;
+    }
+  }
+
+  // Accumulate total_time: previous stored total + this session's elapsed time
+  const _sessSecs = Math.floor((Date.now() - sessionStart) / 1000);
+  const _prevTtm  = (CMI['cmi.core.total_time'] || '').match(/(\d+):(\d+):(\d+)/);
+  const _prevSecs = _prevTtm ? parseInt(_prevTtm[1])*3600+parseInt(_prevTtm[2])*60+parseInt(_prevTtm[3]) : 0;
+  const _totSecs  = _prevSecs + _sessSecs;
+  const _tH = Math.floor(_totSecs/3600), _tM = Math.floor((_totSecs%3600)/60), _tS = _totSecs%60;
+  const _totalTimeStr = String(_tH).padStart(4,'0')+':'+String(_tM).padStart(2,'0')+':'+String(_tS).padStart(2,'0')+'.00';
+
   try {
     const r = await fetch(BASE+'/scorm/tracking', {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+TOKEN() },
       body: JSON.stringify({
-        package_id:       PKG_ID,
-        completion_status:CMI['cmi.core.lesson_status'],
-        score_raw:        CMI['cmi.core.score.raw'] || 0,
-        score_max:        CMI['cmi.core.score.max'] || 100,
-        total_time:       CMI['cmi.core.total_time'] || getSessionTime(),
-        suspend_data:     CMI['cmi.suspend_data'] || '',
-        lesson_location:  CMI['cmi.core.lesson_location'] || '',
+        package_id:        PKG_ID,
+        course_id:         COURSE_ID,
+        completion_status: CMI['cmi.core.lesson_status'],
+        score_raw:         effectiveScoreRaw,
+        score_max:         parseInt(CMI['cmi.core.score.max']) || 100,
+        total_time:        _totalTimeStr,
+        suspend_data:      CMI['cmi.suspend_data'] || '',
+        lesson_location:   CMI['cmi.core.lesson_location'] || '',
+        slide_times:       slideTimings,
+        slide_visits:      slideVisits,
       })
     });
     const d = await r.json();
@@ -361,15 +452,88 @@ async function loadTracking() {
       CMI['cmi.core.total_time']      = t.total_time || '0000:00:00.00';
       CMI['cmi.suspend_data']         = t.suspend_data || '';
       CMI['cmi.core.entry']           = (t.completion_status && t.completion_status !== 'not attempted') ? 'resume' : 'ab-initio';
+      if (t.slide_times && typeof t.slide_times === 'object') {
+        slideTimings = t.slide_times;
+        if (slideTimings['video_seconds']) {
+          videoWatched = parseInt(slideTimings['video_seconds']) || 0;
+        }
+      }
+      if (t.slide_visits && typeof t.slide_visits === 'object') {
+        slideVisits = t.slide_visits;
+      }
     }
   } catch(e) {}
   updateStatusBar();
 }
 
-// ── LOAD SCORM CONTENT ────────────────────────────────────────────
+// ── VIDEO TRACKING ────────────────────────────────────────────────
+let videoDuration  = 0;   // total seconds
+let videoWatched   = 0;   // max seconds reached
+let videoSaveTimer = null;
+
+function initVideoPlayer(src, savedSeconds) {
+  const wrap  = document.getElementById('videoWrap');
+  const video = document.getElementById('videoPlayer');
+  wrap.style.display = 'flex';
+
+  video.src = src;
+  video.load();
+
+  video.addEventListener('loadedmetadata', () => {
+    videoDuration = Math.floor(video.duration) || 0;
+    // Restore saved position (don't seek past 98% so completion banner triggers properly)
+    if (savedSeconds > 0 && savedSeconds < videoDuration * 0.98) {
+      video.currentTime = savedSeconds;
+    }
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    updateVideoStatus();
+  });
+
+  video.addEventListener('timeupdate', () => {
+    const cur = Math.floor(video.currentTime);
+    if (cur > videoWatched) videoWatched = cur;
+    updateVideoStatus();
+    dirty = true;
+    // Auto-save every 15s of playback
+    clearTimeout(videoSaveTimer);
+    videoSaveTimer = setTimeout(() => saveTracking(false), 15000);
+  });
+
+  video.addEventListener('pause',  () => saveTracking(false));
+  video.addEventListener('ended',  () => {
+    videoWatched = videoDuration;
+    updateVideoStatus();
+    saveTracking(true);
+    document.getElementById('completionBanner').classList.add('show');
+    setTimeout(() => document.getElementById('completionBanner').classList.remove('show'), 6000);
+  });
+
+  video.addEventListener('error', () => showError('Failed to load video. Please contact your administrator.'));
+}
+
+function updateVideoStatus() {
+  if (!videoDuration) return;
+  const pct = Math.min(100, Math.round((videoWatched / videoDuration) * 100));
+  document.getElementById('progressDisplay').textContent = pct + '%';
+  document.getElementById('progressBar').style.width = pct + '%';
+  // Update status badge
+  const badge = document.getElementById('statusBadge');
+  if (pct >= 100) {
+    badge.textContent = 'Completed'; badge.className = 'status-badge status-val badge-green';
+  } else if (pct > 0) {
+    badge.textContent = 'In Progress'; badge.className = 'status-badge status-val badge-orange';
+  }
+  // Sync score_raw for the backend progress calculation
+  CMI['cmi.core.score.raw'] = String(pct);
+  CMI['cmi.core.score.max'] = '100';
+  if (pct >= 100) CMI['cmi.core.lesson_status'] = 'completed';
+  else if (pct > 0) CMI['cmi.core.lesson_status'] = 'incomplete';
+}
+
+// ── LOAD CONTENT (VIDEO or SCORM) ─────────────────────────────────
 async function loadContent() {
   if (!PKG_ID) {
-    showError('No SCORM package specified. Please go back and try again.');
+    showError('No package specified. Please go back and try again.');
     return;
   }
   try {
@@ -379,19 +543,56 @@ async function loadContent() {
     const d = await r.json();
     if (!d.success || !d.data) { showError('Package not found.'); return; }
     const pkg = d.data;
+    totalSlidesInPkg = parseInt(pkg.total_slides) || 0;
     document.getElementById('pkgTitle').textContent = pkg.package_name || PKG_NAME;
-    document.title = (pkg.package_name || 'SCORM') + ' – Smart LMS';
-    // Load prior tracking
+    document.title = (pkg.package_name || 'Content') + ' – Smart LMS';
+
+    // Load prior tracking first
     await loadTracking();
-    // Launch iframe
-    const frame = document.getElementById('scormFrame');
-    frame.onload = () => {
-      document.getElementById('loadingOverlay').classList.add('hidden');
-    };
-    frame.onerror = () => showError('Failed to load content. The SCORM package may be corrupted.');
-    frame.src = pkg.upload_path;
-    // Fallback hide loader after 6s
-    setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 6000);
+
+    if (pkg.content_type === 'video') {
+      // ── VIDEO MODE ──────────────────────────────────────────────
+      document.getElementById('loadingText').textContent = 'Loading Video…';
+      // Restore saved watch position from slide_times.video_seconds
+      const savedSec = parseInt(slideTimings['video_seconds'] || 0);
+      initVideoPlayer(pkg.upload_path, savedSec);
+
+    } else {
+      // ── SCORM MODE ──────────────────────────────────────────────
+      document.getElementById('loadingText').textContent = 'Loading SCORM Content…';
+      const frame = document.getElementById('scormFrame');
+      frame.style.display = 'block';
+      frame.onload = () => {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        // ── Hash-based slide tracking fallback ──────────────────────────────
+        // Many SCORM packages (Articulate, iSpring, Lectora…) navigate via URL
+        // hash without calling LMSSetValue('cmi.core.lesson_location',...).
+        // We poll the iframe hash every 500 ms and call recordSlideTime() when
+        // a new numeric slide ID appears, so timing is captured automatically.
+        let _lastHash = '';
+        setInterval(() => {
+          try {
+            const hash = frame.contentWindow.location.hash;
+            if (hash === _lastHash) return;
+            _lastHash = hash;
+            if (!hash) return;
+            // Extract slide numbers: matches patterns like #/1, #/slide/5,
+            // #!/2, #story/slides/Slide1Layer0 → ["1"] etc.
+            const nums = (hash.match(/\d+/g) || [])
+              .map(Number).filter(n => n > 0 && n < 5000);
+            if (!nums.length) return;
+            const sid = String(nums[0]);
+            if (sid !== currentSlide) recordSlideTime(sid);
+          } catch(e) {} // cross-origin guard (same-origin should always pass)
+        }, 500);
+      };
+      frame.onerror = () => showError('Failed to load SCORM content. The package may be corrupted.');
+      frame.src = pkg.upload_path;
+      // Fallback hide loader after 8s
+      setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 8000);
+      // Heartbeat: save every 60s even if no LMSCommit fires
+      setInterval(() => { if (initialized && dirty) saveTracking(false); }, 60000);
+    }
   } catch(e) {
     showError('Error loading content: ' + e.message);
   }
@@ -403,27 +604,60 @@ function showError(msg) {
   document.getElementById('errorBox').classList.add('show');
 }
 
+// ── MANUAL SAVE ───────────────────────────────────────────────────
+async function manualSave() {
+  const btn = document.getElementById('saveBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
+  await saveTracking(false);
+  if (btn) {
+    btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Progress';
+    }, 2000);
+  }
+}
+
 // ── NAVIGATION ────────────────────────────────────────────────────
 function goBack() {
-  // Auto-save before leaving
+  const video = document.getElementById('videoPlayer');
+  if (videoDuration > 0 && video) video.pause();
+  CMI['cmi.core.session_time'] = getSessionTime();
+  const dest = ROLE === 'student' ? 'student-dashboard.html'
+    : ROLE === 'trainer' ? 'trainer-dashboard.html'
+    : ROLE === 'participant' ? 'participant-dashboard.html'
+    : 'admin-dashboard.html';
   if (dirty) {
-    CMI['cmi.core.session_time'] = getSessionTime();
-    saveTracking(false).then(() => history.back());
+    saveTracking(false).then(() => { window.location.href = dest; });
   } else {
-    history.back();
+    window.location.href = dest;
   }
 }
 
 function exitSCORM() {
-  CMI['cmi.core.session_time'] = getSessionTime();
-  window.API.LMSFinish('');
-  const role = ROLE;
-  setTimeout(() => {
-    if (role === 'student') window.location.href = 'student-dashboard.html';
-    else if (role === 'trainer') window.location.href = 'trainer-dashboard.html';
-    else if (role === 'participant') window.location.href = 'participant-dashboard.html';
-    else window.location.href = 'admin-dashboard.html';
-  }, 300);
+  const video = document.getElementById('videoPlayer');
+  if (videoDuration > 0 && video) {
+    // Video mode — pause and save then redirect
+    video.pause();
+    saveTracking(false).then(() => {
+      const role = ROLE;
+      if (role === 'student') window.location.href = 'student-dashboard.html';
+      else if (role === 'trainer') window.location.href = 'trainer-dashboard.html';
+      else if (role === 'participant') window.location.href = 'participant-dashboard.html';
+      else window.location.href = 'admin-dashboard.html';
+    });
+  } else {
+    // SCORM mode — properly await save before navigating
+    CMI['cmi.core.session_time'] = getSessionTime();
+    initialized = false;
+    const role = ROLE;
+    saveTracking(true).then(() => {
+      if (role === 'student') window.location.href = 'student-dashboard.html';
+      else if (role === 'trainer') window.location.href = 'trainer-dashboard.html';
+      else if (role === 'participant') window.location.href = 'participant-dashboard.html';
+      else window.location.href = 'admin-dashboard.html';
+    });
+  }
 }
 
 // Warn on unload if dirty

@@ -203,12 +203,12 @@ tr:hover td{background:#f8f9ff;}
   <span class="sb-section">Learning</span>
   <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Courses</button>
   <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-line"></i>My Progress</button>
-  <button class="nav-item" onclick="showSection('exams')"><i class="fas fa-file-pen"></i>Exams & Results</button>
-  <button class="nav-item" onclick="showSection('assignments')"><i class="fas fa-tasks"></i>Assignments</button>
+  <button class="nav-item" onclick="showSection('exams')" style="opacity:0.7;"><i class="fas fa-file-pen"></i>Exams & Results <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
+  <button class="nav-item" onclick="showSection('assignments')" style="opacity:0.7;"><i class="fas fa-tasks"></i>Assignments <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
   <button class="nav-item" onclick="showSection('queries')"><i class="fas fa-question-circle"></i>My Queries</button>
   <span class="sb-section">School</span>
-  <button class="nav-item" onclick="showSection('attendance')"><i class="fas fa-calendar-check"></i>Attendance</button>
-  <button class="nav-item" onclick="showSection('timetable')"><i class="fas fa-clock"></i>Timetable</button>
+  <button class="nav-item" onclick="showSection('attendance')" style="opacity:0.7;"><i class="fas fa-calendar-check"></i>Attendance <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
+  <button class="nav-item" onclick="showSection('timetable')" style="opacity:0.7;"><i class="fas fa-clock"></i>Timetable <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
   <button class="nav-item" onclick="showSection('materials')"><i class="fas fa-folder-open"></i>Study Materials</button>
   <button class="nav-item" onclick="showSection('scorm')"><i class="fas fa-cube"></i>E-Learning (SCORM)</button>
   <button class="nav-item" onclick="showSection('certificates')"><i class="fas fa-certificate"></i>My Certificates</button>
@@ -414,18 +414,16 @@ tr:hover td{background:#f8f9ff;}
   <!-- ── EXAMS & RESULTS ── -->
   <div class="section" id="sec-exams">
     <div class="card">
-      <div class="card-header"><span class="card-title">Available Exams</span></div>
-      <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Exam Title</th><th>Course</th><th>Duration</th><th>Pass %</th><th>Status</th><th>Action</th></tr></thead>
-        <tbody id="examsTbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
-      </table></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">Exam Results History</span></div>
-      <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Exam</th><th>Course</th><th>Score</th><th>Result</th><th>Date</th></tr></thead>
-        <tbody id="resultsTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
-      </table></div>
+      <div style="text-align:center;padding:56px 24px;">
+        <div style="width:76px;height:76px;border-radius:20px;background:linear-gradient(135deg,#1565c0,#0d47a1);display:inline-flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 8px 28px rgba(21,101,192,0.32);">
+          <i class="fas fa-file-pen" style="font-size:32px;color:#fff;"></i>
+        </div>
+        <h3 style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:8px;">Exams & Results</h3>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:22px;max-width:360px;margin-left:auto;margin-right:auto;">Your exams and results will appear here once they are made available by your admin.</p>
+        <span style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;padding:11px 28px;border-radius:24px;font-weight:700;font-size:13px;box-shadow:0 4px 16px rgba(21,101,192,0.4);">
+          <i class="fas fa-clock"></i> Arriving Soon
+        </span>
+      </div>
     </div>
   </div>
 
@@ -454,17 +452,17 @@ tr:hover td{background:#f8f9ff;}
 
   <!-- ── ATTENDANCE ── -->
   <div class="section" id="sec-attendance">
-    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);max-width:600px;margin-bottom:20px;">
-      <div class="stat-card"><div class="stat-icon ic-green"><i class="fas fa-check"></i></div><div class="stat-info"><div class="num" id="att-present">—</div><div class="lbl">Present Days</div></div></div>
-      <div class="stat-card"><div class="stat-icon ic-orange"><i class="fas fa-times"></i></div><div class="stat-info"><div class="num" id="att-absent">—</div><div class="lbl">Absent Days</div></div></div>
-      <div class="stat-card"><div class="stat-icon ic-blue"><i class="fas fa-percent"></i></div><div class="stat-info"><div class="num" id="att-pct">—</div><div class="lbl">Attendance %</div></div></div>
-    </div>
     <div class="card">
-      <div class="card-header"><span class="card-title">Attendance Record</span></div>
-      <div style="overflow-x:auto;"><table>
-        <thead><tr><th>Date</th><th>Batch</th><th>Status</th><th>Marked By</th></tr></thead>
-        <tbody id="attTbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
-      </table></div>
+      <div style="text-align:center;padding:56px 24px;">
+        <div style="width:76px;height:76px;border-radius:20px;background:linear-gradient(135deg,#43a047,#00897b);display:inline-flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 8px 28px rgba(67,160,71,0.32);">
+          <i class="fas fa-calendar-check" style="font-size:32px;color:#fff;"></i>
+        </div>
+        <h3 style="font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:8px;">Attendance</h3>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:22px;max-width:360px;margin-left:auto;margin-right:auto;">Your attendance records will appear here once your trainer starts marking attendance.</p>
+        <span style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#43a047,#00897b);color:#fff;padding:11px 28px;border-radius:24px;font-weight:700;font-size:13px;box-shadow:0 4px 16px rgba(67,160,71,0.4);">
+          <i class="fas fa-clock"></i> Arriving Soon
+        </span>
+      </div>
     </div>
   </div>
 
@@ -491,14 +489,49 @@ tr:hover td{background:#f8f9ff;}
 
   <!-- ── SCORM CONTENT ── -->
   <div class="section" id="sec-scorm">
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title"><i class="fas fa-cube" style="color:#e91e8c;margin-right:6px;"></i>Interactive E-Learning</span>
-      </div>
-      <div id="scormGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:4px 0;">
-        <div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+    <div style="margin-bottom:20px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">E-Learning (SCORM)</span>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px;">Select a module to view your progress and slide-by-slide analytics.</p>
+    </div>
+    <!-- Filter card -->
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+        <div style="flex:1;min-width:220px;">
+          <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">SCORM / Video Module</label>
+          <select id="studentScormSel" style="width:100%;padding:8px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;background:#fff;" onchange="loadStudentScormData()">
+            <option value="">— Select Module —</option>
+          </select>
+        </div>
+        <a id="studentScormLaunchBtn" href="#" target="_blank" class="btn btn-primary" style="display:none;white-space:nowrap;">
+          <i class="fas fa-play"></i> Launch Module
+        </a>
       </div>
     </div>
+    <!-- Progress table (all modules summary) -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <span class="card-title"><i class="fas fa-list-check" style="color:var(--pink);margin-right:6px;"></i>My Modules Progress</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:var(--bg);">
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">#</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Module</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Type</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Status</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Score</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Slides</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Time</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Analytics</th>
+          </tr></thead>
+          <tbody id="studentScormTbody">
+            <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Analytics panel -->
+    <div id="studentScormAnalyticsPanel" style="display:none;"></div>
   </div>
 
   <!-- ── STUDY MATERIALS ── -->
@@ -818,6 +851,7 @@ function buildProgressChart(data){
 let _activeCourseTab = 'all';
 let _allCoursesCache = null;
 let _enrolledCache   = null;
+let _scormProgressCache = {};
 
 function switchCourseTab(tab) {
   _activeCourseTab = tab;
@@ -841,7 +875,7 @@ function switchCourseTab(tab) {
   if (_allCoursesCache !== null) renderCourseGrids();
 }
 
-function _buildCourseCard(c, isEnrolled, progress) {
+function _buildCourseCard(c, isEnrolled, progress, scormProg) {
   const gradients = [
     'linear-gradient(135deg,#e91e8c,#9c27b0)',
     'linear-gradient(135deg,#1565c0,#0097a7)',
@@ -862,12 +896,22 @@ function _buildCourseCard(c, isEnrolled, progress) {
       <div class="crs-title" style="font-family:Poppins,sans-serif;font-size:14px;font-weight:700;color:var(--navy);line-height:1.3;">${fmt(c.name||c.title)}</div>
       <div class="crs-meta" style="font-size:12px;color:var(--muted);"><i class="fas fa-tag"></i> ${fmt(c.category||c.category_name||'General')} &nbsp;|&nbsp; <i class="fas fa-clock"></i> ${fmt(c.duration||'—')}</div>
       ${c.description ? `<div style="font-size:12px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${c.description}</div>` : ''}
-      ${isEnrolled
-        ? `<div class="prog-bar" style="height:6px;background:#eee;border-radius:10px;overflow:hidden;margin:4px 0 2px;">
-             <div style="width:${progress}%;height:100%;background:${grad};border-radius:10px;transition:width 0.4s;"></div>
+      ${isEnrolled ? (() => {
+          const sp = scormProg || null;
+          const pct = sp ? sp.pct : progress;
+          let infoTag = '';
+          if (sp && sp.is_video && sp.pct > 0) {
+            infoTag = `<span style="margin-left:6px;font-size:10px;background:rgba(26,35,126,0.08);color:var(--navy);padding:1px 7px;border-radius:10px;font-weight:600;"><i class="fas fa-play-circle" style="margin-right:2px;"></i>${sp.pct}% watched</span>`;
+          } else if (sp && sp.total_slides > 0 && sp.slides_visited > 0) {
+            infoTag = `<span style="margin-left:6px;font-size:10px;background:rgba(26,35,126,0.08);color:var(--navy);padding:1px 7px;border-radius:10px;font-weight:600;">${sp.slides_visited}/${sp.total_slides} slides</span>`;
+          }
+          const timeSecs = sp && sp.time_seconds > 0 ? sp.time_seconds : 0;
+          const timeLabel = timeSecs > 0 ? `<span style="font-size:10px;color:var(--muted);margin-left:auto;"><i class="fas fa-clock" style="margin-right:2px;"></i>${timeSecs<60?timeSecs+'s':timeSecs<3600?Math.floor(timeSecs/60)+'m':Math.floor(timeSecs/3600)+'h '+Math.floor((timeSecs%3600)/60)+'m'}</span>` : '';
+          return `<div class="prog-bar" style="height:6px;background:#eee;border-radius:10px;overflow:hidden;margin:4px 0 2px;">
+             <div style="width:${pct}%;height:100%;background:${grad};border-radius:10px;transition:width 0.4s;"></div>
            </div>
-           <div style="font-size:11px;color:var(--muted);">${progress}% complete</div>`
-        : ''}
+           <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;">${pct}% complete${infoTag}${timeLabel}</div>`;
+        })() : ''}
       <div style="flex:1;"></div>
       ${isEnrolled
         ? `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;" onclick="event.stopPropagation()">
@@ -904,7 +948,8 @@ function renderCourseGrids() {
     allGrid.innerHTML = all.map(c => {
       const isEnrolled = enrolledIds.has(c.id);
       const progress   = enrolledMap[c.id]?.progress || 0;
-      return _buildCourseCard(c, isEnrolled, progress);
+      const scormProg  = _scormProgressCache[String(c.id)] || null;
+      return _buildCourseCard(c, isEnrolled, progress, scormProg);
     }).join('');
   }
 
@@ -922,8 +967,9 @@ function renderCourseGrids() {
     </div>`;
   } else {
     mineGrid.innerHTML = myCourses.map(c => {
-      const progress = enrolledMap[c.id]?.progress || 0;
-      return _buildCourseCard(c, true, progress);
+      const progress  = enrolledMap[c.id]?.progress || 0;
+      const scormProg = _scormProgressCache[String(c.id)] || null;
+      return _buildCourseCard(c, true, progress, scormProg);
     }).join('');
   }
 }
@@ -936,12 +982,14 @@ async function loadCourses() {
   mineGrid.innerHTML = spinner;
 
   try {
-    const [allR, enrollR] = await Promise.all([
+    const [allR, enrollR, scormR] = await Promise.all([
       api('GET', '/courses'),
-      api('GET', '/courses/enrolled')
+      api('GET', '/courses/enrolled'),
+      api('GET', '/scorm/my-progress')
     ]);
     _allCoursesCache = allR.data   || [];
     _enrolledCache   = enrollR.data || [];
+    _scormProgressCache = scormR.data || {};
     renderCourseGrids();
   } catch(e) {
     const errHtml = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#c62828;"><i class="fas fa-exclamation-circle" style="font-size:32px;margin-bottom:12px;display:block;"></i><p>Could not load courses: ${e.message}</p></div>`;
@@ -1068,14 +1116,22 @@ function fmtTime(sec){
   return Math.floor(sec/3600)+'h '+Math.floor((sec%3600)/60)+'m';
 }
 async function loadProgress(){
-  const r=await api('GET','/progress/me');
+  const [r, scormR] = await Promise.all([api('GET','/progress/me'), api('GET','/scorm/my-progress')]);
   if(!r.success && r.error){
     document.getElementById('progressList').innerHTML=`<div style="text-align:center;padding:32px;color:#c62828;"><i class="fas fa-exclamation-triangle"></i> Could not load progress: ${r.error}</div>`;
     return;
   }
   const data=r.data||{};
   const courses=data.courses||[];
-  const overall=data.overall_percentage||0;
+  const scormMap=scormR.data||{};
+
+  // Compute effective % — prefer SCORM slide % when available
+  const effPct=c=>{
+    const sp=scormMap[String(c.id)];
+    if(sp&&sp.total_slides>0) return sp.pct;
+    return c.percentage||0;
+  };
+  const overall=courses.length>0?Math.round(courses.reduce((a,c)=>a+effPct(c),0)/courses.length):0;
 
   // Overall summary
   const overallCard=document.getElementById('progressOverallCard');
@@ -1096,14 +1152,18 @@ async function loadProgress(){
   document.getElementById('progressList').innerHTML=courses.length?
     `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
     ${courses.map(c=>{
-      const pct=c.percentage||0;
+      const sp=scormMap[String(c.id)];
+      const pct=effPct(c);
       const barColor=pct>=100?'#4caf50':pct>=60?'#ff9800':'#e91e8c';
       const statusIcon=pct>=100?'<span style="color:#4caf50;font-size:12px;"><i class="fas fa-check-circle"></i> Completed</span>':pct>0?'<span style="color:#ff9800;font-size:12px;"><i class="fas fa-spinner"></i> In Progress</span>':'<span style="color:var(--muted);font-size:12px;"><i class="fas fa-clock"></i> Not Started</span>';
       const certBadge=c.certificate_no?`<div style="margin-top:10px;padding:7px 10px;background:#e8f5e9;border-radius:8px;font-size:12px;color:#2e7d32;display:flex;align-items:center;gap:6px;"><i class="fas fa-certificate"></i> Certificate: ${c.certificate_no}</div>`:'';
+      let slideBadge='';
+      if(sp&&sp.is_video&&sp.pct>0){slideBadge=`<span style="font-size:11px;background:rgba(26,35,126,0.07);color:var(--navy);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px;"><i class="fas fa-play-circle" style="margin-right:3px;"></i>${sp.pct}% watched</span>`;}
+      else if(sp&&sp.total_slides>0&&sp.slides_visited>0){slideBadge=`<span style="font-size:11px;background:rgba(26,35,126,0.07);color:var(--navy);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px;"><i class="fas fa-layer-group" style="margin-right:3px;"></i>${sp.slides_visited}/${sp.total_slides} slides</span>`;}
       return `<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid #f0f0f0;">
         <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;">${fmt(c.title)}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          ${statusIcon}
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">${statusIcon}${slideBadge}</div>
           <span style="font-size:22px;font-weight:800;color:${barColor};">${pct}%</span>
         </div>
         <div style="background:#f0f0f0;border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px;">
@@ -1131,6 +1191,82 @@ async function loadProgress(){
   const results=er.data||[];
   const ctx2=document.getElementById('examPerfChart');
   if(ctx2){if(examPChart)examPChart.destroy();examPChart=new Chart(ctx2,{type:'line',data:{labels:results.slice(-10).map(r=>r.exam_title?.substring(0,10)||'Exam'),datasets:[{label:'Score',data:results.slice(-10).map(r=>r.score||0),borderColor:'#7c4dff',backgroundColor:'rgba(124,77,255,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#7c4dff'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});}
+
+  // ── Per-slide SCORM time breakdown ──
+  const pkgsR=await api('GET','/scorm/packages');
+  const pkgs=pkgsR.data||[];
+  if(pkgs.length){
+    const trackResults=await Promise.allSettled(pkgs.map(p=>api('GET','/scorm/tracking/'+p.id)));
+    const slideCards=pkgs.map((p,i)=>{
+      const t=(trackResults[i].status==='fulfilled'&&trackResults[i].value?.data)||trackResults[i].value||{};
+      const st=t.slide_times&&typeof t.slide_times==='object'?t.slide_times:{};
+      const isVideo=p.content_type==='video';
+
+      if(isVideo){
+        // ── VIDEO card ──
+        const watchedSec=parseInt(st.video_seconds||0);
+        const durSec=parseInt(st.video_duration||0);
+        if(!watchedSec)return'';
+        const watchPct=durSec>0?Math.min(100,Math.round(watchedSec/durSec*100)):0;
+        const barColor=watchPct>=100?'#4caf50':watchPct>=50?'#ff9800':'#e91e8c';
+        return`<div style="background:#fff;border-radius:12px;border:1px solid var(--brd);margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <div style="background:linear-gradient(135deg,#1565c020,#0097a720);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--brd);flex-wrap:wrap;gap:6px;">
+            <div style="font-size:13px;font-weight:700;color:var(--navy);"><i class="fas fa-play-circle" style="color:#1565c0;margin-right:6px;"></i>${fmt(p.package_name)}</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:11px;background:rgba(21,101,192,0.08);color:#1565c0;padding:2px 8px;border-radius:10px;font-weight:600;"><i class="fas fa-video" style="margin-right:3px;"></i>${watchPct}% watched</span>
+              <span style="font-size:11px;color:var(--muted);">Watched: <strong style="color:var(--navy);">${fmtTime(watchedSec)}</strong>${durSec?` / ${fmtTime(durSec)}`:''}</span>
+            </div>
+          </div>
+          <div style="padding:14px 16px;">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Watch Progress</div>
+            <div style="background:#f0f0f0;border-radius:6px;height:10px;overflow:hidden;">
+              <div style="height:100%;width:${watchPct}%;background:${barColor};border-radius:6px;transition:width .6s;"></div>
+            </div>
+          </div>
+        </div>`;
+      }
+
+      // ── SCORM slide card ──
+      const entries=Object.entries(st).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&v>0);
+      if(!entries.length)return'';
+      const visitedCount=entries.length;
+      const totalSlides=p.total_slides||0;
+      const slidePct=totalSlides>0?Math.min(100,Math.round((visitedCount/totalSlides)*100)):null;
+      const totalTime=entries.reduce((a,[,v])=>a+v,0);
+      const rows=entries.map(([slide,secs])=>`<tr>
+        <td style="padding:6px 12px;font-size:12px;color:var(--text);border-bottom:1px solid #f0f0f0;word-break:break-all;">${slide}</td>
+        <td style="padding:6px 12px;font-size:12px;font-weight:600;color:var(--navy);border-bottom:1px solid #f0f0f0;white-space:nowrap;">${fmtTime(secs)}</td>
+      </tr>`).join('');
+      const slideCountInfo=totalSlides>0
+        ?`<span style="font-size:11px;background:rgba(26,35,126,0.08);color:var(--navy);padding:2px 8px;border-radius:10px;font-weight:600;"><i class="fas fa-layer-group" style="margin-right:3px;"></i>${visitedCount}/${totalSlides} slides &nbsp;•&nbsp; ${slidePct}%</span>`
+        :`<span style="font-size:11px;color:var(--muted);">${visitedCount} slide${visitedCount!==1?'s':''} visited</span>`;
+      return`<div style="background:#fff;border-radius:12px;border:1px solid var(--brd);margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="background:linear-gradient(135deg,#e91e8c20,#9c27b020);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--brd);flex-wrap:wrap;gap:6px;">
+          <div style="font-size:13px;font-weight:700;color:var(--navy);"><i class="fas fa-cube" style="color:#e91e8c;margin-right:6px;"></i>${fmt(p.package_name)}</div>
+          <div style="display:flex;align-items:center;gap:10px;">${slideCountInfo}<span style="font-size:11px;color:var(--muted);">Time: <strong style="color:var(--navy);">${fmtTime(totalTime)}</strong></span></div>
+        </div>
+        <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:#fafafa;">
+            <th style="padding:6px 12px;font-size:11px;color:var(--muted);text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Slide / Page</th>
+            <th style="padding:6px 12px;font-size:11px;color:var(--muted);text-align:left;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Time Spent</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+      </div>`;
+    }).filter(Boolean).join('');
+    if(slideCards){
+      const container=document.getElementById('progressList');
+      if(container){
+        container.insertAdjacentHTML('beforeend',`
+          <div style="margin-top:20px;">
+            <div style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+              <i class="fas fa-layer-group" style="color:#e91e8c;"></i> Per-Slide Time Spent
+            </div>
+            ${slideCards}
+          </div>`);
+      }
+    }
+  }
 }
 
 /* ── EXAMS ── */
@@ -1262,59 +1398,280 @@ async function loadMaterials(){
     '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No materials available.</td></tr>';
 }
 
+/* ── SCORM DASHBOARD MODAL (testing-style dark overlay) ── */
+function showScormDashboard(pkgName,tracking,pkgMeta,label){
+  const ex=document.getElementById('_scormDash');if(ex)ex.remove();
+  tracking=tracking||{};pkgMeta=pkgMeta||{};
+  const st=tracking.completion_status||'not attempted';
+  const sRaw=parseInt(tracking.score_raw)||0,sMax=parseInt(tracking.score_max)||100;
+  const sPct=sMax>0?Math.round((sRaw/sMax)*100):0;
+  let tot=parseInt(pkgMeta.total_slides)||0;
+  const stObj=tracking.slide_times&&typeof tracking.slide_times==='object'?Object.assign({},tracking.slide_times):{};
+  const svObj=tracking.slide_visits&&typeof tracking.slide_visits==='object'?Object.assign({},tracking.slide_visits):{};
+  const _f=s=>{s=parseInt(s)||0;if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';};
+  // Parse total_time first so fallback can use it
+  const _ttm=(tracking.total_time||'').match(/(\d+):(\d+):(\d+)/);
+  const _tts=_ttm?parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]):0;
+  const _vk=Object.keys(stObj).filter(k=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(stObj[k])>0).map(k=>parseInt(k)||0);
+  const _mx=_vk.length>0?Math.max(..._vk):0;
+  if(tot<=1&&_mx>tot)tot=_mx;
+  // Fallback: single-slide package with no per-slide data → attribute total_time to Slide 1
+  if(_vk.length===0&&_tts>0&&tot<=1){stObj['1']=_tts;if(!svObj['1'])svObj['1']=1;if(tot<1)tot=1;}
+  const allSlides=[];
+  if(tot>0){for(let i=1;i<=tot;i++){const id=String(i);allSlides.push({id,spent:parseInt(stObj[id])||0,visits:parseInt(svObj[id])||0});}}
+  else{_vk.sort((a,b)=>a-b).forEach(k=>allSlides.push({id:String(k),spent:parseInt(stObj[String(k)])||0,visits:parseInt(svObj[String(k)])||0}));}
+  const vc=allSlides.filter(s=>s.spent>0||s.visits>0).length;
+  const ts=allSlides.reduce((a,s)=>a+s.spent,0);
+  const mx=Math.max(...allSlides.map(s=>s.spent),1);
+  const tv=allSlides.reduce((a,s)=>a+s.visits,0);
+  const _dispTs=ts>0?ts:_tts;
+  let pct=0;if(st==='passed'||st==='completed')pct=100;else if(tot>0&&vc>0)pct=Math.min(99,Math.round(vc/tot*100));else if(sRaw>0)pct=Math.min(99,sRaw);else if(vc>0)pct=Math.min(95,vc*8);
+  const dc=pct>=80?'#22c55e':pct>=40?'#6366f1':'#f59e0b';
+  const circ=2*Math.PI*52,dash=circ-(pct/100)*circ;
+  const sMap={passed:'Passed ✓',completed:'Completed ✓',incomplete:'Incomplete','not attempted':'Not Started',failed:'Failed ✗',browsed:'Browsed'};
+  const sBg={passed:'#166534',completed:'#166534',incomplete:'#92400e','not attempted':'#1e293b',failed:'#7f1d1d',browsed:'#1e3a5f'};
+  const sCol={passed:'#86efac',completed:'#86efac',incomplete:'#fde68a','not attempted':'#94a3b8',failed:'#fca5a5',browsed:'#93c5fd'};
+  const bg=p=>p>=80?'#22c55e,#86efac':p>=40?'#6366f1,#a78bfa':'#ef4444,#fca5a5';
+  const ver=pkgMeta.content_type==='video'?'VIDEO':pkgMeta.scorm_version==='2004'?'SCORM 2004':'SCORM 1.2';
+  const pUrl=pkgMeta.id?`scorm-player.html?pkg=${pkgMeta.id}&name=${encodeURIComponent(pkgName)}`:'#';
+  const rows=allSlides.length?allSlides.map(s=>{
+    const visited=s.spent>0||s.visits>0;
+    const spW=s.spent>0?Math.max(4,Math.round((s.spent/mx)*100)):0;
+    const visitBadge=s.visits>0?`<span style="background:#2d3148;border-radius:10px;padding:3px 10px;font-size:11px;color:#e2e8f0;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;"><i class="fas fa-eye" style="font-size:10px;color:#a78bfa;"></i>${s.visits}x</span>`:visited?`<span style="color:#64748b;font-size:11px;">1x</span>`:`<span style="color:#475569;font-size:11px;">Not viewed</span>`;
+    return`<tr style="border-bottom:1px solid #1e2139;${!visited?'opacity:.4':''}">
+      <td style="padding:12px 12px;white-space:nowrap;width:100px;vertical-align:top;">
+        <div style="font-weight:700;font-size:13px;color:${visited?'#e2e8f0':'#475569'};">Slide ${s.id}</div>
+      </td>
+      <td style="padding:12px 12px;">
+        ${visited?`
+        <div style="margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;font-weight:600;color:#c084fc;width:36px;flex-shrink:0;">Spent</span>
+            <div style="flex:1;background:#1e2139;border-radius:3px;height:10px;overflow:hidden;"><div style="width:${spW}%;height:100%;border-radius:3px;background:linear-gradient(90deg,#c084fc,#e879f9);"></div></div>
+            <span style="font-size:12px;font-weight:700;color:#c084fc;width:44px;text-align:right;font-family:monospace;">${_f(s.spent)}</span>
+          </div>
+        </div>`:`<span style="color:#475569;font-size:12px;">—</span>`}
+      </td>
+      <td style="padding:12px 12px;white-space:nowrap;vertical-align:top;width:110px;">${visitBadge}</td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="3" style="text-align:center;padding:32px;color:#64748b;">${_tts>0?`No per-slide breakdown available.<br><small style="color:#475569;font-size:11px;">Total session recorded: ${_f(_tts)}</small>`:'Launch the course to start tracking.'}</td></tr>`;
+  const el=document.createElement('div');el.id='_scormDash';
+  el.style.cssText='position:fixed;inset:0;background:#0f1117;z-index:9999;overflow-y:auto;font-family:"Inter",system-ui,sans-serif;color:#e2e8f0;';
+  el.innerHTML=`<nav style="background:#1a1d2e;border-bottom:1px solid #2d3148;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;">
+    <div style="display:flex;align-items:center;gap:12px;"><button onclick="document.getElementById('_scormDash').remove()" style="background:rgba(255,255,255,.1);border:none;color:#e2e8f0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">← Back</button><span style="color:#94a3b8;font-size:13px;">SCORM Analytics${label?' — '+label:''}</span></div>
+    <span style="color:#94a3b8;font-size:13px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkgName}</span></nav>
+  <div style="max-width:1100px;margin:0 auto;padding:24px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+      <div><h4 style="font-size:20px;font-weight:700;color:#e2e8f0;margin:0 0 8px;">${pkgName}</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span style="background:#334155;color:#94a3b8;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;">${ver}</span>
+          <span style="background:${sBg[st]||'#1e293b'};color:${sCol[st]||'#94a3b8'};padding:3px 12px;border-radius:6px;font-size:12px;font-weight:700;">${sMap[st]||st}</span>
+          ${label?`<span style="color:#64748b;font-size:13px;">· ${label}</span>`:''}
+        </div>
+      </div>
+      ${pkgMeta.id?`<a href="${pUrl}" style="display:inline-flex;align-items:center;gap:8px;background:#6366f1;color:#fff;padding:8px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;"><i class="fas fa-play"></i> Launch / Resume Course</a>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;"><div style="font-size:24px;margin-bottom:8px;"><i class="fas fa-circle-check" style="color:#6366f1;"></i></div><div style="font-size:28px;font-weight:700;line-height:1;">${pct}%</div><div style="color:#94a3b8;font-size:12px;margin-top:4px;">Completion</div></div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;"><div style="font-size:24px;margin-bottom:8px;"><i class="fas fa-star" style="color:#f59e0b;"></i></div><div style="font-size:28px;font-weight:700;line-height:1;color:${sRaw>0?(sPct>=60?'#22c55e':'#ef4444'):'#64748b'};">${sRaw>0?sRaw+'%':'N/A'}</div><div style="color:#94a3b8;font-size:12px;margin-top:4px;">Score</div></div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;"><div style="font-size:24px;margin-bottom:8px;"><i class="fas fa-layer-group" style="color:#38bdf8;"></i></div><div style="font-size:28px;font-weight:700;line-height:1;">${tot||vc||'—'}</div><div style="color:#94a3b8;font-size:12px;margin-top:4px;">Total Slides</div></div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;"><div style="font-size:24px;margin-bottom:8px;"><i class="fas fa-eye" style="color:#a78bfa;"></i></div><div style="font-size:28px;font-weight:700;line-height:1;">${vc}</div><div style="color:#94a3b8;font-size:12px;margin-top:4px;">Slides Visited</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:16px;"><i class="fas fa-clock-rotate-left" style="font-size:26px;color:#c084fc;flex-shrink:0;"></i><div><div style="font-size:22px;font-weight:700;">${_dispTs>0?_f(_dispTs):'—'}</div><div style="color:#94a3b8;font-size:12px;margin-top:2px;">Total Time Spent (incl. pauses &amp; replays)</div></div></div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:16px;"><i class="fas fa-check-double" style="font-size:26px;color:#38bdf8;flex-shrink:0;"></i><div><div style="font-size:22px;font-weight:700;">${vc} / ${tot||vc}</div><div style="color:#94a3b8;font-size:12px;margin-top:2px;">Slides Viewed / Total</div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;">
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:24px;">
+        <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;font-weight:600;">Overall Completion</div>
+        <div style="position:relative;width:160px;height:160px;margin:0 auto 20px;">
+          <svg width="160" height="160" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#2d3148" stroke-width="12"/><circle cx="60" cy="60" r="52" fill="none" stroke="${dc}" stroke-width="12" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${dash.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;"><div style="font-size:28px;font-weight:800;line-height:1;">${pct}%</div><div style="font-size:11px;color:#94a3b8;">Complete</div></div>
+        </div>
+        <div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:#94a3b8;">Progress</span><span>${pct}%</span></div><div style="background:#2d3148;height:10px;border-radius:6px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${bg(pct)});border-radius:6px;"></div></div></div>
+        ${sRaw>0?`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:#94a3b8;">Score</span><span>${sPct}%</span></div><div style="background:#2d3148;height:10px;border-radius:6px;overflow:hidden;"><div style="height:100%;width:${sPct}%;background:linear-gradient(90deg,${bg(sPct)});border-radius:6px;"></div></div></div>`:''}
+        <div style="text-align:center;margin-top:14px;"><span style="background:${sBg[st]||'#1e293b'};color:${sCol[st]||'#94a3b8'};padding:5px 16px;border-radius:20px;font-size:12px;font-weight:700;">${sMap[st]||st}</span></div>
+      </div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+          <span style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;">Time Spent — Per Slide</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c084fc;"></span><span style="font-size:11px;color:#c084fc;">Time Spent (with pauses/replays)</span></span>
+            <span style="background:#2d3148;color:#94a3b8;border-radius:8px;padding:2px 10px;font-size:11px;">${tot||allSlides.length} slides</span>
+          </div>
+        </div>
+        <div style="text-align:right;font-size:11px;color:#94a3b8;margin-bottom:10px;">${vc}/${tot||allSlides.length} slides viewed</div>
+        <div style="max-height:460px;overflow-y:auto;border-radius:8px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="position:sticky;top:0;background:#1a1d2e;z-index:1;">
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:100px;border-bottom:1px solid #2d3148;">Slide</th>
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid #2d3148;">Time Spent</th>
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:110px;border-bottom:1px solid #2d3148;">Visits</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr style="background:#12152a;border-top:2px solid #2d3148;">
+              <td style="padding:10px 12px;font-weight:700;font-size:13px;">Total</td>
+              <td style="padding:10px 12px;font-size:13px;color:#c084fc;font-weight:700;">${_dispTs>0?_f(_dispTs):'—'}</td>
+              <td style="padding:10px 12px;font-size:13px;color:#94a3b8;">${tv>0?tv+' visits':'—'}</td>
+            </tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(el);el.scrollTop=0;
+}
+
 /* ── SCORM ── */
+let _studentScormPkgs=[];
+let _studentScormTrackMap={};
+
+function _sFmtSec(s){s=parseInt(s)||0;if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';}
+function _sStatusBadge(st){
+  const col={passed:'#1b5e20',completed:'#1b5e20',incomplete:'#e65100','not attempted':'#546e7a',failed:'#b71c1c',browsed:'#1565c0'};
+  const bg={passed:'#e8f5e9',completed:'#e8f5e9',incomplete:'#fff3e0','not attempted':'#eceff1',failed:'#fdecea',browsed:'#e3f2fd'};
+  const lbl={passed:'Passed ✓',completed:'Completed ✓',incomplete:'In Progress','not attempted':'Not Started',failed:'Failed ✗',browsed:'Browsed'};
+  return`<span style="padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:${bg[st]||'#eceff1'};color:${col[st]||'#546e7a'};">${lbl[st]||st}</span>`;
+}
+function _sAnalyticsPanel(pkgName, tracking, accentColor){
+  accentColor=accentColor||'var(--pink)';
+  const st=tracking.completion_status||'not attempted';
+  const scoreRaw=parseInt(tracking.score_raw)||0;
+  const scoreMax=parseInt(tracking.score_max)||100;
+  const slideTimesObj=tracking.slide_times&&typeof tracking.slide_times==='object'?tracking.slide_times:{};
+  const slideEntries=Object.entries(slideTimesObj)
+    .filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>0)
+    .sort((a,b)=>(parseInt(a[0])||0)-(parseInt(b[0])||0));
+  const totalSpent=slideEntries.reduce((a,[,v])=>a+parseInt(v),0);
+  const maxSpent=Math.max(...slideEntries.map(([,v])=>parseInt(v)),1);
+  let pct=0;
+  if(st==='passed'||st==='completed'){pct=100;}
+  else if(scoreRaw>0){pct=Math.min(99,scoreRaw);}
+  else if(slideEntries.length>0){pct=Math.min(95,slideEntries.length*8);}
+  const donutColor=pct>=80?'#43a047':pct>=40?'#7c4dff':'#ff6b35';
+  const circ=2*Math.PI*52; const dash=circ-(pct/100)*circ;
+  const slideRows=slideEntries.length?slideEntries.map(([sid,secs])=>{
+    const s=parseInt(secs);const bw=Math.round((s/maxSpent)*100);
+    return`<tr style="border-bottom:1px solid var(--brd);">
+      <td style="padding:9px 12px;font-size:12px;font-weight:600;color:var(--navy);width:90px;">Slide ${sid}</td>
+      <td style="padding:9px 12px;"><div style="display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;background:#eee;border-radius:6px;height:12px;overflow:hidden;">
+          <div style="width:${bw}%;height:100%;border-radius:6px;background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:var(--navy);width:52px;text-align:right;font-family:monospace;">${_sFmtSec(s)}</span>
+      </div></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="2" style="text-align:center;padding:28px;color:var(--muted);font-size:13px;"><i class="fas fa-info-circle" style="margin-right:6px;"></i>Launch the module and navigate slides to see timing data here.</td></tr>`;
+  return`<div class="card" style="border:2px solid ${accentColor};">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;color:var(--navy);"><i class="fas fa-chart-bar" style="color:${accentColor};margin-right:8px;"></i>${pkgName}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">SCORM Analytics — Slide Timing Breakdown</div>
+      </div>
+      <button onclick="document.getElementById('studentScormAnalyticsPanel').style.display='none'" style="background:none;border:1px solid var(--brd);border-radius:8px;padding:5px 14px;cursor:pointer;font-size:12px;color:var(--muted);">✕ Close</button>
+    </div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:24px;margin-bottom:20px;align-items:center;">
+      <div style="text-align:center;">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#f3e5f5" stroke-width="12"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="${donutColor}" stroke-width="12"
+            stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${dash.toFixed(1)}"
+            stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          <text x="60" y="56" text-anchor="middle" font-size="22" font-weight="700" fill="#1a237e">${pct}%</text>
+          <text x="60" y="72" text-anchor="middle" font-size="10" fill="#78909c">Complete</text>
+        </svg>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+        <div style="background:var(--bg);border-radius:10px;padding:12px;"><div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Status</div>${_sStatusBadge(st)}</div>
+        <div style="background:var(--bg);border-radius:10px;padding:12px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Score</div><div style="font-size:18px;font-weight:700;color:var(--navy);">${scoreRaw>0?scoreRaw+'/'+scoreMax:'—'}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:12px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Slides Visited</div><div style="font-size:18px;font-weight:700;color:var(--navy);">${slideEntries.length}</div></div>
+        <div style="background:var(--bg);border-radius:10px;padding:12px;"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Total Time</div><div style="font-size:18px;font-weight:700;color:var(--navy);">${totalSpent>0?_sFmtSec(totalSpent):(tracking.total_time||'—')}</div></div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;"><i class="fas fa-clock" style="margin-right:6px;color:${accentColor};"></i>Per-Slide Time Spent</div>
+    <div style="max-height:360px;overflow-y:auto;border-radius:10px;border:1px solid var(--brd);">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="background:var(--bg);position:sticky;top:0;">
+          <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);text-align:left;width:100px;">Slide</th>
+          <th style="padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);text-align:left;">Time Spent</th>
+        </tr></thead>
+        <tbody>${slideRows}</tbody>
+        ${slideEntries.length?`<tfoot><tr style="background:var(--bg);"><td style="padding:9px 12px;font-size:12px;font-weight:700;color:var(--navy);">Total</td><td style="padding:9px 12px;font-size:12px;font-weight:700;color:${accentColor};">${_sFmtSec(totalSpent)}</td></tr></tfoot>`:''}
+      </table>
+    </div>
+  </div>`;
+}
+
 async function loadScorm(){
-  const grid=document.getElementById('scormGrid');
-  grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  _studentScormPkgs=[];_studentScormTrackMap={};
+  document.getElementById('studentScormAnalyticsPanel').style.display='none';
+  document.getElementById('studentScormTbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
   const r=await api('GET','/scorm/packages');
   const pkgs=r.data||[];
+  _studentScormPkgs=pkgs;
   if(!pkgs.length){
-    grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-cube" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>No SCORM content available yet.</div>';
+    document.getElementById('studentScormTbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-cube" style="font-size:32px;opacity:.3;display:block;margin-bottom:10px;"></i>No SCORM content available yet.</td></tr>';
     return;
   }
   // Load tracking for each package
-  const trackMap={};
   await Promise.allSettled(pkgs.map(async p=>{
     const t=await api('GET','/scorm/tracking/'+p.id);
-    trackMap[p.id]=t.data||{completion_status:'not attempted',score_raw:0};
+    _studentScormTrackMap[p.id]=t.data||{completion_status:'not attempted',score_raw:0};
   }));
-  const statusColor={passed:'#1b5e20',completed:'#1b5e20',incomplete:'#e65100','not attempted':'#546e7a',failed:'#b71c1c'};
-  const statusIcon={passed:'fa-circle-check',completed:'fa-circle-check',incomplete:'fa-circle-half-stroke','not attempted':'fa-circle',failed:'fa-circle-xmark'};
-  grid.innerHTML=pkgs.map(p=>{
-    const t=trackMap[p.id]||{};
+  // Populate dropdown
+  const sel=document.getElementById('studentScormSel');
+  sel.innerHTML='<option value="">— Select Module —</option>'+pkgs.map(p=>`<option value="${p.id}">${p.package_name||'Module'}</option>`).join('');
+  // Render table
+  const tbody=document.getElementById('studentScormTbody');
+  tbody.innerHTML=pkgs.map((p,i)=>{
+    const t=_studentScormTrackMap[p.id]||{};
     const st=t.completion_status||'not attempted';
-    const color=statusColor[st]||'#546e7a';
-    const icon=statusIcon[st]||'fa-circle';
-    const score=t.score_raw!=null?`${t.score_raw}/${t.score_max||100}`:null;
     const isVideo=(p.content_type||'scorm')==='video';
-    const iconBg=isVideo?'linear-gradient(135deg,#e91e8c,#f06292)':'linear-gradient(135deg,#e91e8c,#9c27b0)';
-    const iconClass=isVideo?'fa-video':'fa-cube';
-    const typeTag=isVideo?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:1px 6px;font-weight:600;">VIDEO</span>`:`<span style="font-size:10px;background:#9c27b020;color:#9c27b0;border-radius:4px;padding:1px 6px;font-weight:600;">SCORM</span>`;
-    const actionBtn=isVideo
-      ?`<a href="${p.upload_path}" target="_blank" class="btn btn-primary" style="text-align:center;justify-content:center;"><i class="fas fa-play"></i> Watch Video</a>`
-      :`<a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" class="btn btn-primary" style="text-align:center;justify-content:center;"><i class="fas fa-${st==='incomplete'?'rotate-right':'play'}"></i> ${st==='incomplete'?'Resume':'Launch'}</a>`;
-    return`<div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);border:1.5px solid var(--brd);display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:42px;height:42px;border-radius:10px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i class="fas ${iconClass}" style="color:#fff;font-size:18px;"></i>
+    const typeTag=isVideo?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:2px 8px;font-weight:700;">VIDEO</span>`:`<span style="font-size:10px;background:#9c27b020;color:#9c27b0;border-radius:4px;padding:2px 8px;font-weight:700;">SCORM</span>`;
+    const slides=t.slide_times&&typeof t.slide_times==='object'?t.slide_times:{};
+    const visitedSlides=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>0).length;
+    const totalSecs=Object.entries(slides).filter(([k])=>k!=='video_seconds'&&k!=='video_duration').reduce((a,[,v])=>a+parseInt(v),0);
+    const score=parseInt(t.score_raw)||0;
+    const scoreMax=parseInt(t.score_max)||100;
+    const playerUrl=`scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'Content')}`;
+    const actionLabel=isVideo?'Watch':st==='incomplete'?'Resume':'Launch';
+    const actionIcon=isVideo?'fa-play-circle':st==='incomplete'?'fa-rotate-right':'fa-play';
+    return`<tr style="border-bottom:1px solid var(--brd);">
+      <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--muted);">${i+1}</td>
+      <td style="padding:12px 14px;">
+        <div style="font-weight:600;font-size:13px;color:var(--navy);">${p.package_name||'Module'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${p.course_name||'—'}${p.module_name?' · '+p.module_name:''}</div>
+      </td>
+      <td style="padding:12px 14px;">${typeTag}</td>
+      <td style="padding:12px 14px;">${_sStatusBadge(st)}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${score>0?score+'/'+scoreMax:'—'}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${visitedSlides||'—'}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${totalSecs>0?_sFmtSec(totalSecs):'—'}</td>
+      <td style="padding:12px 14px;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <a href="${playerUrl}" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--pink);color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;"><i class="fas ${actionIcon}"></i>${actionLabel}</a>
+          <button onclick="showStudentScormAnalytics(${p.id})" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:none;border:1.5px solid var(--brd);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-chart-bar"></i>Analytics</button>
         </div>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">${typeTag}</div>
-          <div style="font-weight:700;font-size:14px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.package_name||'Module'}</div>
-          <div style="font-size:11px;color:var(--muted);">${p.course_name||'—'} ${p.module_name?'• '+p.module_name:''}</div>
-        </div>
-      </div>
-      ${!isVideo?`<div style="display:flex;align-items:center;gap:8px;font-size:12px;">
-        <i class="fas ${icon}" style="color:${color};"></i>
-        <span style="color:${color};font-weight:600;text-transform:capitalize;">${st}</span>
-        ${score?`<span style="margin-left:auto;color:var(--muted);">Score: <strong>${score}</strong></span>`:''}
-      </div>
-      <div style="background:var(--brd);border-radius:4px;height:5px;overflow:hidden;">
-        <div style="background:linear-gradient(90deg,#e91e8c,#9c27b0);height:100%;width:${st==='passed'||st==='completed'?100:st==='incomplete'?50:0}%;"></div>
-      </div>`:''}
-      ${actionBtn}
-    </div>`;
+      </td>
+    </tr>`;
   }).join('');
+}
+
+function loadStudentScormData(){
+  const pkgId=parseInt(document.getElementById('studentScormSel').value);
+  if(!pkgId) return;
+  showStudentScormAnalytics(pkgId);
+}
+
+async function showStudentScormAnalytics(pkgId){
+  const pkg=_studentScormPkgs.find(p=>p.id===pkgId)||{};
+  // Always fetch fresh tracking so saved slide_times / total_time appear immediately
+  try{
+    const r=await api('GET','/scorm/tracking/'+pkgId);
+    if(r.data){_studentScormTrackMap[pkgId]=r.data;}
+  }catch(e){}
+  const tracking=_studentScormTrackMap[pkgId]||{};
+  showScormDashboard(pkg.package_name||'Module',tracking,pkg,null);
 }
 
 /* ── NOTIFICATIONS ── */
@@ -1396,8 +1753,9 @@ async function loadSiteSettings(){
 async function loadMyCourses(){
   const grid=document.getElementById('myAssignedCoursesGrid');
   grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i></div>';
-  const r=await api('GET','/student/mycourses');
+  const [r, scormR]=await Promise.all([api('GET','/student/mycourses'), api('GET','/scorm/my-progress')]);
   const courses=r.data||[];
+  const scormMap=scormR.data||{};
   if(!courses.length){
     grid.innerHTML='<div style="text-align:center;padding:48px;color:var(--muted);grid-column:1/-1;"><i class="fas fa-book-open" style="font-size:48px;opacity:0.3;display:block;margin-bottom:16px;"></i><p>No courses assigned yet.<br><small>Contact your admin or trainer.</small></p></div>';
     return;
@@ -1405,9 +1763,36 @@ async function loadMyCourses(){
   grid.innerHTML=courses.map(c=>{
     const total=parseInt(c.total_modules)||0;
     const done=parseInt(c.completed_modules)||0;
-    const pct=total>0?Math.round(done/total*100):0;
+    const sp=scormMap[String(c.id)];
+    // Priority: slide-based SCORM % > module completion % > scorm_score fallback
+    let pct=0;
+    if(sp&&sp.total_slides>0){
+      pct=sp.pct||0;
+    } else {
+      pct=total>0?Math.round(done/total*100):0;
+      if(pct===0&&c.scorm_score!==null&&c.scorm_score!==undefined&&c.scorm_score!==''){
+        const sMax=parseInt(c.scorm_score_max)||100;
+        const sRaw=parseInt(c.scorm_score)||0;
+        pct=sMax>0?Math.round((sRaw/sMax)*100):0;
+      }
+    }
     const hrs=Math.floor((parseInt(c.time_spent_seconds)||0)/3600);
     const mins=Math.floor(((parseInt(c.time_spent_seconds)||0)%3600)/60);
+    // SCORM score badge (like participant card)
+    let scormScoreHtml='';
+    if(c.scorm_score!==null&&c.scorm_score!==undefined&&String(c.scorm_score)!==''){
+      const sPct=c.scorm_score_max>0?Math.round((c.scorm_score/c.scorm_score_max)*100):0;
+      const sCol=sPct>=60?'#2e7d32':'#e65100';
+      scormScoreHtml=`<div style="font-size:12px;margin-bottom:8px;padding:6px 10px;background:#f0f4ff;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:var(--muted);"><i class="fas fa-star-half-alt"></i> SCORM Score</span>
+        <span style="font-weight:700;color:${sCol};">${c.scorm_score}/${c.scorm_score_max||100} (${sPct}%)</span>
+      </div>`;
+    }
+    // Slide progress badge
+    let slideBadge='';
+    if(sp&&sp.total_slides>0&&sp.slides_visited>0){
+      slideBadge=`<span style="font-size:11px;background:rgba(26,35,126,0.07);color:var(--navy);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px;"><i class="fas fa-layer-group" style="margin-right:3px;"></i>${sp.slides_visited}/${sp.total_slides} slides</span>`;
+    }
     return`<div style="background:#fff;border-radius:16px;border:1px solid var(--brd);overflow:hidden;box-shadow:var(--shadow);">
       ${c.thumbnail?`<img src="${c.thumbnail}" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'"/>`:`<div style="height:100px;background:linear-gradient(135deg,#1a237e,#e91e8c);display:flex;align-items:center;justify-content:center;"><i class="fas fa-book-open" style="color:#fff;font-size:36px;"></i></div>`}
       <div style="padding:16px;">
@@ -1415,9 +1800,12 @@ async function loadMyCourses(){
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${c.trainer_name?'<i class="fas fa-user-tie" style="margin-right:4px;"></i>'+c.trainer_name:''}${c.duration?' · '+c.duration:''}</div>
         ${c.avg_rating>0?`<div style="font-size:12px;color:#f59e0b;margin-bottom:8px;">★ ${Number(c.avg_rating).toFixed(1)}</div>`:''}
         <div style="margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;"><span>${done}/${total} modules</span><span>${pct}%</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px;">
+            <span>${done}/${total} modules${slideBadge}</span><span>${pct}%</span>
+          </div>
           <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=40?'var(--orange)':'var(--pink)'};"></div></div>
         </div>
+        ${scormScoreHtml}
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px;"><i class="fas fa-clock" style="margin-right:4px;"></i> Time spent: ${hrs}h ${mins}m</div>
         ${c.certificate_validity_days>0?`<div style="font-size:11px;color:var(--orange);margin-bottom:10px;"><i class="fas fa-certificate"></i> Certificate valid for ${c.certificate_validity_days} days</div>`:''}
         <button class="btn btn-primary btn-sm" style="width:100%;" onclick="showSection('scorm')"><i class="fas fa-play"></i> Continue Learning</button>
@@ -1639,9 +2027,8 @@ async function openStudentCourseContent(courseId, courseName){
         const typeLabel=isVideo?'Video':'SCORM';
         const statusHtml=fmtScormStatus(pkg.tracking);
         const encodedName=encodeURIComponent(pkg.package_name||typeLabel);
-        const actionBtn=isVideo
-          ?`<a href="${pkg.upload_path}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;text-decoration:none;background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;white-space:nowrap;"><i class="fas fa-play"></i> Watch</a>`
-          :`<a href="scorm-player.html?pkg=${pkg.id}&name=${encodedName}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;text-decoration:none;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;white-space:nowrap;"><i class="fas fa-play"></i> Launch</a>`;
+        const playerUrl=`scorm-player.html?pkg=${pkg.id}&name=${encodedName}&course=${courseId}`;
+        const actionBtn=`<a href="${playerUrl}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;text-decoration:none;background:linear-gradient(135deg,${isVideo?'var(--pink),var(--purple)':'var(--navy),var(--blue)'});color:#fff;white-space:nowrap;"><i class="fas fa-${isVideo?'play-circle':'play'}"></i> ${isVideo?'Watch':'Launch'}</a>`;
         html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #f5f5f5;">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:34px;height:34px;border-radius:8px;background:${iconBg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;"><i class="fas ${iconName}" style="color:${iconColor};"></i></div>
@@ -1910,6 +2297,28 @@ async function loadStudentCertificates(){
   html+='</div>';
   grid.innerHTML=html;
 }
+
+// Refresh SCORM progress when coming back from bfcache (e.g. after using Back from player)
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) {
+    api('GET', '/scorm/my-progress').then(r => {
+      _scormProgressCache = r.data || {};
+      renderCourseGrids();
+    }).catch(() => {});
+  }
+});
+
+// Refresh progress when user switches back to this tab (e.g. after closing player tab)
+let _lastProgressRefresh = 0;
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - _lastProgressRefresh > 10000) {
+    _lastProgressRefresh = Date.now();
+    api('GET', '/scorm/my-progress').then(r => {
+      _scormProgressCache = r.data || {};
+      renderCourseGrids();
+    }).catch(() => {});
+  }
+});
 
 /* ── INIT ── */
 (async()=>{

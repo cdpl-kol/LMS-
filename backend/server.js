@@ -507,6 +507,20 @@ async function initDB() {
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS passing_marks INTEGER DEFAULT 0`).catch(()=>{});
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS passing_percentage INTEGER DEFAULT 0`).catch(()=>{});
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS requires_pass BOOLEAN DEFAULT FALSE`).catch(()=>{});
+    // Per-slide time tracking for SCORM content
+    await client.query(`ALTER TABLE scorm_tracking ADD COLUMN IF NOT EXISTS slide_times JSONB DEFAULT '{}'::jsonb`).catch(()=>{});
+    // Per-slide visit counts (how many times each slide was visited)
+    await client.query(`ALTER TABLE scorm_tracking ADD COLUMN IF NOT EXISTS slide_visits JSONB DEFAULT '{}'::jsonb`).catch(()=>{});
+    // Total slides count per SCORM package (parsed from manifest at upload time)
+    await client.query(`ALTER TABLE scorm_packages ADD COLUMN IF NOT EXISTS total_slides INTEGER DEFAULT 0`).catch(()=>{});
+    // course_id on tracking so we can show course-level progress without needing module linkage
+    await client.query(`ALTER TABLE scorm_tracking ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL`).catch(()=>{});
+    // Backfill course_id on existing tracking rows that have module linkage
+    await client.query(`UPDATE scorm_tracking st SET course_id=m.course_id FROM scorm_packages sp JOIN modules m ON sp.module_id=m.id WHERE st.package_id=sp.id AND st.course_id IS NULL AND m.course_id IS NOT NULL`).catch(()=>{});
+    // Support tracking for course_content items (uploaded via course-level content upload, shown as cc-N IDs)
+    await client.query(`ALTER TABLE scorm_tracking ADD COLUMN IF NOT EXISTS cc_content_id INTEGER REFERENCES course_content(id) ON DELETE CASCADE`).catch(()=>{});
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_scorm_tracking_student_cc ON scorm_tracking(student_id, cc_content_id) WHERE student_id IS NOT NULL AND cc_content_id IS NOT NULL`).catch(()=>{});
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_scorm_tracking_participant_cc ON scorm_tracking(participant_id, cc_content_id) WHERE participant_id IS NOT NULL AND cc_content_id IS NOT NULL`).catch(()=>{});
 
     // ── NEW: Student quiz attempts table ─────────────────────────────────────
     await client.query(`CREATE TABLE IF NOT EXISTS student_quiz_attempts (
@@ -1111,6 +1125,7 @@ app.put('/api/v1/notifications/read', auth, async (req,res)=>{ try{ await pool.q
 app.post('/api/v1/notifications/broadcast', auth, adminOnly, async (req,res)=>{ try{ const {message,roles}=req.body; const targetRoles=roles||['student','trainer','bschool']; for(const role of targetRoles){ const users=await pool.query(`SELECT id FROM ${role==='student'?'students':role==='trainer'?'trainers':'bschools'}`); for(const u of users.rows){ await pool.query('INSERT INTO notifications(user_id,role,message,type) VALUES($1,$2,$3,$4)',[u.id,role,sanitize(message),'broadcast']); } } ok(res,{},'Notification broadcast sent'); }catch(e){err(res,e.message);}});
 
 // ── COURSE MATERIALS ──────────────────────────────────────────────────────────
+app.get('/api/v1/materials/course/:courseId', auth, async (req,res)=>{ try{ const r=await pool.query(`SELECT cm.*,COALESCE(m.name,'—') AS module_name,c.name AS course_title FROM course_materials cm LEFT JOIN modules m ON cm.module_id=m.id JOIN courses c ON COALESCE(cm.course_id,m.course_id)=c.id WHERE COALESCE(cm.course_id,m.course_id)=$1 ORDER BY COALESCE(m.order_no,0),cm.created_at`,[req.params.courseId]); ok(res,r.rows); }catch(e){err(res,e.message);}});
 app.get('/api/v1/materials/:moduleId', auth, async (req,res)=>{ try{ const r=await pool.query('SELECT * FROM course_materials WHERE module_id=$1 ORDER BY created_at',[req.params.moduleId]); ok(res,r.rows); }catch(e){err(res,e.message);}});
 app.post('/api/v1/materials', auth, requireRole('admin','trainer'), (req,res)=>{ req.uploadFolder='materials'; upload.single('file')(req,res,async(e)=>{ if(e)return err(res,e.message,400); try{ const {module_id,course_id,title,type,url}=req.body; const fp=req.file?'/uploads/materials/'+req.file.filename:(url||null); const r=await pool.query('INSERT INTO course_materials(module_id,course_id,title,type,file_path_or_url,uploaded_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING *',[module_id,course_id,sanitize(title),type||'PDF',fp,req.user.id]); ok(res,r.rows[0]); }catch(ex){err(res,ex.message);} });});
 app.delete('/api/v1/materials/:id', auth, requireRole('admin','trainer'), async (req,res)=>{ try{ await pool.query('DELETE FROM course_materials WHERE id=$1',[req.params.id]); ok(res,{}); }catch(e){err(res,e.message);}});
@@ -1131,7 +1146,7 @@ app.get('/api/v1/trainer/students', auth, trainerOnly, async (req,res)=>{ try{ c
 // ── STUDENT-SPECIFIC ──────────────────────────────────────────────────────────
 app.get('/api/v1/student/modules', auth, studentOnly, async (req,res)=>{ try{ const r=await pool.query(`SELECT m.id,m.name,m.duration,m.order_no,COALESCE(sp.completed,FALSE) AS completed FROM modules m LEFT JOIN student_progress sp ON sp.module_id=m.id AND sp.student_id=$1 WHERE m.course_id=(SELECT course_id FROM students WHERE id=$1) ORDER BY m.order_no`,[req.user.id]); ok(res,r.rows); }catch(e){err(res,e.message);}});
 app.get('/api/v1/student/exams', auth, studentOnly, async (req,res)=>{ try{ const r=await pool.query(`SELECT e.id,e.name,e.duration,e.pass_percentage,e.total_marks,(SELECT status FROM student_exam_attempts WHERE student_id=$1 AND exam_id=e.id ORDER BY submitted_at DESC LIMIT 1) AS last_status FROM exams e WHERE e.course_id=(SELECT course_id FROM students WHERE id=$1)`,[req.user.id]); ok(res,r.rows); }catch(e){err(res,e.message);}});
-app.get('/api/v1/student/materials', auth, studentOnly, async (req,res)=>{ try{ const r=await pool.query(`SELECT cm.* FROM course_materials cm JOIN modules m ON cm.module_id=m.id WHERE m.course_id=(SELECT course_id FROM students WHERE id=$1) ORDER BY m.order_no,cm.created_at`,[req.user.id]); ok(res,r.rows); }catch(e){err(res,e.message);}});
+app.get('/api/v1/student/materials', auth, studentOnly, async (req,res)=>{ try{ const r=await pool.query(`SELECT cm.*,COALESCE(m.name,'—') AS module_name,c.name AS course_title FROM course_materials cm LEFT JOIN modules m ON cm.module_id=m.id JOIN courses c ON COALESCE(cm.course_id,m.course_id)=c.id WHERE COALESCE(cm.course_id,m.course_id) IN (SELECT COALESCE(b.course_id,s.course_id) FROM students s LEFT JOIN batches b ON s.batch_id=b.id WHERE s.id=$1 AND COALESCE(b.course_id,s.course_id) IS NOT NULL) ORDER BY COALESCE(m.order_no,0),cm.created_at`,[req.user.id]); ok(res,r.rows); }catch(e){err(res,e.message);}});
 app.get('/api/v1/student/timetable', auth, studentOnly, async (req,res)=>{ try{ const r=await pool.query(`SELECT t.*,tr.name AS trainer_name FROM timetable t LEFT JOIN trainers tr ON t.trainer_id=tr.id WHERE t.batch_id=(SELECT batch_id FROM students WHERE id=$1) ORDER BY CASE day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END,t.start_time`,[req.user.id]); ok(res,r.rows); }catch(e){err(res,e.message);}});
 
 // ── ANALYTICS OVERVIEW (Admin) ────────────────────────────────────────────────
@@ -1329,7 +1344,7 @@ app.get('/api/v1/materials', auth, async (req,res)=>{
   try{
     let r;
     if(req.user.role==='student'){
-      r=await pool.query(`SELECT cm.*,m.name AS module_name,c.name AS course_title FROM course_materials cm JOIN modules m ON cm.module_id=m.id JOIN courses c ON cm.course_id=c.id WHERE m.course_id=(SELECT course_id FROM students WHERE id=$1) ORDER BY m.order_no,cm.created_at`,[req.user.id]);
+      r=await pool.query(`SELECT cm.*,COALESCE(m.name,'—') AS module_name,c.name AS course_title FROM course_materials cm LEFT JOIN modules m ON cm.module_id=m.id JOIN courses c ON COALESCE(cm.course_id,m.course_id)=c.id WHERE COALESCE(cm.course_id,m.course_id) IN (SELECT COALESCE(b.course_id,s.course_id) FROM students s LEFT JOIN batches b ON s.batch_id=b.id WHERE s.id=$1 AND COALESCE(b.course_id,s.course_id) IS NOT NULL) ORDER BY c.name,COALESCE(m.order_no,0),cm.created_at`,[req.user.id]);
     } else if(req.user.role==='trainer'){
       r=await pool.query(`SELECT cm.*,m.name AS module_name,c.name AS course_title FROM course_materials cm JOIN modules m ON cm.module_id=m.id JOIN courses c ON cm.course_id=c.id WHERE cm.uploaded_by=$1 ORDER BY cm.created_at DESC`,[req.user.id]);
     } else {
@@ -1338,7 +1353,6 @@ app.get('/api/v1/materials', auth, async (req,res)=>{
     ok(res,r.rows);
   }catch(e){err(res,e.message);}
 });
-app.get('/api/v1/materials/course/:courseId', auth, async (req,res)=>{ try{ const r=await pool.query(`SELECT cm.*,m.name AS module_name,c.name AS course_title FROM course_materials cm JOIN modules m ON cm.module_id=m.id JOIN courses c ON cm.course_id=c.id WHERE cm.course_id=$1 ORDER BY m.order_no,cm.created_at`,[req.params.courseId]); ok(res,r.rows); }catch(e){err(res,e.message);}});
 
 // ── NOTIFICATIONS: MARK ALL READ ──────────────────────────────────────────────
 app.put('/api/v1/notifications/read', auth, async (req,res)=>{ try{ await pool.query('UPDATE notifications SET is_read=TRUE WHERE user_id=$1 AND role=$2 AND is_read=FALSE',[req.user.id,req.user.role]); ok(res,{},'All notifications marked as read'); }catch(e){err(res,e.message);}});
@@ -2137,7 +2151,9 @@ app.get('/api/v1/student/mycourses', auth, studentOnly, async (req,res)=>{
              cat.name AS category_name, t.name AS trainer_name,
              (SELECT COUNT(*) FROM modules WHERE course_id=c.id) AS total_modules,
              (SELECT COUNT(*) FROM student_progress WHERE student_id=$1 AND module_id IN (SELECT id FROM modules WHERE course_id=c.id) AND completed=TRUE) AS completed_modules,
-             COALESCE((SELECT COALESCE(SUM(time_spent_seconds),0) FROM student_progress WHERE student_id=$1 AND module_id IN (SELECT id FROM modules WHERE course_id=c.id)),0) AS time_spent_seconds
+             COALESCE((SELECT COALESCE(SUM(time_spent_seconds),0) FROM student_progress WHERE student_id=$1 AND module_id IN (SELECT id FROM modules WHERE course_id=c.id)),0) AS time_spent_seconds,
+             (SELECT MAX(st.score_raw) FROM scorm_tracking st LEFT JOIN scorm_packages sp ON st.package_id=sp.id LEFT JOIN modules m ON sp.module_id=m.id WHERE st.student_id=$1 AND COALESCE(st.course_id,m.course_id)=c.id) AS scorm_score,
+             COALESCE((SELECT MAX(st.score_max) FROM scorm_tracking st LEFT JOIN scorm_packages sp ON st.package_id=sp.id LEFT JOIN modules m ON sp.module_id=m.id WHERE st.student_id=$1 AND COALESCE(st.course_id,m.course_id)=c.id),100) AS scorm_score_max
       FROM courses c
       LEFT JOIN categories cat ON c.category_id=cat.id
       LEFT JOIN trainers t ON c.linked_trainer_id=t.id
@@ -2816,9 +2832,9 @@ app.get('/api/v1/participant/mycourses', auth, requireRole('participant'), async
              (SELECT COUNT(*) FROM modules WHERE course_id=c.id) AS total_modules,
              (SELECT COUNT(*) FROM participant_progress WHERE participant_id=$1 AND module_id IN (SELECT id FROM modules WHERE course_id=c.id) AND completed=TRUE) AS completed_modules,
              COALESCE((SELECT SUM(time_spent_seconds) FROM participant_progress WHERE participant_id=$1 AND module_id IN (SELECT id FROM modules WHERE course_id=c.id)),0) AS time_spent_seconds,
-             (SELECT MAX(st.score_raw) FROM scorm_tracking st JOIN scorm_packages sp ON st.package_id=sp.id JOIN modules m ON sp.module_id=m.id WHERE st.participant_id=$1 AND m.course_id=c.id) AS scorm_score,
-             (SELECT MAX(st.score_max) FROM scorm_tracking st JOIN scorm_packages sp ON st.package_id=sp.id JOIN modules m ON sp.module_id=m.id WHERE st.participant_id=$1 AND m.course_id=c.id) AS scorm_score_max,
-             COALESCE((SELECT MAX(CASE WHEN st.completion_status IN ('completed','passed') THEN 1 ELSE 0 END) FROM scorm_tracking st JOIN scorm_packages sp ON st.package_id=sp.id JOIN modules m ON sp.module_id=m.id WHERE st.participant_id=$1 AND m.course_id=c.id),0) AS scorm_completed,
+             (SELECT MAX(st.score_raw) FROM scorm_tracking st LEFT JOIN scorm_packages sp ON st.package_id=sp.id LEFT JOIN modules m ON sp.module_id=m.id WHERE st.participant_id=$1 AND COALESCE(st.course_id,m.course_id)=c.id) AS scorm_score,
+             (SELECT MAX(st.score_max) FROM scorm_tracking st LEFT JOIN scorm_packages sp ON st.package_id=sp.id LEFT JOIN modules m ON sp.module_id=m.id WHERE st.participant_id=$1 AND COALESCE(st.course_id,m.course_id)=c.id) AS scorm_score_max,
+             COALESCE((SELECT MAX(CASE WHEN st.completion_status IN ('completed','passed') THEN 1 ELSE 0 END) FROM scorm_tracking st LEFT JOIN scorm_packages sp ON st.package_id=sp.id LEFT JOIN modules m ON sp.module_id=m.id WHERE st.participant_id=$1 AND COALESCE(st.course_id,m.course_id)=c.id),0) AS scorm_completed,
              cca.assigned_at
       FROM corporate_course_assignments cca
       JOIN courses c ON cca.course_id=c.id
@@ -2832,6 +2848,43 @@ app.get('/api/v1/participant/mycourses', auth, requireRole('participant'), async
 });
 
 // ── SCORM ENDPOINTS ───────────────────────────────────────────────────────────
+// Count slides from imsmanifest.xml — tries multiple strategies
+function countSlidesFromManifest(manifestFilePath) {
+  try {
+    if (!manifestFilePath || !fs.existsSync(manifestFilePath)) return 0;
+    const xml = fs.readFileSync(manifestFilePath, 'utf8');
+
+    // Strategy 1: items with identifierref (standard multi-SCO)
+    const withRef = (xml.match(/<item[^>]+identifierref\s*=/gi) || []).length;
+    if (withRef > 1) return withRef;
+
+    // Strategy 2: all <item> elements (catches packages that omit identifierref on sub-items)
+    const allItems = (xml.match(/<item[\s>]/gi) || []).length;
+    if (allItems > 1) return allItems;
+
+    // Strategy 3: Articulate Storyline / Rise — story.xml has <slide> tags
+    const dir = path.dirname(manifestFilePath);
+    for (const rel of ['story.xml', 'story_content/story.xml', '../story.xml']) {
+      const fp = path.join(dir, rel);
+      if (fs.existsSync(fp)) {
+        const s = fs.readFileSync(fp, 'utf8');
+        const m = s.match(/<slide[\s>\/]/gi);
+        if (m && m.length > 1) return m.length;
+      }
+    }
+
+    // Strategy 4: count SCO-typed resources in manifest
+    const scoCount = (xml.match(/scormtype\s*=\s*["']sco["']/gi) || []).length;
+    if (scoCount > 1) return scoCount;
+
+    // Strategy 5: count <resource> elements with href pointing to HTML files
+    const resCount = (xml.match(/<resource[^>]+href\s*=\s*["'][^"']+\.html?["']/gi) || []).length;
+    if (resCount > 1) return resCount;
+
+    return withRef || allItems || 0;
+  } catch(e) { return 0; }
+}
+
 const scormDir = path.join(uploadsDir, 'scorm');
 if (!fs.existsSync(scormDir)) fs.mkdirSync(scormDir, { recursive: true });
 app.use('/uploads/scorm', express.static(scormDir));
@@ -2950,10 +3003,11 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
       }
 
       const launchUrl = findLaunch(extractPath, manifestPath) || relManifest;
-      console.log(`[SCORM] Package ${pkgId} launch URL: ${launchUrl}`);
-      await pool.query('UPDATE scorm_packages SET manifest_path=$1,upload_path=$2 WHERE id=$3',[relManifest, '/uploads/scorm/'+pkgId+'/'+launchUrl, pkgId]);
+      const totalSlides = countSlidesFromManifest(manifestPath);
+      console.log(`[SCORM] Package ${pkgId} launch URL: ${launchUrl}, slides: ${totalSlides}`);
+      await pool.query('UPDATE scorm_packages SET manifest_path=$1,upload_path=$2,total_slides=$3 WHERE id=$4',[relManifest, '/uploads/scorm/'+pkgId+'/'+launchUrl, totalSlides||0, pkgId]);
       await logAudit(req.user.id, req.user.role, 'SCORM_UPLOAD', 'scorm_packages', pkgId, 'Uploaded SCORM package: '+pkgName, req.ip);
-      ok(res, { id:pkgId, package_name:pkgName, launch_url:'/uploads/scorm/'+pkgId+'/'+launchUrl, scorm_version:version, content_type:cType }, 'SCORM package uploaded successfully');
+      ok(res, { id:pkgId, package_name:pkgName, launch_url:'/uploads/scorm/'+pkgId+'/'+launchUrl, scorm_version:version, content_type:cType, total_slides:totalSlides }, 'SCORM package uploaded successfully');
     }
   } catch(e) { console.error('SCORM upload error:', e); err(res, e.message); }
 });
@@ -2961,7 +3015,7 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
 // List SCORM packages
 app.get('/api/v1/scorm/packages', auth, async (req, res) => {
   try {
-    const r = await pool.query(`SELECT sp.*,m.name AS module_name,c.name AS course_name FROM scorm_packages sp LEFT JOIN modules m ON sp.module_id=m.id LEFT JOIN courses c ON m.course_id=c.id ORDER BY sp.created_at DESC`);
+    const r = await pool.query(`SELECT sp.*,m.name AS module_name,m.course_id,c.name AS course_name FROM scorm_packages sp LEFT JOIN modules m ON sp.module_id=m.id LEFT JOIN courses c ON m.course_id=c.id ORDER BY sp.created_at DESC`);
     ok(res, r.rows);
   } catch(e) { err(res, e.message); }
 });
@@ -2969,7 +3023,15 @@ app.get('/api/v1/scorm/packages', auth, async (req, res) => {
 // Get single package
 app.get('/api/v1/scorm/packages/:id', auth, async (req, res) => {
   try {
-    const r = await pool.query(`SELECT sp.*,m.name AS module_name,c.name AS course_name FROM scorm_packages sp LEFT JOIN modules m ON sp.module_id=m.id LEFT JOIN courses c ON m.course_id=c.id WHERE sp.id=$1`,[req.params.id]);
+    const idParam = req.params.id;
+    if (String(idParam).startsWith('cc-')) {
+      const ccId = parseInt(idParam.slice(3));
+      const r = await pool.query('SELECT id, course_id, content_type, file_path AS upload_path, file_name AS package_name FROM course_content WHERE id=$1', [ccId]);
+      if (!r.rows[0]) return err(res, 'Content not found', 404);
+      const c = r.rows[0];
+      return ok(res, { id: 'cc-'+c.id, cc_id: c.id, package_name: c.package_name || 'Content', content_type: c.content_type || 'video', upload_path: c.upload_path, total_slides: 0, course_id: c.course_id });
+    }
+    const r = await pool.query(`SELECT sp.*,m.name AS module_name,m.course_id,c.name AS course_name FROM scorm_packages sp LEFT JOIN modules m ON sp.module_id=m.id LEFT JOIN courses c ON m.course_id=c.id WHERE sp.id=$1`,[idParam]);
     if (!r.rows[0]) return err(res,'Package not found',404);
     ok(res, r.rows[0]);
   } catch(e) { err(res, e.message); }
@@ -3069,9 +3131,10 @@ app.post('/api/v1/scorm/packages/:id/rescan', auth, adminOnly, async (req, res) 
     }
 
     const launchUrl = findLaunch(extractPath, manifestPath) || relManifest;
+    const totalSlides = countSlidesFromManifest(manifestPath);
     const newUploadPath = '/uploads/scorm/' + id + '/' + launchUrl;
-    console.log(`[RESCAN] Package ${id} -> launch URL: ${launchUrl}`);
-    await pool.query('UPDATE scorm_packages SET manifest_path=$1, upload_path=$2 WHERE id=$3', [relManifest, newUploadPath, id]);
+    console.log(`[RESCAN] Package ${id} -> launch URL: ${launchUrl}, slides: ${totalSlides}`);
+    await pool.query('UPDATE scorm_packages SET manifest_path=$1, upload_path=$2, total_slides=$3 WHERE id=$4', [relManifest, newUploadPath, totalSlides||0, id]);
     ok(res, { id, launch_url: newUploadPath }, 'Package rescanned successfully. New launch URL: ' + newUploadPath);
   } catch(e) { console.error('Rescan error:', e); err(res, e.message); }
 });
@@ -3089,61 +3152,182 @@ app.put('/api/v1/scorm/packages/:id/assign', auth, adminOnly, async (req, res) =
 app.get('/api/v1/scorm/tracking/:packageId', auth, async (req, res) => {
   try {
     let r;
+    const pkgId = req.params.packageId;
+    const isCc = String(pkgId).startsWith('cc-');
+    const ccId = isCc ? parseInt(pkgId.slice(3)) : null;
     if (req.user.role === 'participant') {
-      r = await pool.query('SELECT * FROM scorm_tracking WHERE participant_id=$1 AND package_id=$2', [req.user.id, req.params.packageId]);
+      r = isCc
+        ? await pool.query('SELECT * FROM scorm_tracking WHERE participant_id=$1 AND cc_content_id=$2', [req.user.id, ccId])
+        : await pool.query('SELECT * FROM scorm_tracking WHERE participant_id=$1 AND package_id=$2', [req.user.id, pkgId]);
     } else {
       const studentId = req.user.role === 'student' ? req.user.id : (req.query.student_id || req.user.id);
-      r = await pool.query('SELECT * FROM scorm_tracking WHERE student_id=$1 AND package_id=$2', [studentId, req.params.packageId]);
+      r = isCc
+        ? await pool.query('SELECT * FROM scorm_tracking WHERE student_id=$1 AND cc_content_id=$2', [studentId, ccId])
+        : await pool.query('SELECT * FROM scorm_tracking WHERE student_id=$1 AND package_id=$2', [studentId, pkgId]);
     }
     ok(res, r.rows[0] || { completion_status:'not attempted', score_raw:0, score_max:100, suspend_data:'', total_time:'0000:00:00.00' });
+  } catch(e) { err(res, e.message); }
+});
+
+// Per-course SCORM/video progress for current student (used for progress % on course cards)
+app.get('/api/v1/scorm/my-progress', auth, studentOnly, async (req, res) => {
+  try {
+    const sid = req.user.id;
+    // scorm_packages-based tracking
+    const r = await pool.query(`
+      SELECT COALESCE(st.course_id, m.course_id) AS course_id,
+             sp.total_slides, sp.content_type,
+             st.slide_times, st.completion_status, st.score_raw, st.total_time
+      FROM scorm_tracking st
+      JOIN scorm_packages sp ON st.package_id = sp.id
+      LEFT JOIN modules m ON sp.module_id = m.id
+      WHERE st.student_id = $1
+        AND COALESCE(st.course_id, m.course_id) IS NOT NULL
+    `, [sid]);
+    // course_content-based tracking (cc-N IDs)
+    const r2 = await pool.query(`
+      SELECT st.course_id, cc.content_type, 0 AS total_slides,
+             st.slide_times, st.completion_status, st.score_raw, st.total_time
+      FROM scorm_tracking st
+      JOIN course_content cc ON st.cc_content_id = cc.id
+      WHERE st.student_id = $1 AND st.course_id IS NOT NULL
+    `, [sid]).catch(() => ({ rows: [] }));
+    const allRows = [...r.rows, ...r2.rows];
+    const courseMap = {};
+    for (const row of allRows) {
+      const cid = String(row.course_id);
+      if (!courseMap[cid]) courseMap[cid] = { slides_visited: 0, total_slides: 0, score_raw: 0, time_seconds: 0, completed: false, is_video: false };
+      const st = row.slide_times && typeof row.slide_times === 'object' ? row.slide_times : {};
+      // Parse total_time "HHHH:MM:SS.cc" → seconds
+      const tm = (row.total_time||'').match(/(\d+):(\d+):(\d+)/);
+      const secs = tm ? parseInt(tm[1])*3600 + parseInt(tm[2])*60 + parseInt(tm[3]) : 0;
+      courseMap[cid].time_seconds += secs;
+      if (row.content_type === 'video') {
+        courseMap[cid].is_video = true;
+        courseMap[cid].score_raw = Math.max(courseMap[cid].score_raw, parseInt(row.score_raw) || 0);
+        if (st.video_seconds) courseMap[cid].slides_visited = Math.max(courseMap[cid].slides_visited, parseInt(st.video_seconds) || 0);
+        if (st.video_duration) courseMap[cid].total_slides = Math.max(courseMap[cid].total_slides, parseInt(st.video_duration) || 0);
+      } else {
+        const visited = Object.entries(st).filter(([k,v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0).length;
+        courseMap[cid].slides_visited += visited;
+        courseMap[cid].total_slides += (row.total_slides || 0);
+      }
+      if (row.completion_status === 'passed' || row.completion_status === 'completed') courseMap[cid].completed = true;
+    }
+    const result = {};
+    for (const [cid, d] of Object.entries(courseMap)) {
+      let pct = 0;
+      if (d.completed) {
+        pct = 100;
+      } else if (d.is_video) {
+        pct = Math.min(99, d.score_raw);
+      } else if (d.total_slides > 0 && d.slides_visited > 0) {
+        pct = Math.min(99, Math.round((d.slides_visited / d.total_slides) * 100));
+      } else if (d.score_raw > 0) {
+        // SCORM reported a score (e.g. 50 = 50%) — use directly as percentage
+        pct = Math.min(99, d.score_raw);
+      } else if (d.slides_visited > 0) {
+        // slide_times has entries but total_slides unknown — show "in progress" as 10% minimum
+        pct = 10;
+      }
+      result[cid] = { slides_visited: d.slides_visited, total_slides: d.total_slides, is_video: d.is_video, time_seconds: d.time_seconds, pct };
+    }
+    ok(res, result);
   } catch(e) { err(res, e.message); }
 });
 
 // Save tracking data (called by SCORM player on LMSCommit/LMSFinish)
 app.post('/api/v1/scorm/tracking', auth, async (req, res) => {
   try {
-    const { package_id, completion_status, score_raw, score_max, total_time, suspend_data } = req.body;
+    const { package_id, course_id, completion_status, score_raw, score_max, total_time, suspend_data, slide_times, slide_visits } = req.body;
     const isCompleted = completion_status === 'passed' || completion_status === 'completed';
+    const slideTimesJson = JSON.stringify(slide_times && typeof slide_times === 'object' ? slide_times : {});
+    const slideVisitsJson = JSON.stringify(slide_visits && typeof slide_visits === 'object' ? slide_visits : {});
+    const isCc = String(package_id || '').startsWith('cc-');
+    const ccId = isCc ? parseInt(String(package_id).slice(3)) : null;
+    const pkgId = isCc ? null : (package_id || null);
 
     if (req.user.role === 'participant') {
-      // ── PARTICIPANT tracking ──────────────────────────────────────────────────
-      await pool.query(`INSERT INTO scorm_tracking(participant_id,package_id,completion_status,score_raw,score_max,total_time,suspend_data,last_accessed)
-        VALUES($1,$2,$3,$4,$5,$6,$7,NOW())
-        ON CONFLICT (participant_id,package_id) WHERE participant_id IS NOT NULL DO UPDATE SET
-          completion_status=$3,score_raw=$4,score_max=$5,total_time=$6,suspend_data=$7,last_accessed=NOW()`,
-        [req.user.id, package_id, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'']);
-
-      // Parse CMI total_time (e.g. "0001:23:45.00") into seconds for participant_progress
-      const tStr = total_time || '0000:00:00.00';
-      const tMatch = tStr.match(/(\d+):(\d+):(\d+)/);
-      const timeSeconds = tMatch ? parseInt(tMatch[1])*3600 + parseInt(tMatch[2])*60 + parseInt(tMatch[3]) : 0;
-
-      // Update participant_progress (module-level progress)
-      const pkg = await pool.query('SELECT module_id FROM scorm_packages WHERE id=$1',[package_id]);
-      if (pkg.rows[0]?.module_id) {
-        await pool.query(`
-          INSERT INTO participant_progress(participant_id,module_id,completed,completed_at,time_spent_seconds,last_accessed)
-          VALUES($1,$2,$3,$4,$5,NOW())
-          ON CONFLICT(participant_id,module_id) DO UPDATE SET
-            completed = CASE WHEN $3=TRUE THEN TRUE ELSE participant_progress.completed END,
-            completed_at = CASE WHEN $3=TRUE AND participant_progress.completed_at IS NULL THEN NOW() ELSE participant_progress.completed_at END,
-            time_spent_seconds = GREATEST(participant_progress.time_spent_seconds, $5),
-            last_accessed = NOW()`,
-          [req.user.id, pkg.rows[0].module_id, isCompleted, isCompleted ? new Date() : null, timeSeconds]);
+      // If course_id not provided, derive from package module or participant's assignment
+      let effectivePartCourseId = course_id || null;
+      if (!effectivePartCourseId && pkgId) {
+        const pkgCourse = await pool.query('SELECT m.course_id FROM scorm_packages sp LEFT JOIN modules m ON sp.module_id=m.id WHERE sp.id=$1', [pkgId]);
+        effectivePartCourseId = pkgCourse.rows[0]?.course_id || null;
+      }
+      if (!effectivePartCourseId) {
+        const assigned = await pool.query('SELECT course_id FROM corporate_course_assignments WHERE participant_id=$1 ORDER BY assigned_at DESC LIMIT 1', [req.user.id]);
+        effectivePartCourseId = assigned.rows[0]?.course_id || null;
+      }
+      if (isCc) {
+        await pool.query(`INSERT INTO scorm_tracking(participant_id,cc_content_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,slide_times,slide_visits,last_accessed)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,NOW())
+          ON CONFLICT(participant_id,cc_content_id) WHERE participant_id IS NOT NULL AND cc_content_id IS NOT NULL DO UPDATE SET
+            course_id=COALESCE($3,scorm_tracking.course_id),
+            completion_status=$4,score_raw=$5,score_max=$6,total_time=$7,suspend_data=$8,
+            slide_times=CASE WHEN $9::jsonb='{}' THEN scorm_tracking.slide_times ELSE $9::jsonb END,
+            slide_visits=CASE WHEN $10::jsonb='{}' THEN scorm_tracking.slide_visits ELSE $10::jsonb END,last_accessed=NOW()`,
+          [req.user.id, ccId, effectivePartCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', slideTimesJson, slideVisitsJson]);
+      } else {
+        // ── PARTICIPANT tracking ────────────────────────────────────────────────
+        await pool.query(`INSERT INTO scorm_tracking(participant_id,package_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,slide_times,slide_visits,last_accessed)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,NOW())
+          ON CONFLICT (participant_id,package_id) WHERE participant_id IS NOT NULL DO UPDATE SET
+            course_id=COALESCE($3,scorm_tracking.course_id),
+            completion_status=$4,score_raw=$5,score_max=$6,total_time=$7,suspend_data=$8,
+            slide_times=CASE WHEN $9::jsonb='{}' THEN scorm_tracking.slide_times ELSE $9::jsonb END,
+            slide_visits=CASE WHEN $10::jsonb='{}' THEN scorm_tracking.slide_visits ELSE $10::jsonb END,last_accessed=NOW()`,
+          [req.user.id, pkgId, effectivePartCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', slideTimesJson, slideVisitsJson]);
+        const tStr = total_time || '0000:00:00.00';
+        const tMatch = tStr.match(/(\d+):(\d+):(\d+)/);
+        const timeSeconds = tMatch ? parseInt(tMatch[1])*3600 + parseInt(tMatch[2])*60 + parseInt(tMatch[3]) : 0;
+        const pkg = await pool.query('SELECT module_id FROM scorm_packages WHERE id=$1',[pkgId]);
+        if (pkg.rows[0]?.module_id) {
+          await pool.query(`INSERT INTO participant_progress(participant_id,module_id,completed,completed_at,time_spent_seconds,last_accessed)
+            VALUES($1,$2,$3,$4,$5,NOW())
+            ON CONFLICT(participant_id,module_id) DO UPDATE SET
+              completed=CASE WHEN $3=TRUE THEN TRUE ELSE participant_progress.completed END,
+              completed_at=CASE WHEN $3=TRUE AND participant_progress.completed_at IS NULL THEN NOW() ELSE participant_progress.completed_at END,
+              time_spent_seconds=GREATEST(participant_progress.time_spent_seconds,$5),last_accessed=NOW()`,
+            [req.user.id, pkg.rows[0].module_id, isCompleted, isCompleted ? new Date() : null, timeSeconds]);
+        }
       }
     } else {
       // ── STUDENT / other tracking ─────────────────────────────────────────────
       const studentId = req.user.role === 'student' ? req.user.id : (req.body.student_id || req.user.id);
-      await pool.query(`INSERT INTO scorm_tracking(student_id,package_id,completion_status,score_raw,score_max,total_time,suspend_data,last_accessed)
-        VALUES($1,$2,$3,$4,$5,$6,$7,NOW())
-        ON CONFLICT(student_id,package_id) DO UPDATE SET
-          completion_status=$3,score_raw=$4,score_max=$5,total_time=$6,suspend_data=$7,last_accessed=NOW()`,
-        [studentId, package_id, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'']);
-      // Update student_progress on completion
-      if (isCompleted) {
-        const pkg = await pool.query('SELECT module_id FROM scorm_packages WHERE id=$1',[package_id]);
-        if (pkg.rows[0]?.module_id) {
-          await pool.query(`INSERT INTO student_progress(student_id,module_id,completed,completed_at) VALUES($1,$2,TRUE,NOW()) ON CONFLICT(student_id,module_id) DO UPDATE SET completed=TRUE,completed_at=NOW()`,[studentId, pkg.rows[0].module_id]);
+      // If course_id not provided by player, derive it from student's assigned course
+      let effectiveCourseId = course_id || null;
+      if (!effectiveCourseId && req.user.role === 'student') {
+        const sRow = await pool.query('SELECT course_id FROM students WHERE id=$1', [studentId]);
+        effectiveCourseId = sRow.rows[0]?.course_id || null;
+      }
+      // Also try to derive from package's module if still null
+      if (!effectiveCourseId && pkgId) {
+        const pkgCourse = await pool.query('SELECT m.course_id FROM scorm_packages sp LEFT JOIN modules m ON sp.module_id=m.id WHERE sp.id=$1', [pkgId]);
+        effectiveCourseId = pkgCourse.rows[0]?.course_id || null;
+      }
+      if (isCc) {
+        await pool.query(`INSERT INTO scorm_tracking(student_id,cc_content_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,slide_times,slide_visits,last_accessed)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,NOW())
+          ON CONFLICT(student_id,cc_content_id) WHERE student_id IS NOT NULL AND cc_content_id IS NOT NULL DO UPDATE SET
+            course_id=COALESCE($3,scorm_tracking.course_id),
+            completion_status=$4,score_raw=$5,score_max=$6,total_time=$7,suspend_data=$8,
+            slide_times=CASE WHEN $9::jsonb='{}' THEN scorm_tracking.slide_times ELSE $9::jsonb END,
+            slide_visits=CASE WHEN $10::jsonb='{}' THEN scorm_tracking.slide_visits ELSE $10::jsonb END,last_accessed=NOW()`,
+          [studentId, ccId, effectiveCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', slideTimesJson, slideVisitsJson]);
+      } else {
+        await pool.query(`INSERT INTO scorm_tracking(student_id,package_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,slide_times,slide_visits,last_accessed)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,NOW())
+          ON CONFLICT(student_id,package_id) DO UPDATE SET
+            course_id=COALESCE($3,scorm_tracking.course_id),
+            completion_status=$4,score_raw=$5,score_max=$6,total_time=$7,suspend_data=$8,
+            slide_times=CASE WHEN $9::jsonb='{}' THEN scorm_tracking.slide_times ELSE $9::jsonb END,
+            slide_visits=CASE WHEN $10::jsonb='{}' THEN scorm_tracking.slide_visits ELSE $10::jsonb END,last_accessed=NOW()`,
+          [studentId, pkgId, effectiveCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', slideTimesJson, slideVisitsJson]);
+        if (isCompleted) {
+          const pkg = await pool.query('SELECT module_id FROM scorm_packages WHERE id=$1',[pkgId]);
+          if (pkg.rows[0]?.module_id) {
+            await pool.query(`INSERT INTO student_progress(student_id,module_id,completed,completed_at) VALUES($1,$2,TRUE,NOW()) ON CONFLICT(student_id,module_id) DO UPDATE SET completed=TRUE,completed_at=NOW()`,[studentId, pkg.rows[0].module_id]);
+          }
         }
       }
     }
@@ -3152,14 +3336,45 @@ app.post('/api/v1/scorm/tracking', auth, async (req, res) => {
 });
 
 // Get all tracking records (admin/trainer view)
-app.get('/api/v1/scorm/tracking-all', auth, requireRole('admin','trainer'), async (req, res) => {
+app.get('/api/v1/scorm/tracking-all', auth, requireRole('admin','trainer','corporate'), async (req, res) => {
   try {
     const { package_id } = req.query;
-    let q = `SELECT st.*,s.name AS student_name,sp.package_name FROM scorm_tracking st JOIN students s ON st.student_id=s.id JOIN scorm_packages sp ON st.package_id=sp.id WHERE 1=1`;
-    const params = [];
-    if (package_id) { params.push(package_id); q += ` AND st.package_id=$${params.length}`; }
+    let q, params = [];
+    if (req.user.role === 'corporate') {
+      const { participant_id } = req.query;
+      q = `SELECT st.*,cp.name AS student_name,sp.package_name,sp.total_slides,sp.scorm_version,sp.content_type FROM scorm_tracking st JOIN corporate_participants cp ON st.participant_id=cp.id JOIN scorm_packages sp ON st.package_id=sp.id WHERE cp.corporate_id=$1`;
+      params.push(req.user.id);
+      if (package_id) { params.push(package_id); q += ` AND st.package_id=$${params.length}`; }
+      if (participant_id) { params.push(participant_id); q += ` AND st.participant_id=$${params.length}`; }
+    } else {
+      const { student_id } = req.query;
+      q = `SELECT st.*,s.name AS student_name,sp.package_name,sp.total_slides,sp.scorm_version,sp.content_type FROM scorm_tracking st JOIN students s ON st.student_id=s.id JOIN scorm_packages sp ON st.package_id=sp.id WHERE st.student_id IS NOT NULL`;
+      if (package_id) { params.push(package_id); q += ` AND st.package_id=$${params.length}`; }
+      if (student_id) { params.push(student_id); q += ` AND st.student_id=$${params.length}`; }
+    }
     q += ' ORDER BY st.last_accessed DESC';
     ok(res, (await pool.query(q, params)).rows);
+  } catch(e) { err(res, e.message); }
+});
+
+// Get per-slide SCORM time for a specific student (admin) or participant (corporate)
+app.get('/api/v1/scorm/slide-times/:packageId', auth, async (req, res) => {
+  try {
+    const { packageId } = req.params;
+    const { student_id, participant_id } = req.query;
+    let r;
+    if (participant_id) {
+      r = await pool.query('SELECT slide_times,total_time,completion_status FROM scorm_tracking WHERE participant_id=$1 AND package_id=$2',[participant_id, packageId]);
+    } else if (student_id) {
+      r = await pool.query('SELECT slide_times,total_time,completion_status FROM scorm_tracking WHERE student_id=$1 AND package_id=$2',[student_id, packageId]);
+    } else if (req.user.role === 'student') {
+      r = await pool.query('SELECT slide_times,total_time,completion_status FROM scorm_tracking WHERE student_id=$1 AND package_id=$2',[req.user.id, packageId]);
+    } else if (req.user.role === 'participant') {
+      r = await pool.query('SELECT slide_times,total_time,completion_status FROM scorm_tracking WHERE participant_id=$1 AND package_id=$2',[req.user.id, packageId]);
+    } else {
+      return err(res, 'Missing student_id or participant_id');
+    }
+    ok(res, r.rows[0] || { slide_times: {}, total_time: '0000:00:00.00', completion_status: 'not attempted' });
   } catch(e) { err(res, e.message); }
 });
 

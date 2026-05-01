@@ -88,6 +88,7 @@ tr:hover td{background:#f0fdf4;}
   <span class="sb-section">Courses</span>
   <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Available Courses</button>
   <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-bar"></i>Progress Report</button>
+  <button class="nav-item" onclick="showSection('scorm')"><i class="fas fa-cube"></i>SCORM Analytics</button>
   <span class="sb-section">Account</span>
   <button class="nav-item" onclick="showSection('settings')"><i class="fas fa-cog"></i>Settings / Branding</button>
   <div class="sb-footer">
@@ -258,6 +259,50 @@ tr:hover td{background:#f0fdf4;}
     </div>
   </div>
 
+  <!-- SCORM ANALYTICS -->
+  <div class="section" id="sec-scorm">
+    <div style="margin-bottom:20px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--navy);">SCORM Analytics</span>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px;">View SCORM e-learning progress and slide analytics for your participants.</p>
+    </div>
+    <!-- Package selector + participant filter -->
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">SCORM Package</label>
+          <select id="corpScormPkgSel" onchange="loadCorpScormData()" style="width:100%;padding:8px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;background:#fff;">
+            <option value="">— Select Package —</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Participant</label>
+          <select id="corpScormPartSel" onchange="loadCorpScormAnalytics()" style="width:100%;padding:8px 12px;border:1.5px solid var(--brd);border-radius:8px;font-size:13px;outline:none;background:#fff;">
+            <option value="">— Select Participant —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <!-- Summary table -->
+    <div class="card" style="margin-bottom:20px;" id="corpScormTableCard">
+      <div class="card-header"><span class="card-title"><i class="fas fa-table" style="color:var(--teal);margin-right:6px;"></i>Participant Progress</span></div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:var(--bg);">
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Participant</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Status</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Score</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Slides Visited</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Time Spent</th>
+            <th style="padding:10px 12px;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;">Analytics</th>
+          </tr></thead>
+          <tbody id="corpScormTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Select a SCORM package to view participant progress.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Per-participant analytics panel -->
+    <div id="corpScormAnalyticsPanel" style="display:none;"></div>
+  </div>
+
   <!-- SETTINGS / BRANDING -->
   <div class="section" id="sec-settings">
     <div class="card" style="max-width:520px;">
@@ -368,15 +413,175 @@ function logout(){localStorage.removeItem('corp_token');localStorage.removeItem(
 function openModal(id){document.getElementById('modalOverlay').classList.add('open');}
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
 
-const sectionTitles={overview:'Overview',participants:'All Participants','add-participant':'Add Participant','bulk-upload':'Bulk Upload',courses:'Available Courses',progress:'Progress Report',settings:'Settings / Branding'};
+const sectionTitles={overview:'Overview',participants:'All Participants','add-participant':'Add Participant','bulk-upload':'Bulk Upload',courses:'Available Courses',progress:'Progress Report',scorm:'SCORM Analytics',settings:'Settings / Branding'};
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const sec=document.getElementById('sec-'+name);if(sec)sec.classList.add('active');
   document.getElementById('pageTitle').textContent=sectionTitles[name]||name;
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.textContent.trim()===sectionTitles[name])n.classList.add('active');});
-  const loaders={overview:loadOverview,participants:loadParticipants,'add-participant':loadCourseCheckboxes,'bulk-upload':loadBulkCourseCheckboxes,courses:loadCorpCourses,progress:()=>switchProgressTab('participant'),settings:loadCorpSettings};
+  const loaders={overview:loadOverview,participants:loadParticipants,'add-participant':loadCourseCheckboxes,'bulk-upload':loadBulkCourseCheckboxes,courses:loadCorpCourses,progress:()=>switchProgressTab('participant'),scorm:loadCorpScorm,settings:loadCorpSettings};
   if(loaders[name])loaders[name]();
+}
+
+// ── SCORM ANALYTICS ──────────────────────────────────────────────────────────
+function _corpFmtSec(s){s=parseInt(s)||0;if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';}
+function _corpStatusBadge(st){
+  const col={passed:'#1b5e20',completed:'#1b5e20',incomplete:'#e65100','not attempted':'#546e7a',failed:'#b71c1c',browsed:'#1565c0'};
+  const bg={passed:'#e8f5e9',completed:'#e8f5e9',incomplete:'#fff3e0','not attempted':'#eceff1',failed:'#fdecea',browsed:'#e3f2fd'};
+  const lbl={passed:'Passed ✓',completed:'Completed ✓',incomplete:'In Progress','not attempted':'Not Started',failed:'Failed ✗',browsed:'Browsed'};
+  const c=col[st]||'#546e7a';const b=bg[st]||'#eceff1';
+  return`<span style="padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${b};color:${c};">${lbl[st]||st}</span>`;
+}
+
+let _corpScormPkgs=[];
+let _corpParticipants=[];
+let _corpTrackingCache={};
+
+async function loadCorpScorm(){
+  document.getElementById('corpScormAnalyticsPanel').style.display='none';
+  document.getElementById('corpScormTbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  // FIX: correct endpoints — /corporate/participants not /participants
+  const [pkgR, partR]=await Promise.all([api('GET','/scorm/packages'), api('GET','/corporate/participants')]);
+  _corpScormPkgs=pkgR.data||[];
+  _corpParticipants=partR.data||[];
+  const pkgSel=document.getElementById('corpScormPkgSel');
+  pkgSel.innerHTML='<option value="">— Select Package —</option>'+_corpScormPkgs.map(p=>`<option value="${p.id}">${p.package_name||'Package '+p.id}${p.course_name?' ('+p.course_name+')':''}</option>`).join('');
+  const partSel=document.getElementById('corpScormPartSel');
+  partSel.innerHTML='<option value="">— All Participants —</option>'+_corpParticipants.map(p=>`<option value="${p.id}">${p.name||p.email}</option>`).join('');
+  if(!_corpScormPkgs.length){
+    document.getElementById('corpScormTbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">No SCORM packages found. Upload content from the Admin panel.</td></tr>';
+  } else {
+    document.getElementById('corpScormTbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Select a SCORM package above to view participant progress.</td></tr>';
+  }
+}
+
+async function loadCorpScormData(){
+  const pkgId=document.getElementById('corpScormPkgSel').value;
+  document.getElementById('corpScormAnalyticsPanel').style.display='none';
+  if(!pkgId){
+    document.getElementById('corpScormTbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Select a SCORM package above.</td></tr>';
+    return;
+  }
+  document.getElementById('corpScormTbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);"><i class="fas fa-spinner fa-spin"></i> Loading tracking data…</td></tr>';
+  const r=await api('GET','/scorm/tracking-all?package_id='+pkgId);
+  const rows=r.data||[];
+  _corpTrackingCache={};
+  // FIX: API returns student_name (aliased from cp.name), not participant_name
+  rows.forEach(row=>{if(row.participant_id)_corpTrackingCache[row.participant_id]=row;});
+  if(!rows.length){
+    document.getElementById('corpScormTbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">No participant has accessed this SCORM package yet.</td></tr>';
+    return;
+  }
+  document.getElementById('corpScormTbody').innerHTML=rows.map(row=>{
+    const st=row.completion_status||'not attempted';
+    const slides=row.slide_times&&typeof row.slide_times==='object'?row.slide_times:{};
+    const visitedSlides=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>0).length;
+    const totalSpent=Object.entries(slides).filter(([k])=>k!=='video_seconds'&&k!=='video_duration').reduce((a,[,v])=>a+parseInt(v),0);
+    // FIX: use student_name (the aliased field from server SQL)
+    const displayName=row.student_name||row.participant_name||'Participant #'+row.participant_id;
+    return`<tr>
+      <td style="padding:10px 12px;font-size:13px;font-weight:600;color:var(--navy);">${displayName}</td>
+      <td style="padding:10px 12px;">${_corpStatusBadge(st)}</td>
+      <td style="padding:10px 12px;font-size:13px;">${row.score_raw!=null&&row.score_raw!==''?row.score_raw+'/'+(row.score_max||100):'—'}</td>
+      <td style="padding:10px 12px;font-size:13px;">${visitedSlides>0?visitedSlides+' slides':'—'}</td>
+      <td style="padding:10px 12px;font-size:13px;">${totalSpent>0?_corpFmtSec(totalSpent):(row.total_time||'—')}</td>
+      <td style="padding:10px 12px;">
+        <button onclick="viewCorpAnalytics(${row.participant_id||0})" class="btn btn-outline btn-sm" style="font-size:11px;">
+          <i class="fas fa-chart-bar"></i> View
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function loadCorpScormAnalytics(){
+  const partId=parseInt(document.getElementById('corpScormPartSel').value);
+  if(!partId)return;
+  viewCorpAnalytics(partId);
+}
+
+/* ── SCORM DASHBOARD MODAL (testing-style dark overlay) ── */
+function showScormDashboard(pkgName,tracking,pkgMeta,label){
+  const ex=document.getElementById('_scormDash');if(ex)ex.remove();
+  tracking=tracking||{};pkgMeta=pkgMeta||{};
+  const st=tracking.completion_status||'not attempted';
+  const sRaw=parseInt(tracking.score_raw)||0,sMax=parseInt(tracking.score_max)||100;
+  const sPct=sMax>0?Math.round((sRaw/sMax)*100):0;
+  let tot=parseInt(pkgMeta.total_slides)||0;
+  const stObj=tracking.slide_times&&typeof tracking.slide_times==='object'?tracking.slide_times:{};
+  const svObj=tracking.slide_visits&&typeof tracking.slide_visits==='object'?tracking.slide_visits:{};
+  const _f=s=>{s=parseInt(s)||0;if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';};
+  const _vk=Object.keys(stObj).filter(k=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(stObj[k])>0).map(k=>parseInt(k)||0);
+  const _mx=_vk.length>0?Math.max(..._vk):0;
+  if(tot<=1&&_mx>tot)tot=_mx;
+  const allSlides=[];
+  if(tot>0){for(let i=1;i<=tot;i++){const id=String(i);allSlides.push({id,spent:parseInt(stObj[id])||0,visits:parseInt(svObj[id])||0});}}
+  else{_vk.sort((a,b)=>a-b).forEach(k=>allSlides.push({id:String(k),spent:parseInt(stObj[String(k)])||0,visits:parseInt(svObj[String(k)])||0}));}
+  const vc=allSlides.filter(s=>s.spent>0||s.visits>0).length;
+  const ts=allSlides.reduce((a,s)=>a+s.spent,0),mx=Math.max(...allSlides.map(s=>s.spent),1),tv=allSlides.reduce((a,s)=>a+s.visits,0);
+  const _ttm=(tracking.total_time||'').match(/(\d+):(\d+):(\d+)/);
+  const _tts=_ttm?parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]):0;
+  const _dispTs=ts>0?ts:_tts;
+  let pct=0;if(st==='passed'||st==='completed')pct=100;else if(tot>0&&vc>0)pct=Math.min(99,Math.round(vc/tot*100));else if(sRaw>0)pct=Math.min(99,sRaw);else if(vc>0)pct=Math.min(95,vc*8);
+  const dc=pct>=80?'#22c55e':pct>=40?'#6366f1':'#f59e0b';
+  const circ=2*Math.PI*52,dash=circ-(pct/100)*circ;
+  const sMap={passed:'Passed ✓',completed:'Completed ✓',incomplete:'Incomplete','not attempted':'Not Started',failed:'Failed ✗',browsed:'Browsed'};
+  const sBg={passed:'#166534',completed:'#166534',incomplete:'#92400e','not attempted':'#1e293b',failed:'#7f1d1d',browsed:'#1e3a5f'};
+  const sCol={passed:'#86efac',completed:'#86efac',incomplete:'#fde68a','not attempted':'#94a3b8',failed:'#fca5a5',browsed:'#93c5fd'};
+  const bg=p=>p>=80?'#22c55e,#86efac':p>=40?'#6366f1,#a78bfa':'#ef4444,#fca5a5';
+  const ver=pkgMeta.content_type==='video'?'VIDEO':pkgMeta.scorm_version==='2004'?'SCORM 2004':'SCORM 1.2';
+  const pUrl=pkgMeta.id?`scorm-player.html?pkg=${pkgMeta.id}&name=${encodeURIComponent(pkgName)}`:'#';
+  const rows=allSlides.length?allSlides.map(s=>{
+    const w=s.spent>0?Math.round((s.spent/mx)*100):0,v=s.spent>0||s.visits>0;
+    return`<tr style="border-bottom:1px solid #1e2139;${!v?'opacity:.45':''}"><td style="padding:9px 12px;white-space:nowrap;width:80px;font-weight:700;font-size:13px;color:${v?'#e2e8f0':'#475569'};">Slide ${s.id}</td><td style="padding:9px 12px;">${v?`<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;background:#252840;border-radius:4px;height:10px;overflow:hidden;"><div style="width:${w}%;height:100%;border-radius:4px;background:linear-gradient(90deg,#c084fc,#e879f9);min-width:3px;"></div></div><span style="font-size:12px;font-weight:700;color:#c084fc;width:52px;text-align:right;font-family:monospace;">${_f(s.spent)}</span></div>`:'<span style="color:#475569;font-size:12px;">—</span>'}</td><td style="padding:9px 12px;white-space:nowrap;">${s.visits>0?`<span style="background:#2d3148;border-radius:10px;padding:2px 10px;font-size:11px;color:#e2e8f0;display:inline-block;"><i class="fas fa-eye" style="margin-right:4px;font-size:10px;"></i>${s.visits}x</span>`:'<span style="color:#475569;font-size:12px;">Not viewed</span>'}</td></tr>`;
+  }).join(''):`<tr><td colspan="3" style="text-align:center;padding:28px;color:#64748b;">${_tts>0?'No per-slide data for this package.<br><small style="color:#475569;">Total session time recorded: '+_f(_tts)+'</small>':'Launch the course to see slide analytics.'}</td></tr>`;
+  const el=document.createElement('div');el.id='_scormDash';
+  el.style.cssText='position:fixed;inset:0;background:#0f1117;z-index:9999;overflow-y:auto;font-family:"Inter",system-ui,sans-serif;color:#e2e8f0;';
+  el.innerHTML=`<nav style="background:#1a1d2e;border-bottom:1px solid #2d3148;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;"><div style="display:flex;align-items:center;gap:12px;"><button onclick="document.getElementById('_scormDash').remove()" style="background:rgba(255,255,255,.1);border:none;color:#e2e8f0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">← Back</button><span style="color:#94a3b8;font-size:13px;">SCORM Analytics${label?' — '+label:''}</span></div><span style="color:#94a3b8;font-size:13px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkgName}</span></nav>
+  <div style="max-width:1100px;margin:0 auto;padding:24px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;"><div><h4 style="font-size:20px;font-weight:700;color:#e2e8f0;margin:0 0 8px;">${pkgName}</h4><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span style="background:#334155;color:#94a3b8;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;">${ver}</span><span style="background:${sBg[st]||'#1e293b'};color:${sCol[st]||'#94a3b8'};padding:3px 12px;border-radius:6px;font-size:12px;font-weight:700;">${sMap[st]||st}</span>${label?`<span style="color:#64748b;font-size:13px;">· ${label}</span>`:''}</div></div>${pkgMeta.id?`<a href="${pUrl}" style="display:inline-flex;align-items:center;gap:8px;background:#6366f1;color:#fff;padding:8px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;"><i class="fas fa-play"></i> Launch / Resume Course</a>`:''}</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;"><div style="font-size:24px;margin-bottom:8px;"><i class="fas fa-circle-check" style="color:#6366f1;"></i></div><div style="font-size:28px;font-weight:700;line-height:1;">${pct}%</div><div style="color:#94a3b8;font-size:12px;margin-top:4px;">Completion</div></div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;"><div style="font-size:24px;margin-bottom:8px;"><i class="fas fa-star" style="color:#f59e0b;"></i></div><div style="font-size:28px;font-weight:700;line-height:1;color:${sRaw>0?(sPct>=60?'#22c55e':'#ef4444'):'#64748b'};">${sRaw>0?sRaw+'%':'N/A'}</div><div style="color:#94a3b8;font-size:12px;margin-top:4px;">Score</div></div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;"><div style="font-size:24px;margin-bottom:8px;"><i class="fas fa-layer-group" style="color:#38bdf8;"></i></div><div style="font-size:28px;font-weight:700;line-height:1;">${tot||vc||'—'}</div><div style="color:#94a3b8;font-size:12px;margin-top:4px;">Total Slides</div></div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;"><div style="font-size:24px;margin-bottom:8px;"><i class="fas fa-eye" style="color:#a78bfa;"></i></div><div style="font-size:28px;font-weight:700;line-height:1;">${vc}</div><div style="color:#94a3b8;font-size:12px;margin-top:4px;">Slides Visited</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:16px;"><i class="fas fa-clock-rotate-left" style="font-size:26px;color:#c084fc;flex-shrink:0;"></i><div><div style="font-size:22px;font-weight:700;">${_dispTs>0?_f(_dispTs):'—'}</div><div style="color:#94a3b8;font-size:12px;margin-top:2px;">Total Time Spent (incl. pauses &amp; replays)</div></div></div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:16px;"><i class="fas fa-check-double" style="font-size:26px;color:#38bdf8;flex-shrink:0;"></i><div><div style="font-size:22px;font-weight:700;">${vc} / ${tot||vc}</div><div style="color:#94a3b8;font-size:12px;margin-top:2px;">Slides Completed</div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;">
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:24px;">
+        <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;font-weight:600;">Overall Completion</div>
+        <div style="position:relative;width:160px;height:160px;margin:0 auto 20px;"><svg width="160" height="160" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#2d3148" stroke-width="12"/><circle cx="60" cy="60" r="52" fill="none" stroke="${dc}" stroke-width="12" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${dash.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;"><div style="font-size:28px;font-weight:800;line-height:1;">${pct}%</div><div style="font-size:11px;color:#94a3b8;">Complete</div></div></div>
+        <div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:#94a3b8;">Progress</span><span>${pct}%</span></div><div style="background:#2d3148;height:10px;border-radius:6px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${bg(pct)});border-radius:6px;"></div></div></div>
+        ${sRaw>0?`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:#94a3b8;">Score</span><span>${sPct}%</span></div><div style="background:#2d3148;height:10px;border-radius:6px;overflow:hidden;"><div style="height:100%;width:${sPct}%;background:linear-gradient(90deg,${bg(sPct)});border-radius:6px;"></div></div></div>`:''}
+        <div style="text-align:center;margin-top:14px;"><span style="background:${sBg[st]||'#1e293b'};color:${sCol[st]||'#94a3b8'};padding:5px 16px;border-radius:20px;font-size:12px;font-weight:700;">${sMap[st]||st}</span></div>
+      </div>
+      <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><span style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;">Time Spent — Per Slide</span><div style="display:flex;align-items:center;gap:10px;"><span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c084fc;"></span><span style="font-size:11px;color:#c084fc;">Time Spent</span></span><span style="background:#2d3148;color:#94a3b8;border-radius:8px;padding:2px 10px;font-size:11px;">${tot||allSlides.length} slides</span></div></div>
+        <div style="text-align:right;font-size:11px;color:#94a3b8;margin-bottom:8px;">${vc}/${tot||allSlides.length} slides viewed</div>
+        <div style="max-height:420px;overflow-y:auto;border-radius:8px;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="position:sticky;top:0;background:#1a1d2e;"><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:90px;border-bottom:1px solid #2d3148;">Slide</th><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid #2d3148;">Time Spent</th><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:100px;border-bottom:1px solid #2d3148;">Visits</th></tr></thead><tbody>${rows}</tbody><tfoot><tr style="background:#12152a;"><td style="padding:10px 12px;font-weight:600;font-size:13px;">Total</td><td style="padding:10px 12px;font-size:13px;color:#c084fc;font-weight:600;">${_dispTs>0?_f(_dispTs):'—'}</td><td style="padding:10px 12px;font-size:13px;color:#94a3b8;">${tv>0?tv+' visits':'—'}</td></tr></tfoot></table></div>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(el);el.scrollTop=0;
+}
+
+function viewCorpAnalytics(participantId){
+  const tracking=_corpTrackingCache[participantId];
+  if(!tracking){showToast('No tracking data for this participant yet.','');return;}
+  const pkg=_corpScormPkgs.find(p=>String(p.id)===document.getElementById('corpScormPkgSel').value)||{};
+  const partFromList=_corpParticipants.find(p=>p.id===participantId)||{};
+  const partName=tracking.student_name||partFromList.name||'Participant';
+  const pkgMeta={
+    id:tracking.package_id||pkg.id,
+    total_slides:tracking.total_slides||pkg.total_slides||0,
+    scorm_version:tracking.scorm_version||pkg.scorm_version||'1.2',
+    content_type:tracking.content_type||pkg.content_type||'scorm'
+  };
+  showScormDashboard(tracking.package_name||pkg.package_name||'SCORM Package',tracking,pkgMeta,partName);
 }
 
 // ── SETTINGS / BRANDING ──────────────────────────────────────────────────────
@@ -707,6 +912,7 @@ async function loadProgressByParticipant(){
           <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;">Course-wise Progress</th>
           <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;white-space:nowrap;">Overall</th>
           <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;white-space:nowrap;">Status</th>
+          <th style="padding:10px 14px;text-align:left;color:var(--navy);font-weight:700;white-space:nowrap;">Details</th>
         </tr>
       </thead>
       <tbody id="progressPartTbody"></tbody>
@@ -785,6 +991,11 @@ function renderProgressRows(list){
         </div>
       </td>
       <td style="padding:12px 14px;">${statusBadge}</td>
+      <td style="padding:12px 14px;">
+        <button onclick="viewParticipantSlideTime(${p.id},${JSON.stringify(p.name||'')})" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;border:1.5px solid var(--brd);background:#fff;font-size:12px;font-weight:600;cursor:pointer;color:var(--navy);" onmouseover="this.style.borderColor='var(--teal)';this.style.color='var(--teal)'" onmouseout="this.style.borderColor='var(--brd)';this.style.color='var(--navy)'">
+          <i class="fas fa-layer-group"></i> Slides
+        </button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -793,6 +1004,41 @@ function filterProgressByName(){
   const q = (document.getElementById('progressPartSearch')?.value||'').toLowerCase().trim();
   const filtered = q ? _allProgressParticipants.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.email||'').toLowerCase().includes(q)) : _allProgressParticipants;
   renderProgressRows(filtered);
+}
+
+async function viewParticipantSlideTime(participantId, participantName){
+  const overlay = document.getElementById('progressModalOverlay');
+  document.getElementById('progressModalTitle').textContent = '📊 ' + participantName + ' — Per-Slide Time';
+  document.getElementById('progressModalSummary').innerHTML = '';
+  document.getElementById('progressModalBody').innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;">Loading…</p></div>';
+  overlay.style.display = 'flex';
+
+  const fmtSec = s => { s=parseInt(s)||0; if(s<60)return s+'s'; if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s'; return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m'; };
+  const r = await api('GET', '/scorm/tracking-all?participant_id='+participantId);
+  const rows = Array.isArray(r.data) ? r.data : (Array.isArray(r) ? r : []);
+  const withSlides = rows.filter(t => t.slide_times && Object.keys(t.slide_times).length > 0);
+
+  if (!withSlides.length) {
+    document.getElementById('progressModalBody').innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);"><i class="fas fa-layer-group" style="font-size:36px;opacity:0.3;display:block;margin-bottom:12px;"></i><p>No per-slide data recorded yet.<br><small>Data appears once the participant navigates through SCORM slides.</small></p></div>';
+    return;
+  }
+
+  let html = '';
+  withSlides.forEach(t => {
+    const entries = Object.entries(t.slide_times).filter(([,v])=>parseInt(v)>0);
+    const total = entries.reduce((a,[,v])=>a+parseInt(v),0);
+    html += `<div style="border:1px solid var(--brd);border-radius:10px;margin-bottom:14px;overflow:hidden;">
+      <div style="background:#f0fdf4;padding:10px 14px;border-bottom:1px solid var(--brd);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);"><i class="fas fa-cube" style="color:var(--teal);margin-right:6px;"></i>${t.package_name||'Package'}</div>
+        <div style="font-size:11px;color:var(--muted);">Total: <strong style="color:var(--navy);">${fmtSec(total)}</strong></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:#fafafa;"><th style="padding:6px 12px;text-align:left;color:var(--muted);font-weight:600;">Slide / Page</th><th style="padding:6px 12px;text-align:left;color:var(--muted);font-weight:600;">Time Spent</th></tr></thead>
+        <tbody>${entries.map(([slide,secs])=>`<tr><td style="padding:6px 12px;border-top:1px solid #f0f0f0;word-break:break-all;">${slide}</td><td style="padding:6px 12px;border-top:1px solid #f0f0f0;font-weight:600;color:var(--navy);">${fmtSec(secs)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  });
+  document.getElementById('progressModalBody').innerHTML = html;
 }
 
 // ── BY COURSE ─────────────────────────────────────────────────────────────────

@@ -10,66 +10,65 @@ REQUIREMENTS:
 ------------------------------------------------------------
 STEP 1: PostgreSQL Database Setup
 ------------------------------------------------------------
-1. PostgreSQL install karo (agar nahi hai)
-2. PostgreSQL open karo aur ek database banao:
+1. Install PostgreSQL (if not already installed)
+2. Open PostgreSQL and create a database:
 
-   Windows (pgAdmin use karo) ya Command Prompt mein:
+   Windows (use pgAdmin) or Command Prompt:
    > psql -U postgres
    > CREATE DATABASE lms_db;
    > \q
 
 ------------------------------------------------------------
-STEP 2: .env file configure karo
+STEP 2: Configure the .env file
 ------------------------------------------------------------
-backend/.env file mein apna PostgreSQL password daalo:
+Add your PostgreSQL password in the backend/.env file:
 
    DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/lms_db
 
-   Example: agar password "1234" hai:
+   Example: if your password is "1234":
    DATABASE_URL=postgresql://postgres:1234@localhost:5432/lms_db
 
 ------------------------------------------------------------
-STEP 3: Dependencies install karo
+STEP 3: Install Dependencies
 ------------------------------------------------------------
-Command Prompt / Terminal mein:
+In Command Prompt / Terminal:
 
    cd LMS/backend
    npm install
 
 ------------------------------------------------------------
-STEP 4: Server start karo
+STEP 4: Start the Server
 ------------------------------------------------------------
    node server.js
 
-   Aapko yeh message aayega:
+   You should see this message:
    ✅ Database initialized successfully
    🚀 LMS Backend running at: http://localhost:3001
 
 ------------------------------------------------------------
-STEP 5: Browser mein kholो
+STEP 5: Open in Browser
 ------------------------------------------------------------
    http://localhost:3001
 
 ------------------------------------------------------------
 DEFAULT LOGIN CREDENTIALS
 ------------------------------------------------------------
-  Admin:    username=admin     | password=admin123
-  B-School: email=bschool@cdpl.in | password=bschool123
-  Trainer:  email=trainer@cdpl.in | password=trainer123
-  Students: Jab admin student add kare, default password=student@123
-            (ya jo password admin set kare woh)
+  Admin:    username=admin          | password=admin123
+  B-School: email=bschool@cdpl.in  | password=bschool123
+  Trainer:  email=trainer@cdpl.in  | password=trainer123
+  Students: When admin adds a student, the default password=student@123
+            (or whatever password the admin sets)
 
 ------------------------------------------------------------
-DATA SAVE HONE KA PROCESS
+HOW DATA IS SAVED
 ------------------------------------------------------------
-  - Kuch bhi add/edit/delete karo - sab PostgreSQL database
-    mein save hoga permanently
-  - Server band karo, dobara start karo - data safe rahega
-  - Sirf DELETE karne par data jayega
+  - Any add/edit/delete action is saved permanently in the PostgreSQL database
+  - You can stop and restart the server — data will remain safe
+  - Data is only lost if explicitly deleted
 
 ------------------------------------------------------------
-BACKEND BAND KARNA
+STOPPING THE BACKEND
 ------------------------------------------------------------
-  Terminal mein Ctrl+C press karo
+  Press Ctrl+C in the terminal
 
 ============================================================
