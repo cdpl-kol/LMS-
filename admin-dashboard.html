@@ -1662,10 +1662,13 @@ async function loadStudents(){
   const r=await api('GET','/students?limit=50');
   if(!r.success){document.getElementById('studentsTbody').innerHTML='<tr><td colspan="8" style="text-align:center;color:red;padding:18px;">Error loading students.</td></tr>';return;}
   const rows=r.data?.students||r.data||[];
-  document.getElementById('studentsTbody').innerHTML=rows.length?rows.map((s,i)=>`<tr><td>${i+1}</td><td>${fmt(s.name)}</td><td>${fmt(s.email)}</td><td>${fmt(s.phone)}</td><td>${fmt(s.course_title||s.course||'—')}</td><td>${fmt(s.batch_name||'—')}</td><td>${statusBadge(s.status||'pending')}</td><td><button class="btn btn-sm btn-outline" onclick="approveStudent(${s.id})" title="Approve"><i class="fas fa-check"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})" title="Delete"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px;">No students found.</td></tr>';
+  document.getElementById('studentsTbody').innerHTML=rows.length?rows.map((s,i)=>`<tr><td>${i+1}</td><td>${fmt(s.name)}</td><td>${fmt(s.email)}</td><td>${fmt(s.phone)}</td><td>${fmt(s.course_title||s.course||'—')}</td><td>${fmt(s.batch_name||'—')}</td><td>${statusBadge(s.status||'pending')}</td><td><button class="btn btn-sm btn-outline" onclick="approveStudent(${s.id})" title="Approve"><i class="fas fa-check"></i></button> <button class="btn btn-sm" style="background:#7c3aed;color:#fff;" onclick="openResetPasswordModal(${s.id},'${(s.name||'').replace(/'/g,&quot;\\\'&quot;)}')" title="Reset Password"><i class="fas fa-key"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})" title="Delete"><i class="fas fa-trash"></i></button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px;">No students found.</td></tr>';
 }
 async function approveStudent(id){if(!confirm('Approve this student?'))return;const r=await api('PUT',`/students/${id}/approve`);if(r.success)loadStudents();}
 async function deleteStudent(id){if(!confirm('Delete this student?'))return;const r=await api('DELETE',`/students/${id}`);if(r.success)loadStudents();}
+function openResetPasswordModal(id,name){document.getElementById('rp-student-id').value=id;document.getElementById('rp-student-name').textContent=name;document.getElementById('rp-new-password').value='';document.getElementById('rp-alert').style.display='none';document.getElementById('resetPasswordModal').style.display='flex';}
+function closeResetPasswordModal(){document.getElementById('resetPasswordModal').style.display='none';}
+async function doResetPassword(){const id=document.getElementById('rp-student-id').value;const password=document.getElementById('rp-new-password').value.trim();const alertEl=document.getElementById('rp-alert');if(!password||password.length<6){alertEl.style.display='block';alertEl.style.color='red';alertEl.textContent='Password must be at least 6 characters.';return;}const r=await api('PUT',`/students/${id}/reset-password`,{password});if(r.success){alertEl.style.display='block';alertEl.style.color='green';alertEl.textContent='Password reset successfully!';setTimeout(closeResetPasswordModal,1200);}else{alertEl.style.display='block';alertEl.style.color='red';alertEl.textContent=r.error||'Error resetting password';}}
 async function addStudent(){
   const name=document.getElementById('as-name').value.trim(),email=document.getElementById('as-email').value.trim(),phone=document.getElementById('as-phone').value.trim(),password=document.getElementById('as-password').value;
   const course_id=document.getElementById('as-course')?.value||null;
@@ -4064,5 +4067,23 @@ async function uploadScorm(){
   }
 })();
 </script>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:32px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <h3 style="margin:0 0 6px;color:#1a237e;font-size:18px;"><i class="fas fa-key" style="color:#7c3aed;margin-right:8px;"></i>Reset Password</h3>
+    <p style="margin:0 0 20px;color:#78909c;font-size:13px;">Student: <strong id="rp-student-name"></strong></p>
+    <input type="hidden" id="rp-student-id"/>
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:13px;font-weight:600;color:#37474f;margin-bottom:6px;">New Password <span style="color:red;">*</span></label>
+      <input type="password" id="rp-new-password" placeholder="Min 6 characters" style="width:100%;padding:10px 14px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" onkeydown="if(event.key==='Enter')doResetPassword()"/>
+    </div>
+    <div id="rp-alert" style="display:none;font-size:13px;margin-bottom:12px;padding:8px 12px;border-radius:6px;background:#f5f5f5;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeResetPasswordModal()" style="padding:9px 20px;border:1.5px solid #e0e0e0;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;">Cancel</button>
+      <button onclick="doResetPassword()" style="padding:9px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">Reset Password</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
