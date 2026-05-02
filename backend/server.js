@@ -3715,5 +3715,5 @@ app.use((error, req, res, next) => {
 // ── START ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {
-  app.listen(PORT, () => console.log(`✅ Smart LMS running on http://localhost:${PORT}`));
+  app.listen(PORT, '0.0.0.0', () => console.log(`✅ Smart LMS running on port ${PORT}`));
 });
