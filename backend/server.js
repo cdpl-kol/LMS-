@@ -576,6 +576,9 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT NOW()
     )`).catch(()=>{});
 
+    await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS org_name VARCHAR(255) DEFAULT 'Connecting Dot Consultancy Pvt. Ltd.'`).catch(()=>{});
+    await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS site_subtitle VARCHAR(500) DEFAULT ''`).catch(()=>{});
+
     await client.query(`INSERT INTO company_info (id) VALUES (1) ON CONFLICT DO NOTHING`);
     await client.query(`INSERT INTO site_settings (id) VALUES (1) ON CONFLICT DO NOTHING`);
 
@@ -786,11 +789,11 @@ app.get('/api/v1/settings', async (req, res) => {
 });
 
 app.put('/api/v1/settings', auth, adminOnly, async (req, res) => {
-  const { site_title, tagline, footer_text, primary_color, accent_color, fb_url, instagram_url, linkedin_url, youtube_url, whatsapp_url, twitter_url } = req.body;
+  const { site_title, tagline, footer_text, primary_color, accent_color, fb_url, instagram_url, linkedin_url, youtube_url, whatsapp_url, twitter_url, org_name, site_subtitle } = req.body;
   try {
     const r = await pool.query(
-      `UPDATE site_settings SET site_title=$1,tagline=$2,footer_text=$3,primary_color=$4,accent_color=$5,fb_url=$6,instagram_url=$7,linkedin_url=$8,youtube_url=$9,whatsapp_url=$10,twitter_url=$11,updated_at=NOW() WHERE id=1 RETURNING *`,
-      [site_title,tagline,footer_text,primary_color,accent_color,fb_url,instagram_url,linkedin_url,youtube_url,whatsapp_url,twitter_url]
+      `UPDATE site_settings SET site_title=$1,tagline=$2,footer_text=$3,primary_color=$4,accent_color=$5,fb_url=$6,instagram_url=$7,linkedin_url=$8,youtube_url=$9,whatsapp_url=$10,twitter_url=$11,org_name=$12,site_subtitle=$13,updated_at=NOW() WHERE id=1 RETURNING *`,
+      [site_title,tagline,footer_text,primary_color,accent_color,fb_url,instagram_url,linkedin_url,youtube_url,whatsapp_url,twitter_url,org_name,site_subtitle]
     );
     ok(res, r.rows[0]);
   } catch(e) { err(res, e.message); }

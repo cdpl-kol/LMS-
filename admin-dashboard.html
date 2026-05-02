@@ -3783,24 +3783,24 @@ async function loadSettings(){
   if(!r.success)return;
   const d=r.data||{};
   document.getElementById('set-org').value=d.org_name||'';
-  document.getElementById('set-tagline').value=d.site_tagline||'';
+  document.getElementById('set-tagline').value=d.tagline||'';
   document.getElementById('set-title').value=d.site_title||'';
   document.getElementById('set-subtitle').value=d.site_subtitle||'';
-  document.getElementById('set-copyright').value=d.copyright_text||'';
-  document.getElementById('set-fb').value=d.social_facebook||'';
-  document.getElementById('set-ig').value=d.social_instagram||'';
-  document.getElementById('set-li').value=d.social_linkedin||'';
-  document.getElementById('set-tw').value=d.social_twitter||'';
-  document.getElementById('set-yt').value=d.social_youtube||'';
-  document.getElementById('set-wa').value=d.social_whatsapp||'';
-  if(d.logo_url)document.getElementById('logoPreview').src=d.logo_url;
+  document.getElementById('set-copyright').value=d.footer_text||'';
+  document.getElementById('set-fb').value=d.fb_url||'';
+  document.getElementById('set-ig').value=d.instagram_url||'';
+  document.getElementById('set-li').value=d.linkedin_url||'';
+  document.getElementById('set-tw').value=d.twitter_url||'';
+  document.getElementById('set-yt').value=d.youtube_url||'';
+  document.getElementById('set-wa').value=d.whatsapp_url||'';
+  if(d.logo_path){document.getElementById('logoPreview').src=d.logo_path;document.getElementById('logoPreview').style.display='block';}
   // Update footer copyright & social
   if(d.copyright_text)document.getElementById('adminFooterCopy').textContent=d.copyright_text;
   const sfm={facebook:'adf-fb',instagram:'adf-ig',linkedin:'adf-li',twitter:'adf-tw',youtube:'adf-yt',whatsapp:'adf-wa'};
   Object.entries(sfm).forEach(([key,id])=>{const el=document.getElementById(id);if(el&&d['social_'+key]){el.href=d['social_'+key];el.style.display='inline-flex';}});
 }
 async function saveSettings(){
-  const body={org_name:document.getElementById('set-org').value,site_tagline:document.getElementById('set-tagline').value,site_title:document.getElementById('set-title').value,site_subtitle:document.getElementById('set-subtitle').value,copyright_text:document.getElementById('set-copyright').value,social_facebook:document.getElementById('set-fb').value,social_instagram:document.getElementById('set-ig').value,social_linkedin:document.getElementById('set-li').value,social_twitter:document.getElementById('set-tw').value,social_youtube:document.getElementById('set-yt').value,social_whatsapp:document.getElementById('set-wa').value};
+  const body={org_name:document.getElementById('set-org').value,tagline:document.getElementById('set-tagline').value,site_title:document.getElementById('set-title').value,site_subtitle:document.getElementById('set-subtitle').value,footer_text:document.getElementById('set-copyright').value,fb_url:document.getElementById('set-fb').value,instagram_url:document.getElementById('set-ig').value,linkedin_url:document.getElementById('set-li').value,twitter_url:document.getElementById('set-tw').value,youtube_url:document.getElementById('set-yt').value,whatsapp_url:document.getElementById('set-wa').value};
   const r=await api('PUT','/settings',body);
   showFormAlert('settingsAlert',r.success?'Settings saved successfully!':'Failed: '+(r.error||''),r.success?'success':'error');
 }
@@ -3810,7 +3810,7 @@ async function uploadLogo(){
   const fd=new FormData();fd.append('logo',file);
   const r=await fetch(API('/settings/logo'),{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
   const d=await r.json();
-  if(d.success){document.getElementById('logoPreview').src=d.data.logo_url;document.getElementById('sbLogo').src=d.data.logo_url;showFormAlert('settingsAlert','Logo updated!','success');}
+  if(d.success){document.getElementById('logoPreview').src=d.data.logo_path;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=d.data.logo_path;showFormAlert('settingsAlert','Logo updated!','success');}
   else showFormAlert('settingsAlert',d.error||'Upload failed.');
 }
 
