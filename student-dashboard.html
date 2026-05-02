@@ -1863,23 +1863,32 @@ function openDemoVideo(url,title){
   w.document.write(`<html><head><title>Demo: ${title}</title><style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;}</style></head><body>${isYoutube?`<iframe width="780" height="440" src="${url}" frameborder="0" allow="autoplay;fullscreen" allowfullscreen></iframe>`:`<video controls autoplay style="max-width:100%;max-height:100vh;"><source src="${url}"/></video>`}</body></html>`);
 }
 async function purchaseCourse(courseId,courseName,price){
+  // Free course — enroll directly, no payment needed
   if(price<=0){
-    // Free course — enroll directly
-    if(!confirm(`Enroll in "${courseName}" for Free?`))return;
+    if(!confirm(`"${courseName}" is free!\n\nClick OK to enroll.`))return;
     const r=await api('POST',`/courses/${courseId}/purchase`,{payment_source:'free',payment_ref:'free-'+Date.now()});
-    if(r.success){showToast('✅ Enrolled successfully! Check "My Courses" tab.','success');loadCourses();}
+    if(r.success){showToast('Enrolled successfully! Go to "My Courses" tab.','success');loadCourses();}
     else showToast(r.error||'Failed to enroll','error');
     return;
   }
-  // Paid course — use Razorpay (Test Mode)
-  // NOTE: Replace 'rzp_test_YOUR_KEY_HERE' with your actual Razorpay Test Key ID
-  const RAZORPAY_KEY='rzp_test_YOUR_KEY_HERE';
+
+  // Paid course — Step 1: Create Razorpay order on backend
+  showToast('Opening payment window...','');
+  const orderRes=await api('POST','/razorpay/create-order',{course_id:courseId});
+  if(!orderRes.success){
+    showToast(orderRes.error||'Could not initiate payment. Please try again.','error');
+    return;
+  }
+
+  const {order_id,amount,currency,key}=orderRes.data;
   const user=USER();
+
   const options={
-    key: RAZORPAY_KEY,
-    amount: price*100, // in paise
-    currency: 'INR',
-    name: 'Smart LMS – Connecting Dot',
+    key: key,
+    amount: amount,
+    currency: currency,
+    order_id: order_id,
+    name: 'Connecting Dot Pvt. Ltd.',
     description: `Enrollment: ${courseName}`,
     image: '/logo.png',
     prefill:{
@@ -1890,24 +1899,25 @@ async function purchaseCourse(courseId,courseName,price){
     notes:{ course_id: courseId, course_name: courseName },
     theme:{ color:'#1a237e' },
     handler: async function(response){
-      // Payment successful — record enrollment
-      const payRef=response.razorpay_payment_id||('rzp-'+Date.now());
-      const r=await api('POST',`/courses/${courseId}/purchase`,{
-        payment_source:'razorpay',
-        payment_ref:payRef,
-        razorpay_payment_id:response.razorpay_payment_id||''
+      // Step 2: Verify payment signature on backend — only then enroll
+      const verifyRes=await api('POST','/razorpay/verify',{
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+        course_id: courseId
       });
-      if(r.success){
-        showToast('✅ Payment successful! Enrolled in "'+courseName+'". Check "My Courses" tab.','success');
+      if(verifyRes.success){
+        showToast('Payment successful! You are now enrolled in "'+courseName+'". Go to "My Courses" tab.','success');
         loadCourses();
       } else {
-        showToast(r.error||'Payment recorded but enrollment failed. Contact support.','error');
+        showToast(verifyRes.error||'Payment verification failed. Contact support with Payment ID: '+response.razorpay_payment_id,'error');
       }
     },
     modal:{
       ondismiss: function(){ showToast('Payment cancelled.',''); }
     }
   };
+
   try{
     const rzp=new Razorpay(options);
     rzp.on('payment.failed',function(resp){
@@ -1915,11 +1925,7 @@ async function purchaseCourse(courseId,courseName,price){
     });
     rzp.open();
   } catch(e){
-    // Razorpay not loaded or key not set — fallback to direct enrollment
-    if(!confirm(`Razorpay test mode: Purchase "${courseName}" for ₹${Number(price).toLocaleString()}?\n\n⚠️ Note: This is a TEST enrollment (Razorpay key not configured). Replace 'rzp_test_YOUR_KEY_HERE' with your actual key for live payments.`))return;
-    const r=await api('POST',`/courses/${courseId}/purchase`,{payment_source:'test',payment_ref:'test-'+Date.now()});
-    if(r.success){showToast('✅ Test enrollment recorded! Check "My Courses" tab.','success');loadCourses();}
-    else showToast(r.error||'Failed to enroll','error');
+    showToast('Payment gateway unavailable. Please try again later.','error');
   }
 }
 

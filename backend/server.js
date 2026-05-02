@@ -1549,6 +1549,82 @@ app.post('/api/v1/courses/:id/purchase', auth, studentOnly, async (req,res)=>{
   }catch(e){err(res,e.message);}
 });
 
+// ── RAZORPAY PAYMENT ROUTES ───────────────────────────────────────────────────
+const crypto = require('crypto');
+const RazorpaySDK = require('razorpay');
+
+function getRazorpay() {
+  return new RazorpaySDK({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+}
+
+// Create Razorpay order for a course purchase
+app.post('/api/v1/razorpay/create-order', auth, studentOnly, async (req, res) => {
+  try {
+    const { course_id } = req.body;
+    if (!course_id) return err(res, 'course_id is required', 400);
+
+    const course = await pool.query('SELECT id, name, price FROM courses WHERE id=$1', [course_id]);
+    if (!course.rows[0]) return err(res, 'Course not found', 404);
+
+    const price = parseFloat(course.rows[0].price);
+    if (price <= 0) return err(res, 'This course is free, no payment required', 400);
+
+    const existing = await pool.query('SELECT id FROM course_purchases WHERE student_id=$1 AND course_id=$2', [req.user.id, course_id]);
+    if (existing.rows[0]) return err(res, 'Course already purchased', 409);
+
+    if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID === 'rzp_test_YOUR_KEY_HERE') {
+      return err(res, 'Razorpay keys not configured yet. Please update RAZORPAY_KEY_ID in .env', 503);
+    }
+
+    const rzp = getRazorpay();
+    const order = await rzp.orders.create({
+      amount: Math.round(price * 100),
+      currency: 'INR',
+      receipt: `course_${course_id}_s${req.user.id}_${Date.now()}`,
+      notes: { course_id: String(course_id), student_id: String(req.user.id) }
+    });
+
+    ok(res, { order_id: order.id, amount: order.amount, currency: order.currency, key: process.env.RAZORPAY_KEY_ID });
+  } catch (e) { err(res, e.message); }
+});
+
+// Verify Razorpay payment signature and enroll student
+app.post('/api/v1/razorpay/verify', auth, studentOnly, async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, course_id } = req.body;
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !course_id) {
+      return err(res, 'Missing payment details', 400);
+    }
+
+    const expectedSig = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(razorpay_order_id + '|' + razorpay_payment_id)
+      .digest('hex');
+
+    if (expectedSig !== razorpay_signature) {
+      return err(res, 'Payment verification failed — invalid signature', 400);
+    }
+
+    const course = await pool.query('SELECT id, price FROM courses WHERE id=$1', [course_id]);
+    if (!course.rows[0]) return err(res, 'Course not found', 404);
+
+    const existing = await pool.query('SELECT id FROM course_purchases WHERE student_id=$1 AND course_id=$2', [req.user.id, course_id]);
+    if (existing.rows[0]) return ok(res, {}, 'Already enrolled');
+
+    await pool.query(
+      'INSERT INTO course_purchases(student_id,course_id,amount,payment_source,payment_ref) VALUES($1,$2,$3,$4,$5)',
+      [req.user.id, course_id, course.rows[0].price, 'razorpay', razorpay_payment_id]
+    );
+    await pool.query('UPDATE students SET course_id=$1 WHERE id=$2 AND course_id IS NULL', [course_id, req.user.id]);
+    await notify(req.user.id, 'student', 'Payment successful! You are now enrolled in your course.', 'success');
+
+    ok(res, {}, 'Payment verified. You are now enrolled!');
+  } catch (e) { err(res, e.message); }
+});
+
 // Upload intro video for a course (admin only)
 const videoUpload = multer({
   storage: multer.diskStorage({
