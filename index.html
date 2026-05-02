@@ -503,32 +503,32 @@
       if (!data) return;
 
       // Logo
-      if (data.logo_url) {
+      if (data.logo_path) {
         const img = document.getElementById('logoImg');
-        img.src = data.logo_url;
+        img.src = data.logo_path;
         img.style.display = 'block';
         document.getElementById('logoFallback').style.display = 'none';
       }
 
       // Hero text
-      if (data.site_tagline)  document.getElementById('heroTagline').textContent  = data.site_tagline;
-      if (data.site_title)    document.getElementById('heroTitle').innerHTML      = data.site_title;
+      if (data.tagline)      document.getElementById('heroTagline').textContent  = data.tagline;
+      if (data.site_title)   document.getElementById('heroTitle').innerHTML      = data.site_title;
       if (data.site_subtitle) document.getElementById('heroSubtitle').textContent = data.site_subtitle;
 
       // Footer brand
-      if (data.org_name)      document.getElementById('footerBrand').textContent  = data.org_name;
-      if (data.copyright_text) document.getElementById('copyrightText').textContent = data.copyright_text;
+      if (data.org_name)     document.getElementById('footerBrand').textContent  = data.org_name;
+      if (data.footer_text)  document.getElementById('copyrightText').textContent = data.footer_text;
 
       // Social media
       const socialMap = {
-        facebook: 'sm-facebook', instagram: 'sm-instagram',
-        linkedin: 'sm-linkedin', twitter: 'sm-twitter',
-        youtube: 'sm-youtube',   whatsapp: 'sm-whatsapp'
+        fb_url: 'sm-facebook', instagram_url: 'sm-instagram',
+        linkedin_url: 'sm-linkedin', twitter_url: 'sm-twitter',
+        youtube_url: 'sm-youtube',   whatsapp_url: 'sm-whatsapp'
       };
       Object.entries(socialMap).forEach(([key, id]) => {
-        if (data[`social_${key}`]) {
+        if (data[key]) {
           const el = document.getElementById(id);
-          el.href = data[`social_${key}`];
+          el.href = data[key];
           el.style.display = 'flex';
         }
       });

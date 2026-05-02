@@ -1050,10 +1050,10 @@ async function loadSiteSettings(){
   try{
     const r=await fetch('/api/v1/settings');if(!r.ok)return;
     const {data}=await r.json();if(!data)return;
-    if(data.logo_url){document.getElementById('sbLogo').src=data.logo_url;document.getElementById('sbLogo').style.display='block';}
-    if(data.copyright_text)document.getElementById('footerCopy').textContent=data.copyright_text;
-    const sm={facebook:'sf-fb',instagram:'sf-ig',linkedin:'sf-li',twitter:'sf-tw',youtube:'sf-yt',whatsapp:'sf-wa'};
-    Object.entries(sm).forEach(([key,id])=>{const el=document.getElementById(id);if(el&&data['social_'+key]){el.href=data['social_'+key];el.style.display='inline-flex';}});
+    if(data.logo_path){document.getElementById('sbLogo').src=data.logo_path;document.getElementById('sbLogo').style.display='block';}
+    if(data.footer_text)document.getElementById('footerCopy').textContent=data.footer_text;
+    const sm={fb_url:'sf-fb',instagram_url:'sf-ig',linkedin_url:'sf-li',twitter_url:'sf-tw',youtube_url:'sf-yt',whatsapp_url:'sf-wa'};
+    Object.entries(sm).forEach(([key,id])=>{const el=document.getElementById(id);if(el&&data[key]){el.href=data[key];el.style.display='inline-flex';}});
     // populate course select for materials
     const courses=await api('GET','/courses');(courses.data||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.title;document.getElementById('mat-course').appendChild(o);});
   }catch{}

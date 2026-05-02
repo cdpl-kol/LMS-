@@ -1022,10 +1022,10 @@ async function loadSettings(){
     const r=await api('/settings');
     if(!r.ok)return;
     const d=(await r.json()).data||{};
-    if(d.logo_url){const l=document.getElementById('sbLogo');if(l){l.src=d.logo_url;l.style.display='block';document.getElementById('sbTxt').style.display='none';}}
-    if(d.copyright_text)document.getElementById('bsFooterCopy').textContent=d.copyright_text;
-    const sfm={facebook:'sf-fb',instagram:'sf-ig',linkedin:'sf-li',twitter:'sf-tw',youtube:'sf-yt',whatsapp:'sf-wa'};
-    Object.entries(sfm).forEach(([k,id])=>{const el=document.getElementById(id);if(el&&d['social_'+k]){el.href=d['social_'+k];el.style.display='inline-flex';}});
+    if(d.logo_path){const l=document.getElementById('sbLogo');if(l){l.src=d.logo_path;l.style.display='block';document.getElementById('sbTxt').style.display='none';}}
+    if(d.footer_text)document.getElementById('bsFooterCopy').textContent=d.footer_text;
+    const sfm={fb_url:'sf-fb',instagram_url:'sf-ig',linkedin_url:'sf-li',twitter_url:'sf-tw',youtube_url:'sf-yt',whatsapp_url:'sf-wa'};
+    Object.entries(sfm).forEach(([k,id])=>{const el=document.getElementById(id);if(el&&d[k]){el.href=d[k];el.style.display='inline-flex';}});
   }catch(e){}
 }
 
