@@ -703,6 +703,53 @@ tr:hover td{background:#f8f9ff;}
   </div>
 </div>
 
+<!-- Test Payment Modal (used when Razorpay keys not yet configured) -->
+<div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:900;display:none;align-items:center;justify-content:center;" id="testPayOverlay">
+  <div style="background:#fff;border-radius:20px;width:min(420px,94vw);box-shadow:0 24px 64px rgba(26,35,126,0.25);overflow:hidden;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a237e,#1565c0);padding:20px 24px;color:#fff;display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;">💳</div>
+        <div>
+          <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;">Razorpay</div>
+          <div style="font-size:11px;opacity:0.8;">Connecting Dot Pvt. Ltd.</div>
+        </div>
+      </div>
+      <button onclick="closeTestPayModal()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+    </div>
+    <!-- Test Mode Banner -->
+    <div style="background:#fff3cd;border-bottom:1px solid #ffc107;padding:8px 16px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:14px;">🧪</span>
+      <span style="font-size:12px;color:#856404;font-weight:600;">TEST MODE — No real money will be deducted</span>
+    </div>
+    <!-- Body -->
+    <div style="padding:24px;">
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px;color:#666;margin-bottom:4px;">Course</div>
+        <div id="tpm-course-name" style="font-weight:600;color:#1a237e;font-size:14px;"></div>
+      </div>
+      <div style="background:#f0f4ff;border-radius:12px;padding:16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;color:#555;">Amount to Pay</span>
+        <span id="tpm-amount" style="font-size:22px;font-weight:700;color:#1a237e;font-family:'Poppins',sans-serif;"></span>
+      </div>
+      <!-- Simulated Test Card -->
+      <div style="border:1px dashed #c5cae9;border-radius:12px;padding:14px;margin-bottom:20px;background:#fafbff;">
+        <div style="font-size:11px;font-weight:600;color:#666;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Test Card Details</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+          <div><span style="color:#999;">Card No:</span><br><strong>4111 1111 1111 1111</strong></div>
+          <div><span style="color:#999;">Expiry:</span><br><strong>12/25</strong></div>
+          <div><span style="color:#999;">CVV:</span><br><strong>123</strong></div>
+          <div><span style="color:#999;">OTP:</span><br><strong>123456</strong></div>
+        </div>
+      </div>
+      <button id="tpm-pay-btn" onclick="simulateTestPayment()" style="width:100%;background:linear-gradient(135deg,#1a237e,#1565c0);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">
+        Pay Now (Test)
+      </button>
+      <div style="text-align:center;margin-top:10px;font-size:11px;color:#999;">Click "Pay Now" to simulate a successful payment</div>
+    </div>
+  </div>
+</div>
+
 <!-- Student Quiz Modal -->
 <div style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:650;display:none;align-items:center;justify-content:center;" id="studentQuizOverlay" onclick="if(event.target===this)closeStudentQuiz()">
   <div style="background:#fff;border-radius:20px;width:min(700px,96vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(26,35,126,0.22);overflow:hidden;">
@@ -1862,6 +1909,24 @@ function openDemoVideo(url,title){
   const w=window.open('','_blank','width=800,height=500');
   w.document.write(`<html><head><title>Demo: ${title}</title><style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;}</style></head><body>${isYoutube?`<iframe width="780" height="440" src="${url}" frameborder="0" allow="autoplay;fullscreen" allowfullscreen></iframe>`:`<video controls autoplay style="max-width:100%;max-height:100vh;"><source src="${url}"/></video>`}</body></html>`);
 }
+// Test payment modal state
+let _tpmCourseId=null, _tpmCourseName=null;
+
+function closeTestPayModal(){
+  document.getElementById('testPayOverlay').style.display='none';
+  _tpmCourseId=null; _tpmCourseName=null;
+}
+
+async function simulateTestPayment(){
+  const btn=document.getElementById('tpm-pay-btn');
+  btn.disabled=true; btn.textContent='Processing...';
+  const r=await api('POST',`/courses/${_tpmCourseId}/purchase`,{payment_source:'test',payment_ref:'test-'+Date.now()});
+  btn.disabled=false; btn.textContent='Pay Now (Test)';
+  closeTestPayModal();
+  if(r.success){showToast('✅ Test payment successful! Enrolled in "'+_tpmCourseName+'". Go to "My Courses" tab.','success');loadCourses();}
+  else showToast(r.error||'Enrollment failed','error');
+}
+
 async function purchaseCourse(courseId,courseName,price){
   // Free course — enroll directly, no payment needed
   if(price<=0){
@@ -1872,14 +1937,21 @@ async function purchaseCourse(courseId,courseName,price){
     return;
   }
 
-  // Paid course — Step 1: Create Razorpay order on backend
-  showToast('Opening payment window...','');
+  // Paid course — Step 1: Try to create Razorpay order on backend
   const orderRes=await api('POST','/razorpay/create-order',{course_id:courseId});
+
+  // If keys not configured yet, open test payment modal
   if(!orderRes.success){
-    showToast(orderRes.error||'Could not initiate payment. Please try again.','error');
+    _tpmCourseId=courseId; _tpmCourseName=courseName;
+    document.getElementById('tpm-course-name').textContent=courseName;
+    document.getElementById('tpm-amount').textContent='₹'+Number(price).toLocaleString('en-IN');
+    document.getElementById('tpm-pay-btn').disabled=false;
+    document.getElementById('tpm-pay-btn').textContent='Pay Now (Test)';
+    document.getElementById('testPayOverlay').style.display='flex';
     return;
   }
 
+  // Step 2: Real Razorpay checkout
   const {order_id,amount,currency,key}=orderRes.data;
   const user=USER();
 
@@ -1891,38 +1963,29 @@ async function purchaseCourse(courseId,courseName,price){
     name: 'Connecting Dot Pvt. Ltd.',
     description: `Enrollment: ${courseName}`,
     image: '/logo.png',
-    prefill:{
-      name: user.name||'Student',
-      email: user.email||'',
-      contact: user.contact||''
-    },
-    notes:{ course_id: courseId, course_name: courseName },
-    theme:{ color:'#1a237e' },
+    prefill:{name:user.name||'Student',email:user.email||'',contact:user.contact||''},
+    notes:{course_id:courseId,course_name:courseName},
+    theme:{color:'#1a237e'},
     handler: async function(response){
-      // Step 2: Verify payment signature on backend — only then enroll
       const verifyRes=await api('POST','/razorpay/verify',{
-        razorpay_order_id: response.razorpay_order_id,
-        razorpay_payment_id: response.razorpay_payment_id,
-        razorpay_signature: response.razorpay_signature,
-        course_id: courseId
+        razorpay_order_id:response.razorpay_order_id,
+        razorpay_payment_id:response.razorpay_payment_id,
+        razorpay_signature:response.razorpay_signature,
+        course_id:courseId
       });
       if(verifyRes.success){
-        showToast('Payment successful! You are now enrolled in "'+courseName+'". Go to "My Courses" tab.','success');
+        showToast('Payment successful! Enrolled in "'+courseName+'". Go to "My Courses" tab.','success');
         loadCourses();
       } else {
-        showToast(verifyRes.error||'Payment verification failed. Contact support with Payment ID: '+response.razorpay_payment_id,'error');
+        showToast(verifyRes.error||'Verification failed. Contact support. Payment ID: '+response.razorpay_payment_id,'error');
       }
     },
-    modal:{
-      ondismiss: function(){ showToast('Payment cancelled.',''); }
-    }
+    modal:{ondismiss:function(){showToast('Payment cancelled.','');}}
   };
 
   try{
     const rzp=new Razorpay(options);
-    rzp.on('payment.failed',function(resp){
-      showToast('Payment failed: '+(resp.error?.description||'Unknown error'),'error');
-    });
+    rzp.on('payment.failed',function(resp){showToast('Payment failed: '+(resp.error?.description||'Unknown error'),'error');});
     rzp.open();
   } catch(e){
     showToast('Payment gateway unavailable. Please try again later.','error');
