@@ -158,11 +158,15 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.EMAIL_USER || '', pass: process.env.EMAIL_PASS || '' }
 });
 async function sendEmail(to, subject, html) {
-  if (!process.env.EMAIL_USER) return false;
+  if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your-gmail')) {
+    console.warn('⚠️  EMAIL_USER not configured — skipping email to', to);
+    return false;
+  }
   try {
     await transporter.sendMail({ from: `"Smart LMS - Connecting Dot" <${process.env.EMAIL_USER}>`, to, subject, html });
+    console.log('✅ Email sent to', to);
     return true;
-  } catch(e) { console.error('Email error:', e.message); return false; }
+  } catch(e) { console.error('❌ Email error:', e.message); return false; }
 }
 
 // ── AUTH MIDDLEWARES ──────────────────────────────────────────────────────────
@@ -583,6 +587,19 @@ async function initDB() {
 
     await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS org_name VARCHAR(255) DEFAULT 'Connecting Dot Consultancy Pvt. Ltd.'`).catch(()=>{});
     await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS site_subtitle VARCHAR(500) DEFAULT ''`).catch(()=>{});
+
+    // Corporate course payments table
+    await client.query(`CREATE TABLE IF NOT EXISTS corporate_course_payments (
+      id SERIAL PRIMARY KEY,
+      corporate_id INTEGER REFERENCES corporate_clients(id) ON DELETE CASCADE,
+      participant_id INTEGER REFERENCES corporate_participants(id) ON DELETE CASCADE,
+      course_ids INTEGER[] NOT NULL,
+      amount NUMERIC(10,2) NOT NULL,
+      razorpay_order_id VARCHAR(255),
+      razorpay_payment_id VARCHAR(255),
+      status VARCHAR(50) DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`).catch(()=>{});
 
     await client.query(`INSERT INTO company_info (id) VALUES (1) ON CONFLICT DO NOTHING`);
     await client.query(`INSERT INTO site_settings (id) VALUES (1) ON CONFLICT DO NOTHING`);
@@ -1630,6 +1647,94 @@ app.post('/api/v1/razorpay/verify', auth, studentOnly, async (req, res) => {
     await notify(req.user.id, 'student', 'Payment successful! You are now enrolled in your course.', 'success');
 
     ok(res, {}, 'Payment verified. You are now enrolled!');
+  } catch (e) { err(res, e.message); }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CORPORATE RAZORPAY PAYMENT ROUTES
+// ═══════════════════════════════════════════════════════════════
+
+// Create Razorpay order for corporate course assignment
+app.post('/api/v1/corporate/razorpay/create-order', auth, requireRole('corporate'), async (req, res) => {
+  try {
+    const { participant_id, course_ids } = req.body;
+    if (!participant_id || !course_ids || !course_ids.length) return err(res, 'participant_id and course_ids required', 400);
+
+    const corpId = req.user.id;
+
+    // Verify participant belongs to this corporate
+    const pCheck = await pool.query('SELECT id FROM corporate_participants WHERE id=$1 AND corporate_id=$2', [participant_id, corpId]);
+    if (!pCheck.rows[0]) return err(res, 'Participant not found', 404);
+
+    // Verify courses are in allowed list for this corporate
+    const allowed = await pool.query('SELECT course_id FROM corporate_allowed_courses WHERE corporate_id=$1', [corpId]);
+    const allowedIds = new Set(allowed.rows.map(r => r.course_id));
+
+    // Get prices of selected courses
+    const courses = await pool.query('SELECT id, name, price FROM courses WHERE id = ANY($1)', [course_ids]);
+    let totalAmount = 0;
+    const paidCourses = [];
+    for (const c of courses.rows) {
+      if (!allowedIds.has(c.id)) return err(res, `Course "${c.name}" is not allowed for your account`, 403);
+      if (parseFloat(c.price) > 0) { totalAmount += parseFloat(c.price); paidCourses.push(c.id); }
+    }
+
+    if (totalAmount <= 0) return err(res, 'All selected courses are free — no payment needed', 400);
+
+    if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID.includes('YOUR_KEY')) {
+      return err(res, 'Razorpay live keys not configured', 503);
+    }
+
+    const rzp = getRazorpay();
+    const order = await rzp.orders.create({
+      amount: Math.round(totalAmount * 100),
+      currency: 'INR',
+      receipt: `corp_${corpId}_p${participant_id}_${Date.now()}`,
+      notes: { corporate_id: String(corpId), participant_id: String(participant_id), course_ids: course_ids.join(',') }
+    });
+
+    // Save pending payment record
+    await pool.query(
+      `INSERT INTO corporate_course_payments(corporate_id,participant_id,course_ids,amount,razorpay_order_id,status) VALUES($1,$2,$3,$4,$5,'pending')`,
+      [corpId, participant_id, course_ids, totalAmount, order.id]
+    );
+
+    ok(res, { order_id: order.id, amount: order.amount, currency: order.currency, key: process.env.RAZORPAY_KEY_ID, total_amount: totalAmount });
+  } catch (e) { err(res, e.message); }
+});
+
+// Verify corporate Razorpay payment and assign courses
+app.post('/api/v1/corporate/razorpay/verify', auth, requireRole('corporate'), async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, participant_id, course_ids } = req.body;
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !participant_id || !course_ids) {
+      return err(res, 'Missing payment details', 400);
+    }
+
+    const corpId = req.user.id;
+
+    const expectedSig = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(razorpay_order_id + '|' + razorpay_payment_id)
+      .digest('hex');
+
+    if (expectedSig !== razorpay_signature) return err(res, 'Payment verification failed', 400);
+
+    // Mark payment as completed
+    await pool.query(
+      `UPDATE corporate_course_payments SET status='paid', razorpay_payment_id=$1 WHERE razorpay_order_id=$2`,
+      [razorpay_payment_id, razorpay_order_id]
+    );
+
+    // Assign all courses to participant
+    for (const cid of course_ids) {
+      await pool.query(
+        `INSERT INTO corporate_course_assignments(participant_id,course_id,assigned_by) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,
+        [participant_id, cid, corpId]
+      );
+    }
+
+    ok(res, {}, `Payment successful! ${course_ids.length} course(s) assigned to participant.`);
   } catch (e) { err(res, e.message); }
 });
 
@@ -2763,7 +2868,7 @@ app.post('/api/v1/corporate/participants', auth, requireRole('corporate','admin'
     // Send welcome email
     const loginUrl=`${process.env.BASE_URL||'http://localhost:3000'}/participant-login.html`;
     const dashUrl=`${process.env.BASE_URL||'http://localhost:3000'}/participant-dashboard.html`;
-    await sendEmail(email,'Welcome to Smart LMS – Your Training Portal',`
+    const emailSent = await sendEmail(email,'Welcome to Smart LMS – Your Training Portal',`
       <div style="font-family:Arial;padding:20px;max-width:600px;margin:auto;background:#f9f9f9;border-radius:12px;">
         <div style="background:#1a237e;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
           <h2 style="color:#fff;margin:0;">Welcome to Smart LMS</h2>
@@ -2786,7 +2891,7 @@ app.post('/api/v1/corporate/participants', auth, requireRole('corporate','admin'
         </div>
       </div>
     `);
-    ok(res,{id:pid,otp},'Participant added and email sent');
+    ok(res,{id:pid,otp,email_sent:emailSent},emailSent?'Participant added and email sent':'Participant added (email not configured — share OTP manually)');
   }catch(e){console.error(e);err(res,e.message);}
 });
 
