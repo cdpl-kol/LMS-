@@ -2866,7 +2866,7 @@ app.post('/api/v1/corporate/participants', auth, requireRole('corporate','admin'
     // Generate OTP password
     const otp=Math.floor(100000+Math.random()*900000).toString();
     const hash=await bcrypt.hash(otp,10);
-    const r=await pool.query(`INSERT INTO corporate_participants(corporate_id,name,email,password_hash,otp_password,contact,status) VALUES($1,$2,$3,$4,$5,$6,'Active') ON CONFLICT(email) DO UPDATE SET name=$2,password_hash=$4,otp_password=$5,contact=$6,status='Active',first_login=TRUE RETURNING id`,
+    const r=await pool.query(`INSERT INTO corporate_participants(corporate_id,name,email,password_hash,otp_password,contact,status) VALUES($1,$2,$3,$4,$5,$6,'Active') ON CONFLICT(email) DO UPDATE SET corporate_id=$1,name=$2,password_hash=$4,otp_password=$5,contact=$6,status='Active',first_login=TRUE RETURNING id`,
       [corpId,sanitize(name),sanitize(email.toLowerCase()),hash,otp,sanitize(contact||'')]);
     const pid=r.rows[0].id;
     // Assign courses

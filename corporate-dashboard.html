@@ -880,13 +880,13 @@ async function addParticipant(){
     const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:courseIds});
     if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant & Send Email';}
     if(r.success){
-      const emailMsg=r.data.email_sent===false?' (Email not configured — share OTP manually)':'';
-      showAlertSticky('addParticipantAlert',`✅ Participant added! Login credentials sent to ${email}.${emailMsg}`,'success');
+      showAlertSticky('addParticipantAlert',`✅ Participant added! Login credentials sent to ${email}.`,'success');
       document.getElementById('p-name').value='';
       document.getElementById('p-email').value='';
       document.getElementById('p-contact').value='';
       document.querySelectorAll('.add-course-chk').forEach(c=>c.checked=false);
-      setTimeout(()=>showSection('participants'),2000);
+      loadParticipants(); // refresh list immediately
+      setTimeout(()=>showSection('participants'),1500);
     }else{
       showAlertSticky('addParticipantAlert',r.error||'Failed to add participant. Check if email already exists.');
     }
