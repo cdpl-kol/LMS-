@@ -4004,11 +4004,12 @@ app.get('/api/v1/scorm/analytics', auth, async (req, res) => {
     // ── Key-mismatch fix: numeric slide_times (from hash-polling or lesson_location="1","2"…)
     // vs GUID slideOrder (Articulate Storyline). Map numeric → GUID by 1-based position.
     if (slideOrder && slideOrder.length > 0) {
-      const numericTimeKeys = Object.keys(slideTimes).filter(
-        k => k !== 'video_seconds' && k !== 'video_duration' && /^\d+$/.test(k) && (slideTimes[k] || 0) > 0
-      );
       const slideOrderHasGuids = slideOrder.some(id => !/^\d+$/.test(id));
-      if (numericTimeKeys.length > 0 && slideOrderHasGuids) {
+      if (slideOrderHasGuids) {
+        // Map numeric slide_times keys → GUID keys
+        const numericTimeKeys = Object.keys(slideTimes).filter(
+          k => k !== 'video_seconds' && k !== 'video_duration' && /^\d+$/.test(k) && (slideTimes[k] || 0) > 0
+        );
         numericTimeKeys.forEach(numKey => {
           const idx = parseInt(numKey) - 1;
           if (idx >= 0 && idx < slideOrder.length) {
@@ -4016,6 +4017,7 @@ app.get('/api/v1/scorm/analytics', auth, async (req, res) => {
             if (!(slideTimes[guid] > 0)) slideTimes[guid] = slideTimes[numKey];
           }
         });
+        // Map numeric slide_visits keys → GUID keys (independent of slide_times)
         Object.keys(slideVisits).filter(k => /^\d+$/.test(k) && (slideVisits[k] || 0) > 0).forEach(numKey => {
           const idx = parseInt(numKey) - 1;
           if (idx >= 0 && idx < slideOrder.length) {
