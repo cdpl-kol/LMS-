@@ -64,6 +64,7 @@ function extractZip(zipBuffer, destDir) {
 const app = express();
 
 // ── SECURITY HEADERS ──────────────────────────────────────────────────────────
+app.set('trust proxy', 1); // Render reverse proxy ke liye zaroori
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*' }));
 app.use(express.json({ limit: '10mb' }));
@@ -154,7 +155,10 @@ const JWT_REFRESH = process.env.JWT_REFRESH || 'lms-refresh-secret-2024';
 
 // ── EMAIL TRANSPORTER ─────────────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  family: 4, // force IPv4 — Render does not support IPv6 SMTP
   auth: { user: process.env.EMAIL_USER || '', pass: process.env.EMAIL_PASS || '' }
 });
 async function sendEmail(to, subject, html, options={}) {
