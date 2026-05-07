@@ -153,37 +153,34 @@ const pool = new Pool({
 const JWT_SECRET  = process.env.JWT_SECRET  || 'lms-secret-2024-secure';
 const JWT_REFRESH = process.env.JWT_REFRESH || 'lms-refresh-secret-2024';
 
-// ── EMAIL TRANSPORTER ─────────────────────────────────────────────────────────
-// Brevo SMTP relay (works on Render) — set SMTP_HOST=smtp-relay.brevo.com in env
-// Gmail SMTP is blocked by Render free tier (connection timeout)
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER || process.env.EMAIL_USER || '',
-    pass: process.env.SMTP_PASS || process.env.EMAIL_PASS || ''
-  }
-});
+// ── EMAIL via Resend (free, works on Render) ──────────────────────────────────
+// Render blocks Gmail SMTP — Resend uses HTTP API, always works
+// Free: 3000 emails/month at resend.com — no credit card needed
 async function sendEmail(to, subject, html, options={}) {
-  const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER || '';
-  if (!smtpUser || smtpUser.includes('your-gmail') || smtpUser.includes('your-email')) {
-    console.warn('⚠️  SMTP not configured — skipping email to', to);
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn('⚠️  RESEND_API_KEY not set — skipping email to', to);
     return false;
   }
   try {
-    const mailOptions = {
-      from: options.fromName
-        ? `"${options.fromName}" <${process.env.EMAIL_USER}>`
-        : `"Smart LMS - Connecting Dot" <${process.env.EMAIL_USER}>`,
-      to,
+    const fromName = options.fromName || 'Smart LMS';
+    const fromAddr = process.env.RESEND_FROM || 'onboarding@resend.dev';
+    const body = {
+      from: `${fromName} <${fromAddr}>`,
+      to: [to],
       subject,
       html
     };
-    if (options.replyTo) mailOptions.replyTo = options.replyTo;
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent to', to, 'from:', mailOptions.from);
-    return true;
+    if (options.replyTo) body.reply_to = options.replyTo;
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (res.ok) { console.log('✅ Email sent to', to); return true; }
+    console.error('❌ Resend error:', data.message || JSON.stringify(data));
+    return false;
   } catch(e) { console.error('❌ Email error:', e.message); return false; }
 }
 
