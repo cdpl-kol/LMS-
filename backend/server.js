@@ -157,14 +157,23 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER || '', pass: process.env.EMAIL_PASS || '' }
 });
-async function sendEmail(to, subject, html) {
+async function sendEmail(to, subject, html, options={}) {
   if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your-gmail')) {
     console.warn('⚠️  EMAIL_USER not configured — skipping email to', to);
     return false;
   }
   try {
-    await transporter.sendMail({ from: `"Smart LMS - Connecting Dot" <${process.env.EMAIL_USER}>`, to, subject, html });
-    console.log('✅ Email sent to', to);
+    const mailOptions = {
+      from: options.fromName
+        ? `"${options.fromName}" <${process.env.EMAIL_USER}>`
+        : `"Smart LMS - Connecting Dot" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html
+    };
+    if (options.replyTo) mailOptions.replyTo = options.replyTo;
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent to', to, 'from:', mailOptions.from);
     return true;
   } catch(e) { console.error('❌ Email error:', e.message); return false; }
 }
@@ -2862,35 +2871,40 @@ app.post('/api/v1/corporate/participants', auth, requireRole('corporate','admin'
         await pool.query(`INSERT INTO corporate_course_assignments(participant_id,course_id,assigned_by) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,[pid,cid,corpId]);
       }
     }
-    // Get company name for email
-    const corpR=await pool.query('SELECT company_name FROM corporate_clients WHERE id=$1',[corpId]);
+    // Get corporate admin info for email (name, email, company)
+    const corpR=await pool.query('SELECT company_name, email AS corp_email FROM corporate_clients WHERE id=$1',[corpId]);
     const companyName=corpR.rows[0]?.company_name||'Your Company';
-    // Send welcome email
+    const corpEmail=corpR.rows[0]?.corp_email||'';
+    // Send welcome email — From shows corporate company name, Reply-To goes to corporate admin
     const loginUrl=`${process.env.BASE_URL||'http://localhost:3000'}/participant-login.html`;
     const dashUrl=`${process.env.BASE_URL||'http://localhost:3000'}/participant-dashboard.html`;
-    const emailSent = await sendEmail(email,'Welcome to Smart LMS – Your Training Portal',`
-      <div style="font-family:Arial;padding:20px;max-width:600px;margin:auto;background:#f9f9f9;border-radius:12px;">
+    const emailSent = await sendEmail(
+      email,
+      `Welcome to Smart LMS – ${companyName}`,
+      `<div style="font-family:Arial;padding:20px;max-width:600px;margin:auto;background:#f9f9f9;border-radius:12px;">
         <div style="background:#1a237e;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
-          <h2 style="color:#fff;margin:0;">Welcome to Smart LMS</h2>
+          <h2 style="color:#fff;margin:0;">${companyName}</h2>
+          <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;">Training Portal — Smart LMS</p>
         </div>
         <div style="background:#fff;padding:24px;border-radius:0 0 8px 8px;">
           <p>Dear <strong>${name}</strong>,</p>
-          <p>You have been enrolled in a training program by <strong>${companyName}</strong>.</p>
-          <p><strong>Your Login Credentials:</strong></p>
-          <div style="background:#f0f4ff;padding:16px;border-radius:8px;margin:16px 0;">
-            <p style="margin:4px 0;"><strong>Login URL:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
-            <p style="margin:4px 0;"><strong>Email / Login ID:</strong> ${email}</p>
-            <p style="margin:4px 0;"><strong>One-Time Password:</strong> <span style="font-size:22px;font-weight:bold;color:#e91e8c;letter-spacing:4px;">${otp}</span></p>
+          <p>You have been enrolled in a training program by <strong>${companyName}</strong>. Please use the credentials below to access your learning portal.</p>
+          <div style="background:#f0f4ff;padding:16px;border-radius:8px;margin:16px 0;border-left:4px solid #1a237e;">
+            <p style="margin:6px 0;"><strong>Login URL:</strong> <a href="${loginUrl}" style="color:#1a237e;">${loginUrl}</a></p>
+            <p style="margin:6px 0;"><strong>Your Email (Login ID):</strong> ${email}</p>
+            <p style="margin:6px 0;"><strong>One-Time Password:</strong> <span style="font-size:26px;font-weight:bold;color:#e91e8c;letter-spacing:6px;">${otp}</span></p>
           </div>
-          <p style="color:#888;font-size:13px;">Please login and change your password on first login. If you have any issues, contact your HR department.</p>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;">
+          <p style="background:#fff8e1;padding:10px 14px;border-radius:8px;font-size:13px;color:#5d4037;"><strong>⚠️ Important:</strong> You will be asked to set a new password on your first login. Keep your credentials safe.</p>
+          <div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;">
             <a href="${loginUrl}" style="display:inline-block;background:#1a237e;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Login Now</a>
-            <a href="${dashUrl}?goto=courses" style="display:inline-block;background:#e91e8c;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to My Courses</a>
+            <a href="${dashUrl}?goto=courses" style="display:inline-block;background:#e91e8c;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">View My Courses</a>
           </div>
-          <p style="color:#888;font-size:12px;margin-top:16px;">The "Go to My Courses" link will ask you to login first if you are not already logged in.</p>
+          <hr style="margin:20px 0;border:none;border-top:1px solid #eee;"/>
+          <p style="color:#999;font-size:12px;">This email was sent by <strong>${companyName}</strong> via Smart LMS.<br/>If you have any questions, reply to this email or contact your HR / Training department.</p>
         </div>
-      </div>
-    `);
+      </div>`,
+      { fromName: companyName, replyTo: corpEmail }
+    );
     ok(res,{id:pid,otp,email_sent:emailSent},emailSent?'Participant added and email sent':'Participant added (email not configured — share OTP manually)');
   }catch(e){console.error(e);err(res,e.message);}
 });
@@ -2901,6 +2915,10 @@ app.post('/api/v1/corporate/participants/bulk', auth, requireRole('corporate','a
     const {participants,course_ids}=req.body; // participants = [{name,email,contact}]
     if(!participants||!Array.isArray(participants)||participants.length===0) return err(res,'No participants data',400);
     const corpId=req.user.role==='corporate'?req.user.id:req.body.corporate_id;
+    // Get corporate info once for all emails
+    const corpInfo=await pool.query('SELECT company_name, email AS corp_email FROM corporate_clients WHERE id=$1',[corpId]);
+    const bulkCompanyName=corpInfo.rows[0]?.company_name||'Your Company';
+    const bulkCorpEmail=corpInfo.rows[0]?.corp_email||'';
     const results=[];
     for(const p of participants){
       if(!p.name||!p.email) continue;
@@ -2929,10 +2947,33 @@ app.post('/api/v1/corporate/participants/bulk', auth, requireRole('corporate','a
         for(const cid of cidList){
           await pool.query(`INSERT INTO corporate_course_assignments(participant_id,course_id,assigned_by) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,[pid,cid,corpId]);
         }
-        // Send email
+        // Send email from corporate company's identity
         const loginUrl=`${process.env.BASE_URL||'http://localhost:3000'}/participant-login.html`;
         const dashUrl2=`${process.env.BASE_URL||'http://localhost:3000'}/participant-dashboard.html`;
-        await sendEmail(p.email,'Your LMS Training Access',`<div style="font-family:Arial;padding:20px;max-width:600px;"><h2 style="color:#1a237e;">Welcome to Smart LMS!</h2><p>Dear ${p.name},</p><p><strong>Login:</strong> ${p.email}<br/><strong>Password:</strong> <span style="font-size:20px;color:#e91e8c;letter-spacing:3px;">${otp}</span></p><p style="margin-top:16px;"><a href="${loginUrl}" style="background:#1a237e;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;margin-right:10px;">Login Now</a><a href="${dashUrl2}?goto=courses" style="background:#e91e8c;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">Go to My Courses</a></p><p style="font-size:12px;color:#888;margin-top:12px;">Please change your password after first login.</p></div>`);
+        await sendEmail(
+          p.email,
+          `Welcome to Smart LMS – ${bulkCompanyName}`,
+          `<div style="font-family:Arial;padding:20px;max-width:600px;margin:auto;background:#f9f9f9;border-radius:12px;">
+            <div style="background:#1a237e;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+              <h2 style="color:#fff;margin:0;">${bulkCompanyName}</h2>
+              <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;">Training Portal — Smart LMS</p>
+            </div>
+            <div style="background:#fff;padding:24px;border-radius:0 0 8px 8px;">
+              <p>Dear <strong>${p.name}</strong>,</p>
+              <p>You have been enrolled in a training program by <strong>${bulkCompanyName}</strong>.</p>
+              <div style="background:#f0f4ff;padding:16px;border-radius:8px;margin:16px 0;border-left:4px solid #1a237e;">
+                <p style="margin:6px 0;"><strong>Login URL:</strong> <a href="${loginUrl}" style="color:#1a237e;">${loginUrl}</a></p>
+                <p style="margin:6px 0;"><strong>Your Email (Login ID):</strong> ${p.email}</p>
+                <p style="margin:6px 0;"><strong>One-Time Password:</strong> <span style="font-size:26px;font-weight:bold;color:#e91e8c;letter-spacing:6px;">${otp}</span></p>
+              </div>
+              <p style="background:#fff8e1;padding:10px 14px;border-radius:8px;font-size:13px;color:#5d4037;"><strong>⚠️ Important:</strong> You will be asked to set a new password on your first login.</p>
+              <div style="margin-top:20px;"><a href="${loginUrl}" style="display:inline-block;background:#1a237e;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin-right:10px;">Login Now</a><a href="${dashUrl2}?goto=courses" style="display:inline-block;background:#e91e8c;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">View My Courses</a></div>
+              <hr style="margin:20px 0;border:none;border-top:1px solid #eee;"/>
+              <p style="color:#999;font-size:12px;">This email was sent by <strong>${bulkCompanyName}</strong> via Smart LMS.</p>
+            </div>
+          </div>`,
+          { fromName: bulkCompanyName, replyTo: bulkCorpEmail }
+        );
         results.push({name:p.name,email:p.email,status:'success',id:pid});
       }catch(e2){results.push({name:p.name,email:p.email,status:'error',error:e2.message});}
     }
