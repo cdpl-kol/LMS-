@@ -148,7 +148,10 @@ const upload = multer({ storage, fileFilter, limits: { fileSize: 50*1024*1024 } 
 // ── DATABASE ──────────────────────────────────────────────────────────────────
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/lms_db',
-  max: 20, idleTimeoutMillis: 30000, connectionTimeoutMillis: 2000
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 15000,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 const JWT_SECRET  = process.env.JWT_SECRET  || 'lms-secret-2024-secure';
 const JWT_REFRESH = process.env.JWT_REFRESH || 'lms-refresh-secret-2024';
