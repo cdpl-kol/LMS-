@@ -1700,8 +1700,19 @@ async function loadScorm(){
     const typeTag=isVideo?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:2px 8px;font-weight:700;">VIDEO</span>`:`<span style="font-size:10px;background:#9c27b020;color:#9c27b0;border-radius:4px;padding:2px 8px;font-weight:700;">SCORM</span>`;
     const slides=t.slide_times&&typeof t.slide_times==='object'?t.slide_times:{};
     const slideVisitsObj=t.slide_visits&&typeof t.slide_visits==='object'?t.slide_visits:{};
-    const _allKeys=new Set([...Object.keys(slides),...Object.keys(slideVisitsObj)].filter(k=>k!=='video_seconds'&&k!=='video_duration'));
-    const visitedSlides=[..._allKeys].filter(k=>parseInt(slides[k]||0)>0||parseInt(slideVisitsObj[k]||0)>0).length;
+    const _slOrd=Array.isArray(p.slide_order)&&p.slide_order.length>0?p.slide_order:null;
+    const _slOrdHasGuids=_slOrd&&_slOrd.some(id=>!/^\d+$/.test(id));
+    const _posKeyRe=/^[a-zA-Z_]*(\d+)$/;
+    const _visitedSet=new Set();
+    [...Object.keys(slides),...Object.keys(slideVisitsObj)]
+      .filter(k=>k!=='video_seconds'&&k!=='video_duration')
+      .forEach(k=>{
+        if((parseInt(slides[k]||0)>0||parseInt(slideVisitsObj[k]||0)>0)){
+          if(_slOrdHasGuids&&!_slOrd.includes(k)){const m=k.match(_posKeyRe);if(m){const idx=parseInt(m[1])-1;if(idx>=0&&idx<_slOrd.length){_visitedSet.add(_slOrd[idx]);return;}}}
+          _visitedSet.add(k);
+        }
+      });
+    const visitedSlides=_visitedSet.size;
     let totalSecs=Object.entries(slides).filter(([k])=>k!=='video_seconds'&&k!=='video_duration').reduce((a,[,v])=>a+parseInt(v),0);
     if(totalSecs===0&&t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalSecs=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
     const score=parseInt(t.score_raw)||0;
