@@ -27,6 +27,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
 .btn-save{background:#1565c0;color:#fff;}
 .btn-save:hover{background:#1976d2;}
 .btn-save:disabled{background:#263238;color:rgba(255,255,255,0.4);cursor:not-allowed;}
+.btn-restart{background:#7b1fa2;color:#fff;}
+.btn-restart:hover{background:#9c27b0;}
+.btn-restart:disabled{background:#263238;color:rgba(255,255,255,0.4);cursor:not-allowed;}
 .btn-exit{background:#ff6b35;color:#fff;}
 .btn-exit:hover{background:#e55a2b;}
 
@@ -93,8 +96,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
   </div>
   <div class="tb-right">
     <button class="btn btn-back" onclick="goBack()"><i class="fas fa-arrow-left"></i> Back</button>
-    <button class="btn btn-save" id="saveBtn" onclick="manualSave()"><i class="fas fa-floppy-disk"></i> Save Progress</button>
-    <button class="btn btn-exit" onclick="exitSCORM()"><i class="fas fa-sign-out-alt"></i> Exit</button>
+    <button class="btn btn-restart" id="restartBtn" onclick="restartSCORM()"><i class="fas fa-rotate-left"></i> Restart</button>
+    <button class="btn btn-exit" id="saveExitBtn" onclick="exitSCORM()"><i class="fas fa-floppy-disk"></i> Save &amp; Exit</button>
   </div>
 </div>
 
@@ -202,6 +205,19 @@ let dirty = false;
 let sessionStart = Date.now();
 let saveTimer = null;
 let totalSlidesInPkg = 0;  // set after package loads
+let scormApiSetLocation = false; // true when SCORM content sets lesson_location via LMSSetValue
+let lastSuspendData = '';        // fingerprint: detect slide changes via suspend_data
+let commitSlideCount = 0;        // synthetic slide counter for LMSCommit-based tracking
+let currentPkgPath = '';  // stored so Restart can reload the iframe
+// After restart, SCORM content re-initializes from its own internal cache and
+// immediately calls LMSSetValue with old score/status. We ignore those updates
+// until the user actually visits a new slide (recordSlideTime clears this flag).
+let justRestarted = false;
+// Detects iSpring's own built-in Restart: content calls LMSFinish then
+// LMSInitialize in the same session, which means the user clicked Restart
+// inside the SCORM content (not our LMS Restart button).
+let contentCalledFinish = false;
+let contentFinishTimer  = null;
 
 // ── PER-SLIDE TIME + VISIT TRACKING ──────────────────────────────────────────
 let slideTimings = {};       // { slideId: totalSecondsSpent }
@@ -211,8 +227,10 @@ let slideStartTime = null;
 
 function recordSlideTime(slideId) {
   if (!slideId) return;
+  // First real slide visit after restart — clear the restart guard
+  justRestarted = false;
   if (currentSlide && slideStartTime !== null) {
-    const spent = Math.floor((Date.now() - slideStartTime) / 1000);
+    const spent = Math.max(1, Math.floor((Date.now() - slideStartTime) / 1000));
     slideTimings[currentSlide] = (slideTimings[currentSlide] || 0) + spent;
   }
   // Increment visit count when moving to a new slide
@@ -234,7 +252,8 @@ function getSessionTime() {
 
 // Update status bar (SCORM mode)
 function updateStatusBar() {
-  const status = CMI['cmi.core.lesson_status'] || 'not attempted';
+  // After restart: force badge to "Not Started" until first real slide visit
+  const status = justRestarted ? 'not attempted' : (CMI['cmi.core.lesson_status'] || 'not attempted');
   const badge = document.getElementById('statusBadge');
   badge.textContent = status.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
   badge.className = 'status-badge status-val ' + ({
@@ -244,14 +263,29 @@ function updateStatusBar() {
   }[status] || 'badge-gray');
 
   // Progress % — slides visited / total_slides, fallback to score_raw
-  const scormSlides = Object.entries(slideTimings)
-    .filter(([k, v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0).length;
+  // After restart, show 0% until the user actually visits a new slide
+  const visitedKeys = new Set(
+    Object.entries(slideTimings)
+      .filter(([k, v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0)
+      .map(([k]) => k)
+  );
+  if (currentSlide && currentSlide !== 'video_seconds' && currentSlide !== 'video_duration') {
+    visitedKeys.add(currentSlide); // count the slide currently being viewed
+  }
+  const scormSlides = visitedKeys.size;
   const raw = parseInt(CMI['cmi.core.score.raw']) || 0;
   let pct = 0;
-  if (totalSlidesInPkg > 0 && scormSlides > 0) {
-    pct = Math.min(100, Math.round((scormSlides / totalSlidesInPkg) * 100));
-  } else if (raw > 0) {
-    pct = Math.min(100, raw);
+  if (!justRestarted) {
+    if (totalSlidesInPkg > 0 && scormSlides > 0) {
+      pct = Math.min(100, Math.round((scormSlides / totalSlidesInPkg) * 100));
+    } else if (raw > 0) {
+      pct = Math.min(100, raw);
+    } else if (scormSlides > 0) {
+      // total_slides unknown — show visited count instead of 0%
+      document.getElementById('progressDisplay').textContent = scormSlides + ' slide' + (scormSlides !== 1 ? 's' : '');
+      document.getElementById('progressBar').style.width = Math.min(100, scormSlides * 5) + '%';
+      return;
+    }
   }
   document.getElementById('progressDisplay').textContent = pct + '%';
   document.getElementById('progressBar').style.width = pct + '%';
@@ -268,6 +302,41 @@ setInterval(() => {
 window.API = {
   LMSInitialize: function(s) {
     if (initialized) return 'true';
+
+    // ── Detect iSpring's built-in Restart ────────────────────────────────────
+    // iSpring calls LMSFinish → LMSInitialize in the same session when the user
+    // clicks the Restart button inside the content. Intercept this to reset our
+    // tracking so the progress bar snaps back to 0%.
+    if (contentCalledFinish) {
+      clearTimeout(contentFinishTimer);
+      contentCalledFinish = false;
+      // Reset all in-memory state
+      CMI['cmi.core.lesson_status']   = 'not attempted';
+      CMI['cmi.core.lesson_location'] = '';
+      CMI['cmi.core.score.raw']       = '';
+      CMI['cmi.core.total_time']      = '0000:00:00.00';
+      CMI['cmi.core.session_time']    = '0000:00:00.00';
+      CMI['cmi.core.entry']           = 'ab-initio';
+      CMI['cmi.suspend_data']         = '';
+      slideTimings        = {};
+      slideVisits         = {};
+      currentSlide        = null;
+      slideStartTime      = null;
+      scormApiSetLocation = false;
+      lastSuspendData     = '';
+      commitSlideCount    = 0;
+      justRestarted       = true;
+      dirty               = false;
+      sessionStart        = Date.now();
+      updateStatusBar();
+      // Clear DB so dashboard also shows 0
+      fetch(BASE+'/scorm/tracking/reset', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+TOKEN() },
+        body: JSON.stringify({ package_id: PKG_ID })
+      }).catch(()=>{});
+    }
+
     initialized = true;
     // Pre-fill student info
     try {
@@ -282,6 +351,11 @@ window.API = {
     CMI['cmi.core.session_time'] = getSessionTime();
     saveTracking(true);
     initialized = false;
+    // Mark that content called finish — if LMSInitialize follows quickly it
+    // means the content's own Restart button was clicked.
+    contentCalledFinish = true;
+    clearTimeout(contentFinishTimer);
+    contentFinishTimer = setTimeout(() => { contentCalledFinish = false; }, 5000);
     return 'true';
   },
 
@@ -294,11 +368,26 @@ window.API = {
   LMSSetValue: function(element, value) {
     if (!initialized) return 'false';
     if (CMI_READONLY.has(element)) return 'false';
+    // While justRestarted: SCORM content re-syncs its own cached state.
+    // Ignore score and status so they don't overwrite our clean reset.
+    // lesson_location updates are still allowed (content navigating to slide 1).
+    if (justRestarted && (element === 'cmi.core.score.raw' || element === 'cmi.core.lesson_status')) {
+      return 'true';
+    }
     CMI[element] = value;
     dirty = true;
     // Track per-slide time when lesson_location changes
     if (element === 'cmi.core.lesson_location' && value) {
       recordSlideTime(value);
+      scormApiSetLocation = true;
+    }
+    // Fallback: detect slide changes via suspend_data fingerprint
+    if (element === 'cmi.suspend_data' && value && value !== lastSuspendData) {
+      lastSuspendData = value;
+      if (!scormApiSetLocation) {
+        commitSlideCount++;
+        recordSlideTime('pg_' + commitSlideCount);
+      }
     }
     // Trigger auto-save after 3s of inactivity
     clearTimeout(saveTimer);
@@ -314,6 +403,20 @@ window.API = {
 
   LMSCommit: function(s) {
     CMI['cmi.core.session_time'] = getSessionTime();
+    // Fallback: if SCORM doesn't use lesson_location or suspend_data per slide,
+    // treat each unique commit (with elapsed time) as a slide boundary
+    if (!scormApiSetLocation) {
+      const suspendNow = CMI['cmi.suspend_data'] || '';
+      if (suspendNow !== lastSuspendData) {
+        lastSuspendData = suspendNow;
+        commitSlideCount++;
+        recordSlideTime('pg_' + commitSlideCount);
+      } else if (currentSlide === null) {
+        // First commit with no slide detected yet — count as slide 1
+        commitSlideCount++;
+        recordSlideTime('pg_' + commitSlideCount);
+      }
+    }
     saveTracking(false);
     return 'true';
   },
@@ -373,7 +476,7 @@ async function saveTracking(final) {
   } else {
     // ── SCORM: flush current slide time ──
     if (currentSlide && slideStartTime !== null) {
-      const spent = Math.floor((Date.now() - slideStartTime) / 1000);
+      const spent = Math.max(1, Math.floor((Date.now() - slideStartTime) / 1000));
       slideTimings[currentSlide] = (slideTimings[currentSlide] || 0) + spent;
       slideStartTime = Date.now();
     }
@@ -411,14 +514,15 @@ async function saveTracking(final) {
       body: JSON.stringify({
         package_id:        PKG_ID,
         course_id:         COURSE_ID,
-        completion_status: CMI['cmi.core.lesson_status'],
-        score_raw:         effectiveScoreRaw,
+        completion_status: justRestarted ? 'not attempted' : CMI['cmi.core.lesson_status'],
+        score_raw:         justRestarted ? 0 : effectiveScoreRaw,
         score_max:         parseInt(CMI['cmi.core.score.max']) || 100,
         total_time:        _totalTimeStr,
         suspend_data:      CMI['cmi.suspend_data'] || '',
         lesson_location:   CMI['cmi.core.lesson_location'] || '',
         slide_times:       slideTimings,
         slide_visits:      slideVisits,
+        force_zero:        justRestarted,
       })
     });
     const d = await r.json();
@@ -451,6 +555,7 @@ async function loadTracking() {
       CMI['cmi.core.score.max']       = String(t.score_max || 100);
       CMI['cmi.core.total_time']      = t.total_time || '0000:00:00.00';
       CMI['cmi.suspend_data']         = t.suspend_data || '';
+      CMI['cmi.core.lesson_location'] = t.lesson_location || '';
       CMI['cmi.core.entry']           = (t.completion_status && t.completion_status !== 'not attempted') ? 'resume' : 'ab-initio';
       if (t.slide_times && typeof t.slide_times === 'object') {
         slideTimings = t.slide_times;
@@ -562,8 +667,15 @@ async function loadContent() {
       document.getElementById('loadingText').textContent = 'Loading SCORM Content…';
       const frame = document.getElementById('scormFrame');
       frame.style.display = 'block';
+      currentPkgPath = pkg.upload_path;
       frame.onload = () => {
         document.getElementById('loadingOverlay').classList.add('hidden');
+        // Capture the initial slide immediately on load so Progress isn't stuck at 0%
+        try {
+          const initHash = frame.contentWindow.location.hash;
+          const initNums = (initHash.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 5000);
+          recordSlideTime(initNums.length ? String(initNums[0]) : '1');
+        } catch(e) { recordSlideTime('1'); }
         // ── Hash-based slide tracking fallback ──────────────────────────────
         // Many SCORM packages (Articulate, iSpring, Lectora…) navigate via URL
         // hash without calling LMSSetValue('cmi.core.lesson_location',...).
@@ -582,7 +694,15 @@ async function loadContent() {
               .map(Number).filter(n => n > 0 && n < 5000);
             if (!nums.length) return;
             const sid = String(nums[0]);
-            if (sid !== currentSlide) recordSlideTime(sid);
+            if (sid !== currentSlide) {
+              recordSlideTime(sid);
+              // Update lesson_location from hash only when SCORM content
+              // hasn't called LMSSetValue for lesson_location itself
+              if (!scormApiSetLocation) {
+                CMI['cmi.core.lesson_location'] = sid;
+                dirty = true;
+              }
+            }
           } catch(e) {} // cross-origin guard (same-origin should always pass)
         }, 500);
       };
@@ -619,10 +739,24 @@ async function manualSave() {
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────
+
+// For hash-based SCORM content: advance lesson_location to next slide on exit
+// so that Resume opens the slide AFTER the one the user was on.
+// For SCORM-API-based content the content itself manages lesson_location.
+function advanceLocationForResume() {
+  if (!scormApiSetLocation) {
+    const loc = CMI['cmi.core.lesson_location'];
+    if (loc && /^\d+$/.test(loc)) {
+      CMI['cmi.core.lesson_location'] = String(parseInt(loc) + 1);
+    }
+  }
+}
+
 function goBack() {
   const video = document.getElementById('videoPlayer');
   if (videoDuration > 0 && video) video.pause();
   CMI['cmi.core.session_time'] = getSessionTime();
+  advanceLocationForResume();
   const dest = ROLE === 'student' ? 'student-dashboard.html'
     : ROLE === 'trainer' ? 'trainer-dashboard.html'
     : ROLE === 'participant' ? 'participant-dashboard.html'
@@ -635,6 +769,8 @@ function goBack() {
 }
 
 function exitSCORM() {
+  const btn = document.getElementById('saveExitBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
   const video = document.getElementById('videoPlayer');
   if (videoDuration > 0 && video) {
     // Video mode — pause and save then redirect
@@ -647,8 +783,9 @@ function exitSCORM() {
       else window.location.href = 'admin-dashboard.html';
     });
   } else {
-    // SCORM mode — properly await save before navigating
+    // SCORM mode — advance location then save before navigating
     CMI['cmi.core.session_time'] = getSessionTime();
+    advanceLocationForResume();
     initialized = false;
     const role = ROLE;
     saveTracking(true).then(() => {
@@ -657,6 +794,67 @@ function exitSCORM() {
       else if (role === 'participant') window.location.href = 'participant-dashboard.html';
       else window.location.href = 'admin-dashboard.html';
     });
+  }
+}
+
+async function restartSCORM() {
+  if (!confirm('Restart karein? Aapki saari progress reset ho jayegi aur module shuru se chalega.')) return;
+  const btn = document.getElementById('restartBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Restarting…'; }
+
+  // Reset backend tracking
+  try {
+    await fetch(BASE+'/scorm/tracking/reset', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+TOKEN() },
+      body: JSON.stringify({ package_id: PKG_ID })
+    });
+  } catch(e) {}
+
+  // Reset all in-memory CMI and tracking state
+  CMI['cmi.core.lesson_status']   = 'not attempted';
+  CMI['cmi.core.lesson_location'] = '';
+  CMI['cmi.core.score.raw']       = '';
+  CMI['cmi.core.score.max']       = '100';
+  CMI['cmi.core.total_time']      = '0000:00:00.00';
+  CMI['cmi.core.session_time']    = '0000:00:00.00';
+  CMI['cmi.core.entry']           = 'ab-initio';
+  CMI['cmi.suspend_data']         = '';
+  slideTimings        = {};
+  slideVisits         = {};
+  currentSlide        = null;
+  slideStartTime      = null;
+  scormApiSetLocation = false;
+  lastSuspendData     = '';
+  commitSlideCount    = 0;
+  justRestarted       = true;
+  initialized         = false;
+  dirty               = false;
+  sessionStart        = Date.now();
+
+  updateStatusBar();
+  document.getElementById('syncStatus').textContent = '✓ Reset';
+  document.getElementById('syncStatus').style.color = '#81c784';
+
+  // Reload the SCORM iframe from the beginning
+  if (videoDuration > 0) {
+    const video = document.getElementById('videoPlayer');
+    video.currentTime = 0;
+    videoWatched  = 0;
+    videoDuration = 0;
+    video.load();
+  } else if (currentPkgPath) {
+    const frame = document.getElementById('scormFrame');
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    frame.src = '';
+    setTimeout(() => { frame.src = currentPkgPath; }, 100);
+  }
+
+  if (btn) {
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-rotate-left"></i> Restart';
+    }, 1500);
   }
 }
 

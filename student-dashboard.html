@@ -1464,10 +1464,18 @@ function showScormDashboard(pkgName,tracking,pkgMeta,label){
   if(tot<=1&&_mx>tot)tot=_mx;
   // Fallback: single-slide package with no per-slide data → attribute total_time to Slide 1
   if(_vk.length===0&&_tts>0&&tot<=1){stObj['1']=_tts;if(!svObj['1'])svObj['1']=1;if(tot<1)tot=1;}
+  // Detect Articulate Storyline-style slide IDs (non-numeric keys like "66rSd8hpB0f")
+  const _artKeys=[...new Set([...Object.keys(stObj),...Object.keys(svObj)])].filter(k=>k!=='video_seconds'&&k!=='video_duration'&&!/^\d+$/.test(k));
+  const _slOrdr=Array.isArray(pkgMeta.slide_order)&&pkgMeta.slide_order.length>0?pkgMeta.slide_order:null;
   const allSlides=[];
-  if(tot>0){for(let i=1;i<=tot;i++){const id=String(i);allSlides.push({id,spent:parseInt(stObj[id])||0,visits:parseInt(svObj[id])||0});}}
+  if(_artKeys.length>0&&_slOrdr){
+    // Articulate: map Storyline IDs → sequential "Slide 1", "Slide 2"…
+    _slOrdr.forEach((aid,idx)=>allSlides.push({id:String(idx+1),spent:parseInt(stObj[aid])||0,visits:parseInt(svObj[aid])||0}));
+    if(tot<_slOrdr.length)tot=_slOrdr.length;
+  }else if(tot>0){for(let i=1;i<=tot;i++){const id=String(i);allSlides.push({id,spent:parseInt(stObj[id])||0,visits:parseInt(svObj[id])||0});}}
   else{_vk.sort((a,b)=>a-b).forEach(k=>allSlides.push({id:String(k),spent:parseInt(stObj[String(k)])||0,visits:parseInt(svObj[String(k)])||0}));}
-  const vc=allSlides.filter(s=>s.spent>0||s.visits>0).length;
+  const isComplete=st==='passed'||st==='completed';
+  const vc=isComplete&&tot>0?tot:allSlides.filter(s=>s.spent>0||s.visits>0).length;
   const ts=allSlides.reduce((a,s)=>a+s.spent,0);
   const mx=Math.max(...allSlides.map(s=>s.spent),1);
   const tv=allSlides.reduce((a,s)=>a+s.visits,0);
@@ -1481,13 +1489,23 @@ function showScormDashboard(pkgName,tracking,pkgMeta,label){
   const bg=p=>p>=80?'#22c55e,#86efac':p>=40?'#6366f1,#a78bfa':'#ef4444,#fca5a5';
   const ver=pkgMeta.content_type==='video'?'VIDEO':pkgMeta.scorm_version==='2004'?'SCORM 2004':'SCORM 1.2';
   const pUrl=pkgMeta.id?`scorm-player.html?pkg=${pkgMeta.id}&name=${encodeURIComponent(pkgName)}`:'#';
+  const _fdiff=s=>s<60?s+'s':s<3600?Math.floor(s/60)+'m '+Math.floor(s%60)+'s':Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';
   const rows=allSlides.length?allSlides.map(s=>{
     const visited=s.spent>0||s.visits>0;
     const spW=s.spent>0?Math.max(4,Math.round((s.spent/mx)*100)):0;
     const visitBadge=s.visits>0?`<span style="background:#2d3148;border-radius:10px;padding:3px 10px;font-size:11px;color:#e2e8f0;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;"><i class="fas fa-eye" style="font-size:10px;color:#a78bfa;"></i>${s.visits}x</span>`:visited?`<span style="color:#64748b;font-size:11px;">1x</span>`:`<span style="color:#475569;font-size:11px;">Not viewed</span>`;
+    const actualDur=parseInt(((pkgMeta.slide_durations)||{})[s.id])||0;
+    const diff=s.spent-actualDur;
+    let diffCell='<span style="color:#475569;font-size:12px;">—</span>';
+    if(actualDur>0&&visited){
+      if(diff>5)diffCell=`<span style="color:#f87171;font-weight:700;font-size:12px;">+${_fdiff(Math.abs(diff))} over</span>`;
+      else if(diff<-5)diffCell=`<span style="color:#fbbf24;font-weight:700;font-size:12px;">${_fdiff(Math.abs(diff))} under</span>`;
+      else diffCell=`<span style="color:#4ade80;font-weight:600;font-size:12px;">On time</span>`;
+    }
     return`<tr style="border-bottom:1px solid #1e2139;${!visited?'opacity:.4':''}">
       <td style="padding:12px 12px;white-space:nowrap;width:100px;vertical-align:top;">
         <div style="font-weight:700;font-size:13px;color:${visited?'#e2e8f0':'#475569'};">Slide ${s.id}</div>
+        ${actualDur>0?`<div style="font-size:10px;color:#64748b;margin-top:2px;">Actual: ${_fdiff(actualDur)}</div>`:''}
       </td>
       <td style="padding:12px 12px;">
         ${visited?`
@@ -1500,13 +1518,16 @@ function showScormDashboard(pkgName,tracking,pkgMeta,label){
         </div>`:`<span style="color:#475569;font-size:12px;">—</span>`}
       </td>
       <td style="padding:12px 12px;white-space:nowrap;vertical-align:top;width:110px;">${visitBadge}</td>
+      <td style="padding:12px 12px;white-space:nowrap;vertical-align:top;width:120px;">${diffCell}</td>
     </tr>`;
-  }).join(''):`<tr><td colspan="3" style="text-align:center;padding:32px;color:#64748b;">${_tts>0?`No per-slide breakdown available.<br><small style="color:#475569;font-size:11px;">Total session recorded: ${_f(_tts)}</small>`:'Launch the course to start tracking.'}</td></tr>`;
+  }).join(''):`<tr><td colspan="4" style="text-align:center;padding:32px;color:#64748b;">${_tts>0?`No per-slide breakdown available.<br><small style="color:#475569;font-size:11px;">Total session recorded: ${_f(_tts)}</small>`:'Launch the course to start tracking.'}</td></tr>`;
   const el=document.createElement('div');el.id='_scormDash';
   el.style.cssText='position:fixed;inset:0;background:#0f1117;z-index:9999;overflow-y:auto;font-family:"Inter",system-ui,sans-serif;color:#e2e8f0;';
-  el.innerHTML=`<nav style="background:#1a1d2e;border-bottom:1px solid #2d3148;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;">
+  const _analyticsUrl=pkgMeta.id?`scorm-analytics.html?pkg=${pkgMeta.id}&name=${encodeURIComponent(pkgName)}`:'';
+  el.innerHTML=`<nav style="background:#1a1d2e;border-bottom:1px solid #2d3148;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;gap:8px;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:12px;"><button onclick="document.getElementById('_scormDash').remove()" style="background:rgba(255,255,255,.1);border:none;color:#e2e8f0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">← Back</button><span style="color:#94a3b8;font-size:13px;">SCORM Analytics${label?' — '+label:''}</span></div>
-    <span style="color:#94a3b8;font-size:13px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkgName}</span></nav>
+    <div style="display:flex;align-items:center;gap:8px;">${_analyticsUrl?`<a href="${_analyticsUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#0e7490;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;"><i class="fas fa-chart-mixed"></i> Full Analytics Report</a>`:''}
+    <span style="color:#94a3b8;font-size:13px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkgName}</span></div></nav>
   <div style="max-width:1100px;margin:0 auto;padding:24px 16px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
       <div><h4 style="font-size:20px;font-weight:700;color:#e2e8f0;margin:0 0 8px;">${pkgName}</h4>
@@ -1554,12 +1575,14 @@ function showScormDashboard(pkgName,tracking,pkgMeta,label){
               <th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:100px;border-bottom:1px solid #2d3148;">Slide</th>
               <th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid #2d3148;">Time Spent</th>
               <th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:110px;border-bottom:1px solid #2d3148;">Visits</th>
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:120px;border-bottom:1px solid #2d3148;">Difference</th>
             </tr></thead>
             <tbody>${rows}</tbody>
             <tfoot><tr style="background:#12152a;border-top:2px solid #2d3148;">
               <td style="padding:10px 12px;font-weight:700;font-size:13px;">Total</td>
               <td style="padding:10px 12px;font-size:13px;color:#c084fc;font-weight:700;">${_dispTs>0?_f(_dispTs):'—'}</td>
               <td style="padding:10px 12px;font-size:13px;color:#94a3b8;">${tv>0?tv+' visits':'—'}</td>
+              <td style="padding:10px 12px;font-size:13px;color:#64748b;">—</td>
             </tr></tfoot>
           </table>
         </div>
@@ -1676,8 +1699,11 @@ async function loadScorm(){
     const isVideo=(p.content_type||'scorm')==='video';
     const typeTag=isVideo?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:2px 8px;font-weight:700;">VIDEO</span>`:`<span style="font-size:10px;background:#9c27b020;color:#9c27b0;border-radius:4px;padding:2px 8px;font-weight:700;">SCORM</span>`;
     const slides=t.slide_times&&typeof t.slide_times==='object'?t.slide_times:{};
-    const visitedSlides=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>0).length;
-    const totalSecs=Object.entries(slides).filter(([k])=>k!=='video_seconds'&&k!=='video_duration').reduce((a,[,v])=>a+parseInt(v),0);
+    const slideVisitsObj=t.slide_visits&&typeof t.slide_visits==='object'?t.slide_visits:{};
+    const _allKeys=new Set([...Object.keys(slides),...Object.keys(slideVisitsObj)].filter(k=>k!=='video_seconds'&&k!=='video_duration'));
+    const visitedSlides=[..._allKeys].filter(k=>parseInt(slides[k]||0)>0||parseInt(slideVisitsObj[k]||0)>0).length;
+    let totalSecs=Object.entries(slides).filter(([k])=>k!=='video_seconds'&&k!=='video_duration').reduce((a,[,v])=>a+parseInt(v),0);
+    if(totalSecs===0&&t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalSecs=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
     const score=parseInt(t.score_raw)||0;
     const scoreMax=parseInt(t.score_max)||100;
     const playerUrl=`scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'Content')}`;
@@ -1692,7 +1718,7 @@ async function loadScorm(){
       <td style="padding:12px 14px;">${typeTag}</td>
       <td style="padding:12px 14px;">${_sStatusBadge(st)}</td>
       <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${score>0?score+'/'+scoreMax:'—'}</td>
-      <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${visitedSlides||'—'}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${visitedSlides>0?(p.total_slides>0?visitedSlides+'/'+p.total_slides:visitedSlides):'—'}</td>
       <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${totalSecs>0?_sFmtSec(totalSecs):'—'}</td>
       <td style="padding:12px 14px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -1710,15 +1736,10 @@ function loadStudentScormData(){
   showStudentScormAnalytics(pkgId);
 }
 
-async function showStudentScormAnalytics(pkgId){
+function showStudentScormAnalytics(pkgId){
   const pkg=_studentScormPkgs.find(p=>p.id===pkgId)||{};
-  // Always fetch fresh tracking so saved slide_times / total_time appear immediately
-  try{
-    const r=await api('GET','/scorm/tracking/'+pkgId);
-    if(r.data){_studentScormTrackMap[pkgId]=r.data;}
-  }catch(e){}
-  const tracking=_studentScormTrackMap[pkgId]||{};
-  showScormDashboard(pkg.package_name||'Module',tracking,pkg,null);
+  const name=encodeURIComponent(pkg.package_name||'Module');
+  window.open(`scorm-analytics.html?pkg=${pkgId}&name=${name}`,'_blank');
 }
 
 /* ── NOTIFICATIONS ── */

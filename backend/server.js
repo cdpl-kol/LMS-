@@ -1615,8 +1615,8 @@ app.post('/api/v1/razorpay/create-order', auth, studentOnly, async (req, res) =>
     const existing = await pool.query('SELECT id FROM course_purchases WHERE student_id=$1 AND course_id=$2', [req.user.id, course_id]);
     if (existing.rows[0]) return err(res, 'Course already purchased', 409);
 
-    if (!process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID === 'rzp_test_YOUR_KEY_HERE') {
-      return err(res, 'Razorpay keys not configured yet. Please update RAZORPAY_KEY_ID in .env', 503);
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET === 'YOUR_LIVE_SECRET_HERE') {
+      return err(res, 'Razorpay live keys not configured on server', 503);
     }
 
     const rzp = getRazorpay();

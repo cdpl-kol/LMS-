@@ -1135,11 +1135,36 @@ async function viewStudentDetail(studentId,studentName){
   document.getElementById('detailStudentName').textContent=studentName+' – Detailed Progress';
   document.getElementById('studentDetailContent').innerHTML='<p style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</p>';
   document.getElementById('studentDetailBox').style.display='flex';
-  const r=await api('GET',`/progress/student/${studentId}`);
+  const [r,scormR]=await Promise.all([
+    api('GET',`/progress/student/${studentId}`),
+    api('GET',`/scorm/tracking-all?student_id=${studentId}`).catch(()=>({data:[]}))
+  ]);
   if(!r.success){document.getElementById('studentDetailContent').innerHTML='<p style="color:#e53935;padding:20px;">Failed to load.</p>';return;}
   const {progress,summary}=r.data;
   const hrs=Math.floor((parseInt(summary.total_time_seconds)||0)/3600);
   const mins=Math.floor(((parseInt(summary.total_time_seconds)||0)%3600)/60);
+  const scormRows=Array.isArray(scormR?.data)?scormR.data:(Array.isArray(scormR)?scormR:[]);
+  const scormHtml=scormRows.length?`
+    <div style="margin-top:20px;border-top:1px solid var(--brd);padding-top:16px;">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="fas fa-cube" style="color:#9c27b0;"></i> SCORM / E-Learning Analytics</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${scormRows.map(t=>{
+          const pct=t.completion_status==='completed'||t.completion_status==='passed'?100:(parseInt(t.score_raw)||0);
+          const statusColor=t.completion_status==='completed'||t.completion_status==='passed'?'#166534':'#92400e';
+          const statusText=(t.completion_status||'not started').replace(/_/g,' ');
+          return`<a href="scorm-analytics.html?pkg=${t.package_id}&name=${encodeURIComponent(t.package_name||'Module')}&student_id=${studentId}" target="_blank"
+            style="display:inline-flex;flex-direction:column;gap:4px;background:#f8faff;border:1.5px solid var(--brd);border-radius:10px;padding:10px 14px;text-decoration:none;min-width:160px;transition:border-color .15s;"
+            onmouseover="this.style.borderColor='#9c27b0'" onmouseout="this.style.borderColor='var(--brd)'">
+            <div style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">${t.package_name||'Module'}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <span style="font-size:11px;background:${statusColor};color:#fff;border-radius:4px;padding:1px 6px;">${statusText}</span>
+              <span style="font-size:11px;color:#9c27b0;font-weight:700;"><i class="fas fa-chart-bar" style="font-size:10px;"></i> View Report</span>
+            </div>
+          </a>`;
+        }).join('')}
+      </div>
+    </div>`:
+    '<div style="margin-top:16px;font-size:12px;color:var(--muted);"><i class="fas fa-cube" style="margin-right:4px;opacity:.4;"></i>No SCORM tracking data yet.</div>';
   document.getElementById('studentDetailContent').innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px;background:#f8faff;border-radius:10px;margin-bottom:16px;">
       <div style="text-align:center;"><div style="font-size:22px;font-weight:700;color:var(--navy);">${summary.modules_completed||0}</div><div style="font-size:12px;color:var(--muted);">Completed</div></div>
@@ -1157,7 +1182,8 @@ async function viewStudentDetail(studentId,studentName){
           <td>${p.last_accessed?new Date(p.last_accessed).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—'}</td>
         </tr>`}).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted);">No module data yet</td></tr>'}
       </tbody></table>
-    </div>`;
+    </div>
+    ${scormHtml}`;
 }
 function closeStudentDetail(e){if(e.target===document.getElementById('studentDetailBox'))document.getElementById('studentDetailBox').style.display='none';}
 
