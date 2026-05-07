@@ -52,7 +52,13 @@
       "Bash(python3 -c \"from pptx import Presentation; from pptx.util import Pt; p = Presentation\\('/c/Users/Aadil Shaikh/Downloads/LMS/SmartLMS_Marketing_Flyer.pptx'\\); print\\('Slides:', len\\(p.slides\\)\\)\")",
       "Bash(python -c \"from pptx import Presentation; p = Presentation\\('C:/Users/Aadil Shaikh/Downloads/LMS/SmartLMS_Marketing_Flyer.pptx'\\); print\\('OK'\\)\")",
       "Bash(python -c ' *)",
-      "Bash(grep -E \"\\\\.html$\")"
+      "Bash(grep -E \"\\\\.html$\")",
+      "Bash(git -C \"C:/Users/Aadil Shaikh/Downloads/LMS\" diff --stat)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(node server.js)",
+      "PowerShell(Stop-Process -Name node -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Start-Process -FilePath \"node\" -ArgumentList \"server.js\" -WorkingDirectory \"C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\backend\" -RedirectStandardOutput \"C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\backend\\\\server.log\" -RedirectStandardError \"C:\\\\Users\\\\Aadil Shaikh\\\\Downloads\\\\LMS\\\\backend\\\\server_err.log\" -WindowStyle Hidden)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Host \"Done\")"
     ]
   }
 }

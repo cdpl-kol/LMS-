@@ -677,11 +677,14 @@ tr:hover td{background:#f8f9ff;}
     <div class="card" style="margin-bottom:20px;">
       <div class="card-header">
         <span class="card-title"><i class="fas fa-cube" style="color:var(--orange);margin-right:6px;"></i>SCORM Packages</span>
-        <button class="btn btn-primary btn-sm" onclick="openModal('uploadScormModal')"><i class="fas fa-upload"></i> Upload SCORM / Video</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm" style="background:#0e7490;color:#fff;" onclick="reparseAllScorm()" title="Re-parse all packages to extract slide durations"><i class="fas fa-arrows-rotate"></i> Re-parse Slides</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('uploadScormModal')"><i class="fas fa-upload"></i> Upload SCORM / Video</button>
+        </div>
       </div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Name</th><th>Type</th><th>SCORM Version</th><th>Module</th><th>Course</th><th>Uploaded On</th><th>Actions</th></tr></thead>
-        <tbody id="scormTbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        <thead><tr><th>#</th><th>Name</th><th>Type</th><th>SCORM Version</th><th>Slides</th><th>Module</th><th>Course</th><th>Uploaded On</th><th>Actions</th></tr></thead>
+        <tbody id="scormTbody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
       </table></div>
     </div>
     <!-- Tracking section -->
@@ -3859,11 +3862,16 @@ async function loadScormPackages(){
     const previewBtn=isVideo
       ?`<a href="${p.upload_path}" target="_blank" class="btn btn-sm btn-primary" title="Play Video"><i class="fas fa-play"></i></a>`
       :`<a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" target="_blank" class="btn btn-sm btn-primary" title="Preview SCORM"><i class="fas fa-play"></i></a>`;
+    const slidesBadge = isVideo ? '—'
+      : p.total_slides > 0
+        ? `<span style="background:#1e3a5f;color:#38bdf8;border-radius:8px;padding:2px 9px;font-size:12px;font-weight:700;">${p.total_slides}</span>`
+        : `<span style="color:var(--muted);font-size:12px;" title="Click Re-parse Slides to detect">?</span>`;
     return`<tr>
       <td>${i+1}</td>
       <td><strong>${fmt(p.package_name)}</strong></td>
       <td>${typeBadge}</td>
       <td>${isVideo?'—':`<span class="badge pending">${p.scorm_version||'1.2'}</span>`}</td>
+      <td style="text-align:center;">${slidesBadge}</td>
       <td>${fmt(p.module_name||'—')}</td>
       <td>${fmt(p.course_name||'—')}</td>
       <td>${dateFmt(p.created_at)}</td>
@@ -3873,7 +3881,7 @@ async function loadScormPackages(){
         <button class="btn btn-sm btn-danger" onclick="deleteScorm(${p.id})" title="Delete"><i class="fas fa-trash"></i></button>
       </td>
     </tr>`;
-  }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">No content uploaded yet.</td></tr>';
+  }).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">No content uploaded yet.</td></tr>';
 }
 let _adminScormRows=[];
 function _adminFmtSec(s){s=parseInt(s)||0;if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';}
@@ -3892,10 +3900,18 @@ function showScormDashboard(pkgName,tracking,pkgMeta,label){
   const _vk=Object.keys(stObj).filter(k=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(stObj[k])>0).map(k=>parseInt(k)||0);
   const _mx=_vk.length>0?Math.max(..._vk):0;
   if(tot<=1&&_mx>tot)tot=_mx;
+  // Detect Articulate Storyline-style slide IDs (non-numeric keys like "66rSd8hpB0f")
+  const _artKeys=[...new Set([...Object.keys(stObj),...Object.keys(svObj)])].filter(k=>k!=='video_seconds'&&k!=='video_duration'&&!/^\d+$/.test(k));
+  const _slOrdr=Array.isArray(pkgMeta.slide_order)&&pkgMeta.slide_order.length>0?pkgMeta.slide_order:null;
   const allSlides=[];
-  if(tot>0){for(let i=1;i<=tot;i++){const id=String(i);allSlides.push({id,spent:parseInt(stObj[id])||0,visits:parseInt(svObj[id])||0});}}
+  if(_artKeys.length>0&&_slOrdr){
+    // Articulate: map Storyline IDs → sequential "Slide 1", "Slide 2"…
+    _slOrdr.forEach((aid,idx)=>allSlides.push({id:String(idx+1),spent:parseInt(stObj[aid])||0,visits:parseInt(svObj[aid])||0}));
+    if(tot<_slOrdr.length)tot=_slOrdr.length;
+  }else if(tot>0){for(let i=1;i<=tot;i++){const id=String(i);allSlides.push({id,spent:parseInt(stObj[id])||0,visits:parseInt(svObj[id])||0});}}
   else{_vk.sort((a,b)=>a-b).forEach(k=>allSlides.push({id:String(k),spent:parseInt(stObj[String(k)])||0,visits:parseInt(svObj[String(k)])||0}));}
-  const vc=allSlides.filter(s=>s.spent>0||s.visits>0).length;
+  const isComplete=st==='passed'||st==='completed';
+  const vc=isComplete&&tot>0?tot:allSlides.filter(s=>s.spent>0||s.visits>0).length;
   const ts=allSlides.reduce((a,s)=>a+s.spent,0),mx=Math.max(...allSlides.map(s=>s.spent),1),tv=allSlides.reduce((a,s)=>a+s.visits,0);
   const _ttm=(tracking.total_time||'').match(/(\d+):(\d+):(\d+)/);
   const _tts=_ttm?parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]):0;
@@ -3909,13 +3925,16 @@ function showScormDashboard(pkgName,tracking,pkgMeta,label){
   const bg=p=>p>=80?'#22c55e,#86efac':p>=40?'#6366f1,#a78bfa':'#ef4444,#fca5a5';
   const ver=pkgMeta.content_type==='video'?'VIDEO':pkgMeta.scorm_version==='2004'?'SCORM 2004':'SCORM 1.2';
   const pUrl=pkgMeta.id?`scorm-player.html?pkg=${pkgMeta.id}&name=${encodeURIComponent(pkgName)}`:'#';
+  const _fdiff=s=>s<60?s+'s':s<3600?Math.floor(s/60)+'m '+Math.floor(s%60)+'s':Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';
   const rows=allSlides.length?allSlides.map(s=>{
     const w=s.spent>0?Math.round((s.spent/mx)*100):0,v=s.spent>0||s.visits>0;
-    return`<tr style="border-bottom:1px solid #1e2139;${!v?'opacity:.45':''}"><td style="padding:9px 12px;white-space:nowrap;width:80px;font-weight:700;font-size:13px;color:${v?'#e2e8f0':'#475569'};">Slide ${s.id}</td><td style="padding:9px 12px;">${v?`<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;background:#252840;border-radius:4px;height:10px;overflow:hidden;"><div style="width:${w}%;height:100%;border-radius:4px;background:linear-gradient(90deg,#c084fc,#e879f9);min-width:3px;"></div></div><span style="font-size:12px;font-weight:700;color:#c084fc;width:52px;text-align:right;font-family:monospace;">${_f(s.spent)}</span></div>`:'<span style="color:#475569;font-size:12px;">—</span>'}</td><td style="padding:9px 12px;white-space:nowrap;">${s.visits>0?`<span style="background:#2d3148;border-radius:10px;padding:2px 10px;font-size:11px;color:#e2e8f0;display:inline-block;"><i class="fas fa-eye" style="margin-right:4px;font-size:10px;"></i>${s.visits}x</span>`:'<span style="color:#475569;font-size:12px;">Not viewed</span>'}</td></tr>`;
-  }).join(''):`<tr><td colspan="3" style="text-align:center;padding:28px;color:#64748b;">${_tts>0?'No per-slide data for this package.<br><small style="color:#475569;">Total session time recorded: '+_f(_tts)+'</small>':'Launch the course to see slide analytics.'}</td></tr>`;
+    const actualDur=parseInt(((pkgMeta.slide_durations)||{})[s.id])||0;const diff=s.spent-actualDur;let diffCell='<span style="color:#475569;font-size:12px;">—</span>';if(actualDur>0&&v){if(diff>5)diffCell=`<span style="color:#f87171;font-weight:700;font-size:12px;">+${_fdiff(Math.abs(diff))} over</span>`;else if(diff<-5)diffCell=`<span style="color:#fbbf24;font-weight:700;font-size:12px;">${_fdiff(Math.abs(diff))} under</span>`;else diffCell='<span style="color:#4ade80;font-weight:600;font-size:12px;">On time</span>';}
+    return`<tr style="border-bottom:1px solid #1e2139;${!v?'opacity:.45':''}"><td style="padding:9px 12px;white-space:nowrap;width:80px;font-weight:700;font-size:13px;color:${v?'#e2e8f0':'#475569'};">Slide ${s.id}${actualDur>0?`<div style="font-size:10px;color:#64748b;margin-top:2px;">Actual: ${_fdiff(actualDur)}</div>`:''}</td><td style="padding:9px 12px;">${v?`<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;background:#252840;border-radius:4px;height:10px;overflow:hidden;"><div style="width:${w}%;height:100%;border-radius:4px;background:linear-gradient(90deg,#c084fc,#e879f9);min-width:3px;"></div></div><span style="font-size:12px;font-weight:700;color:#c084fc;width:52px;text-align:right;font-family:monospace;">${_f(s.spent)}</span></div>`:'<span style="color:#475569;font-size:12px;">—</span>'}</td><td style="padding:9px 12px;white-space:nowrap;">${s.visits>0?`<span style="background:#2d3148;border-radius:10px;padding:2px 10px;font-size:11px;color:#e2e8f0;display:inline-block;"><i class="fas fa-eye" style="margin-right:4px;font-size:10px;"></i>${s.visits}x</span>`:'<span style="color:#475569;font-size:12px;">Not viewed</span>'}</td><td style="padding:9px 12px;white-space:nowrap;">${diffCell}</td></tr>`;
+  }).join(''):`<tr><td colspan="4" style="text-align:center;padding:28px;color:#64748b;">${_tts>0?'No per-slide data for this package.<br><small style="color:#475569;">Total session time recorded: '+_f(_tts)+'</small>':'Launch the course to see slide analytics.'}</td></tr>`;
   const el=document.createElement('div');el.id='_scormDash';
   el.style.cssText='position:fixed;inset:0;background:#0f1117;z-index:9999;overflow-y:auto;font-family:"Inter",system-ui,sans-serif;color:#e2e8f0;';
-  el.innerHTML=`<nav style="background:#1a1d2e;border-bottom:1px solid #2d3148;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;"><div style="display:flex;align-items:center;gap:12px;"><button onclick="document.getElementById('_scormDash').remove()" style="background:rgba(255,255,255,.1);border:none;color:#e2e8f0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">← Back</button><span style="color:#94a3b8;font-size:13px;">SCORM Analytics${label?' — '+label:''}</span></div><span style="color:#94a3b8;font-size:13px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkgName}</span></nav>
+  const _analyticsUrl=pkgMeta.id?`scorm-analytics.html?pkg=${pkgMeta.id}&name=${encodeURIComponent(pkgName)}`:'';
+  el.innerHTML=`<nav style="background:#1a1d2e;border-bottom:1px solid #2d3148;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;gap:8px;flex-wrap:wrap;"><div style="display:flex;align-items:center;gap:12px;"><button onclick="document.getElementById('_scormDash').remove()" style="background:rgba(255,255,255,.1);border:none;color:#e2e8f0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">← Back</button><span style="color:#94a3b8;font-size:13px;">SCORM Analytics${label?' — '+label:''}</span></div><div style="display:flex;align-items:center;gap:8px;">${_analyticsUrl?`<a href="${_analyticsUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#0e7490;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;"><i class="fas fa-chart-mixed"></i> Full Analytics Report</a>`:''}<span style="color:#94a3b8;font-size:13px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkgName}</span></div></nav>
   <div style="max-width:1100px;margin:0 auto;padding:24px 16px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;"><div><h4 style="font-size:20px;font-weight:700;color:#e2e8f0;margin:0 0 8px;">${pkgName}</h4><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span style="background:#334155;color:#94a3b8;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;">${ver}</span><span style="background:${sBg[st]||'#1e293b'};color:${sCol[st]||'#94a3b8'};padding:3px 12px;border-radius:6px;font-size:12px;font-weight:700;">${sMap[st]||st}</span>${label?`<span style="color:#64748b;font-size:13px;">· ${label}</span>`:''}</div></div>${pkgMeta.id?`<a href="${pUrl}" style="display:inline-flex;align-items:center;gap:8px;background:#6366f1;color:#fff;padding:8px 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;"><i class="fas fa-play"></i> Launch / Resume Course</a>`:''}</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
@@ -3939,7 +3958,7 @@ function showScormDashboard(pkgName,tracking,pkgMeta,label){
       <div style="background:#1a1d2e;border:1px solid #2d3148;border-radius:12px;padding:20px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><span style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;">Time Spent — Per Slide</span><div style="display:flex;align-items:center;gap:10px;"><span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c084fc;"></span><span style="font-size:11px;color:#c084fc;">Time Spent</span></span><span style="background:#2d3148;color:#94a3b8;border-radius:8px;padding:2px 10px;font-size:11px;">${tot||allSlides.length} slides</span></div></div>
         <div style="text-align:right;font-size:11px;color:#94a3b8;margin-bottom:8px;">${vc}/${tot||allSlides.length} slides viewed</div>
-        <div style="max-height:420px;overflow-y:auto;border-radius:8px;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="position:sticky;top:0;background:#1a1d2e;"><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:90px;border-bottom:1px solid #2d3148;">Slide</th><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid #2d3148;">Time Spent</th><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:100px;border-bottom:1px solid #2d3148;">Visits</th></tr></thead><tbody>${rows}</tbody><tfoot><tr style="background:#12152a;"><td style="padding:10px 12px;font-weight:600;font-size:13px;">Total</td><td style="padding:10px 12px;font-size:13px;color:#c084fc;font-weight:600;">${_dispTs>0?_f(_dispTs):'—'}</td><td style="padding:10px 12px;font-size:13px;color:#94a3b8;">${tv>0?tv+' visits':'—'}</td></tr></tfoot></table></div>
+        <div style="max-height:420px;overflow-y:auto;border-radius:8px;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="position:sticky;top:0;background:#1a1d2e;"><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:90px;border-bottom:1px solid #2d3148;">Slide</th><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid #2d3148;">Time Spent</th><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:100px;border-bottom:1px solid #2d3148;">Visits</th><th style="padding:9px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;width:120px;border-bottom:1px solid #2d3148;">Difference</th></tr></thead><tbody>${rows}</tbody><tfoot><tr style="background:#12152a;"><td style="padding:10px 12px;font-weight:600;font-size:13px;">Total</td><td style="padding:10px 12px;font-size:13px;color:#c084fc;font-weight:600;">${_dispTs>0?_f(_dispTs):'—'}</td><td style="padding:10px 12px;font-size:13px;color:#94a3b8;">${tv>0?tv+' visits':'—'}</td><td style="padding:10px 12px;font-size:13px;color:#64748b;">—</td></tr></tfoot></table></div>
       </div>
     </div>
   </div>`;
@@ -3947,7 +3966,13 @@ function showScormDashboard(pkgName,tracking,pkgMeta,label){
 }
 function showAdminTrackingRow(i){
   const t=_adminScormRows[i]||{};
-  showScormDashboard(t.package_name||'Module',t,{id:t.package_id,total_slides:t.total_slides||0,scorm_version:t.scorm_version||'1.2',content_type:t.content_type||'scorm'},t.student_name||'');
+  const pkgId=t.package_id||t.id;
+  const pkgName=encodeURIComponent(t.package_name||'Module');
+  // If participant_id exists (corporate participant), use that; otherwise use student_id
+  let url=`scorm-analytics.html?pkg=${pkgId}&name=${pkgName}`;
+  if(t.participant_id) url+=`&participant_id=${t.participant_id}`;
+  else if(t.student_id) url+=`&student_id=${t.student_id}`;
+  window.open(url,'_blank');
 }
 
 async function loadScormTracking(){
@@ -3972,12 +3997,28 @@ async function loadScormTracking(){
       <td>${t.score_raw!=null?t.score_raw+' / '+(t.score_max||100):'—'}</td>
       <td>${visited>0?visited+' slides':'—'}</td>
       <td>${totalSpent>0?_adminFmtSec(totalSpent):fmt(t.total_time||'—')}</td>
-      <td><button class="btn btn-sm btn-primary" onclick="showAdminTrackingRow(${i})" title="View Analytics"><i class="fas fa-chart-bar"></i></button></td>
+      <td><button class="btn btn-sm btn-primary" onclick="showAdminTrackingRow(${i})" title="View Full Analytics Report"><i class="fas fa-chart-bar"></i> Report</button></td>
     </tr>`;
   }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px;">No tracking data yet.</td></tr>';
 }
 
 
+async function reparseAllScorm(){
+  if(!confirm('Re-parse all SCORM packages to extract slide counts and audio durations?\nThis may take a moment for large packages.'))return;
+  const btn=event.target.closest('button');
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Parsing…';
+  try{
+    const r=await api('POST','/scorm/reparse-all');
+    const d=r.data||r;
+    showToast(`✅ Re-parsed ${d.updated||0} packages. ${d.skipped||0} skipped.`,'success');
+    loadScormPackages();
+    loadScormTracking();
+  }catch(e){
+    showToast('Re-parse failed: '+(e.message||'Unknown error'),'error');
+  }finally{
+    btn.disabled=false;btn.innerHTML='<i class="fas fa-arrows-rotate"></i> Re-parse Slides';
+  }
+}
 async function deleteScorm(id){
   if(!confirm('Delete this SCORM package? All student progress will also be deleted.'))return;
   const r=await api('DELETE','/scorm/packages/'+id);

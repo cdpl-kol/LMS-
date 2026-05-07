@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SCORM Analytics – Smart LMS</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0f1117;--card:#161b2e;--card2:#1a1f35;--brd:#252c48;
+  --text:#e2e8f0;--muted:#64748b;--muted2:#94a3b8;
+  --cyan:#06b6d4;--purple:#c084fc;--green:#4ade80;--orange:#fb923c;--red:#f87171;
+  --navy:#1e3a8a;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* TOP BAR */
+.topbar{background:#12172b;border-bottom:2px solid #ff6b35;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,.4);}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.tb-logo{font-size:15px;font-weight:700;color:#fff;letter-spacing:.5px;}
+.tb-logo span{color:#ff6b35;}
+.tb-title{font-size:13px;color:var(--muted2);max-width:500px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-right{display:flex;gap:8px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none;}
+.btn-back{background:rgba(255,255,255,.1);color:#fff;}
+.btn-back:hover{background:rgba(255,255,255,.2);}
+.btn-print{background:#1e40af;color:#fff;}
+.btn-print:hover{background:#2563eb;}
+.btn-export{background:#065f46;color:#fff;}
+.btn-export:hover{background:#047857;}
+
+/* MAIN */
+.main{padding:20px;max-width:1400px;margin:0 auto;}
+
+/* STAT CARDS ROW */
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.stat-card{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:18px 22px;display:flex;align-items:center;gap:16px;}
+.stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.stat-icon.cyan{background:rgba(6,182,212,.12);color:var(--cyan);}
+.stat-icon.purple{background:rgba(192,132,252,.12);color:var(--purple);}
+.stat-val{font-size:24px;font-weight:700;color:var(--text);font-family:'Courier New',monospace;}
+.stat-lbl{font-size:12px;color:var(--muted2);margin-top:3px;}
+
+/* BOTTOM LAYOUT */
+.layout{display:grid;grid-template-columns:320px 1fr;gap:16px;}
+
+/* OVERALL COMPLETION CARD */
+.completion-card{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:22px;display:flex;flex-direction:column;align-items:center;}
+.completion-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:20px;align-self:flex-start;}
+.donut-wrap{position:relative;width:160px;height:160px;margin:0 auto 24px;}
+.donut-wrap canvas{width:160px!important;height:160px!important;}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+.donut-pct{font-size:28px;font-weight:700;color:var(--text);}
+.donut-sub{font-size:12px;color:var(--muted2);}
+
+.progress-section{width:100%;margin-top:8px;}
+.prog-row{margin-bottom:14px;}
+.prog-label{font-size:12px;color:var(--muted2);margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+.prog-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.prog-bar-track{background:#252c48;border-radius:20px;height:8px;overflow:hidden;}
+.prog-bar-fill{height:100%;border-radius:20px;transition:width .6s ease;}
+.fill-green{background:linear-gradient(90deg,#4ade80,#22c55e);}
+.fill-cyan{background:linear-gradient(90deg,#06b6d4,#0ea5e9);}
+
+.status-badge{margin-top:18px;padding:6px 20px;border-radius:20px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.badge-incomplete{background:#7c2d12;color:#fb923c;}
+.badge-complete{background:#14532d;color:#4ade80;}
+.badge-inprogress{background:#1e3a8a;color:#93c5fd;}
+.badge-na{background:#1f2937;color:#9ca3af;}
+
+/* SLIDE ANALYTICS CARD */
+.slides-card{background:var(--card);border:1px solid var(--brd);border-radius:12px;overflow:hidden;}
+.slides-header{padding:16px 20px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.slides-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);}
+.legend{display:flex;gap:16px;flex-wrap:wrap;}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted2);}
+.leg-dot{width:10px;height:10px;border-radius:50%;}
+.leg-dot.cyan{background:var(--cyan);}
+.leg-dot.purple{background:var(--purple);}
+.slides-meta{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;}
+.slides-count{background:#252c48;border-radius:6px;padding:2px 10px;font-size:11px;font-weight:700;color:var(--muted2);}
+
+/* SLIDE TABLE */
+.slide-table{width:100%;border-collapse:collapse;}
+.slide-table thead th{padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--brd);background:var(--card2);}
+.slide-table thead th.right{text-align:right;}
+.slide-table tbody tr{border-bottom:1px solid var(--brd);}
+.slide-table tbody tr.not-viewed{opacity:.45;}
+.slide-table tbody tr:hover{background:rgba(255,255,255,.02);}
+
+.slide-name{padding:8px 14px;vertical-align:middle;min-width:80px;}
+.slide-name-label{font-size:13px;font-weight:700;color:var(--text);}
+.slide-name-sub{font-size:10px;color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:4px;}
+
+.slide-bars{padding:6px 14px;vertical-align:middle;}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.bar-row:last-child{margin-bottom:0;}
+.bar-type{font-size:10px;color:var(--muted);width:44px;flex-shrink:0;text-transform:uppercase;letter-spacing:.04em;}
+.bar-track{flex:1;background:#252c48;border-radius:4px;height:10px;overflow:hidden;position:relative;}
+.bar-fill{height:100%;border-radius:4px;min-width:3px;transition:width .6s ease;}
+.bar-fill.cyan{background:linear-gradient(90deg,var(--cyan),#22d3ee);}
+.bar-fill.purple{background:linear-gradient(90deg,var(--purple),#e879f9);}
+.bar-time{font-size:12px;font-weight:700;color:var(--text);width:40px;text-align:right;flex-shrink:0;font-family:'Courier New',monospace;}
+.bar-time.cyan{color:var(--cyan);}
+.bar-time.purple{color:var(--purple);}
+
+.slide-diff{padding:8px 14px;vertical-align:middle;text-align:right;white-space:nowrap;}
+.diff-over{font-size:12px;font-weight:700;color:var(--green);}
+.diff-under{font-size:12px;font-weight:700;color:var(--orange);}
+.diff-na{font-size:12px;color:var(--muted);}
+
+.slide-visits{padding:8px 14px;vertical-align:middle;text-align:right;}
+.visit-badge{background:#252c48;border-radius:10px;padding:3px 10px;font-size:11px;color:var(--text);display:inline-flex;align-items:center;gap:4px;}
+.not-viewed-text{font-size:11px;color:var(--muted);background:#1f2937;border-radius:10px;padding:3px 10px;display:inline-block;}
+
+/* SCROLL */
+.slides-body{max-height:520px;overflow-y:auto;}
+.slides-body::-webkit-scrollbar{width:6px;}
+.slides-body::-webkit-scrollbar-track{background:var(--card);}
+.slides-body::-webkit-scrollbar-thumb{background:#353c5a;border-radius:6px;}
+
+/* TFOOT */
+.slide-tfoot td{padding:10px 14px;font-size:12px;font-weight:600;color:var(--muted2);background:var(--card2);border-top:2px solid var(--brd);}
+
+/* LOADING/ERROR */
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px;color:var(--muted2);}
+.spinner{width:44px;height:44px;border:4px solid rgba(255,255,255,.08);border-top-color:#ff6b35;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.err-icon{font-size:48px;color:var(--red);margin-bottom:8px;}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr;}
+  .stat-row{grid-template-columns:1fr;}
+}
+@media print{
+  .topbar .btn-back,.topbar .btn-print,.topbar .btn-export{display:none;}
+  .slides-body{max-height:none;overflow:visible;}
+  body{background:#fff;color:#000;}
+  .stat-card,.completion-card,.slides-card{border:1px solid #ccc;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="tb-left">
+    <button class="btn btn-back" onclick="goBack()"><i class="fas fa-arrow-left"></i> Back</button>
+    <span class="tb-logo">Smart<span>LMS</span></span>
+    <span style="color:rgba(255,255,255,.2);">|</span>
+    <span class="tb-title" id="pkgTitleBar">SCORM Analytics</span>
+  </div>
+  <div class="tb-right">
+    <button class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+    <button class="btn btn-export" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainContent">
+  <div class="loading-wrap" id="loadingState">
+    <div class="spinner"></div>
+    <div>Loading analytics…</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+//  SCORM ANALYTICS PAGE
+// ══════════════════════════════════════════════════════════════════════
+
+const TOKEN = () => localStorage.getItem('lms_token') || '';
+const USER  = () => { try { return JSON.parse(localStorage.getItem('lms_user') || '{}'); } catch { return {}; } };
+const BASE  = '/api/v1';
+
+const params       = new URLSearchParams(location.search);
+const PKG_ID       = params.get('pkg');
+const STUDENT_ID   = params.get('student_id');
+const PARTICIPANT_ID = params.get('participant_id');
+const PKG_NAME     = decodeURIComponent(params.get('name') || 'SCORM Analytics');
+const BACK_URL     = params.get('back') || '';
+
+document.getElementById('pkgTitleBar').textContent = PKG_NAME;
+document.title = PKG_NAME + ' – Analytics';
+
+function goBack() {
+  if (BACK_URL) { location.href = BACK_URL; return; }
+  const role = USER().role || '';
+  const map = {
+    admin: 'admin-dashboard.html',
+    student: 'student-dashboard.html',
+    participant: 'participant-dashboard.html',
+    corporate: 'corporate-dashboard.html',
+    trainer: 'trainer-dashboard.html',
+    bschool: 'bschool-dashboard.html',
+  };
+  location.href = map[role] || 'index.html';
+}
+
+// Format seconds → "Xs", "Xm Xs", "Xh Xm"
+function fmtSec(s) {
+  s = parseInt(s) || 0;
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+  return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+}
+// Format seconds → "HH:MM:SS"
+function fmtHMS(s) {
+  s = parseInt(s) || 0;
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+}
+
+async function api(path) {
+  const r = await fetch(BASE + path, { headers: { Authorization: 'Bearer ' + TOKEN() } });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'API error');
+  return j.data !== undefined ? j.data : j;
+}
+
+async function loadAnalytics() {
+  if (!PKG_ID) {
+    showError('No package ID provided in URL.');
+    return;
+  }
+  try {
+    let url = `/scorm/analytics?package_id=${PKG_ID}`;
+    if (STUDENT_ID) url += `&student_id=${STUDENT_ID}`;
+    if (PARTICIPANT_ID) url += `&participant_id=${PARTICIPANT_ID}`;
+    const data = await api(url);
+    renderPage(data);
+  } catch(e) {
+    showError(e.message || 'Failed to load analytics.');
+  }
+}
+
+function showError(msg) {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="loading-wrap">
+      <i class="fas fa-circle-exclamation err-icon"></i>
+      <div style="font-size:16px;font-weight:600;">${msg}</div>
+      <button class="btn btn-back" onclick="goBack()" style="margin-top:8px;"><i class="fas fa-arrow-left"></i> Go Back</button>
+    </div>`;
+}
+
+// ── GLOBAL DATA for CSV export ────────────────────────────────────────────────
+let _analyticsData = null;
+
+function renderPage(data) {
+  _analyticsData = data;
+  const { package: pkg, tracking, summary, slides } = data;
+  const totalSlides = pkg.total_slides || slides.length;
+  const totalAudio  = pkg.total_audio_seconds || 0;
+  const totalSpent  = tracking?.total_time_seconds || 0;
+  const cPct        = summary.completion_pct || 0;
+  const cStatus     = tracking?.completion_status || 'not attempted';
+  const scoreRaw    = tracking?.score_raw || 0;
+  const scoreMax    = tracking?.score_max || 100;
+  const scorePct    = scoreMax > 0 ? Math.round((scoreRaw / scoreMax) * 100) : 0;
+  const slidesViewed = summary.slides_viewed || 0;
+
+  // max bar width reference (for scaling bars)
+  const allTimes = slides.flatMap(s => [s.actual_seconds || 0, s.spent || 0]);
+  const maxTime  = Math.max(...allTimes, 1);
+
+  // completion badge
+  const badgeClass = cStatus === 'completed' || cStatus === 'passed' ? 'badge-complete'
+    : cStatus === 'incomplete' ? 'badge-incomplete'
+    : cStatus === 'not attempted' ? 'badge-na'
+    : 'badge-inprogress';
+  const badgeText = cStatus.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  // detect if audio duration data is available
+  const hasAnyActual = slides.some(s => s.actual_seconds !== null && s.actual_seconds > 0);
+
+  // build slide rows HTML
+  const rowsHtml = slides.map(s => {
+    const actualW = s.actual_seconds ? Math.round((s.actual_seconds / maxTime) * 100) : 0;
+    const spentW  = s.spent ? Math.round((s.spent / maxTime) * 100) : 0;
+    const viewed  = s.viewed;
+
+    let diffHtml = '<span class="diff-na">—</span>';
+    if (s.diff !== null) {
+      if (s.diff > 0) diffHtml = `<span class="diff-over">+${fmtSec(s.diff)} over</span>`;
+      else if (s.diff < 0) diffHtml = `<span class="diff-under">${fmtSec(Math.abs(s.diff))} under</span>`;
+      else diffHtml = '<span class="diff-na" style="color:#4ade80;">On time</span>';
+    } else if (viewed && s.actual_seconds === null) {
+      diffHtml = '<span class="diff-na" style="color:#64748b;font-size:11px;">No duration</span>';
+    }
+
+    const visitsHtml = viewed
+      ? `<span class="visit-badge"><i class="fas fa-eye" style="font-size:10px;color:var(--muted2);"></i> ${s.visits || 1}x</span>`
+      : `<span class="not-viewed-text">Not viewed</span>`;
+
+    const actualBarHtml = hasAnyActual
+      ? (s.actual_seconds !== null
+        ? `<div class="bar-row">
+            <span class="bar-type" style="color:var(--cyan);">Actual</span>
+            <div class="bar-track"><div class="bar-fill cyan" style="width:${actualW}%;"></div></div>
+            <span class="bar-time cyan">${fmtSec(s.actual_seconds)}</span>
+          </div>`
+        : `<div class="bar-row">
+            <span class="bar-type" style="color:var(--cyan);">Actual</span>
+            <div class="bar-track" style="background:#1a2040;"></div>
+            <span class="bar-time" style="color:var(--muted);">—</span>
+          </div>`)
+      : '';
+
+    const spentBarHtml = viewed
+      ? `<div class="bar-row">
+          ${hasAnyActual ? `<span class="bar-type" style="color:var(--purple);">Spent</span>` : ''}
+          <div class="bar-track"><div class="bar-fill purple" style="width:${spentW}%;"></div></div>
+          <span class="bar-time purple">${fmtSec(s.spent)}</span>
+        </div>`
+      : `<div class="bar-row">
+          ${hasAnyActual ? `<span class="bar-type" style="color:var(--muted);">Spent</span>` : ''}
+          <div class="bar-track" style="background:#1a2040;"></div>
+          <span class="bar-time" style="color:var(--muted);">—</span>
+        </div>`;
+
+    return `<tr class="${!viewed ? 'not-viewed' : ''}">
+      <td class="slide-name">
+        <div class="slide-name-label">Slide ${s.index}</div>
+        ${s.actual_seconds !== null ? `<div class="slide-name-sub"><i class="fas fa-volume-high" style="font-size:9px;"></i> ${fmtSec(s.actual_seconds)}</div>` : ''}
+      </td>
+      <td class="slide-bars">
+        ${actualBarHtml}
+        ${spentBarHtml}
+      </td>
+      <td class="slide-diff">${diffHtml}</td>
+      <td class="slide-visits">${visitsHtml}</td>
+    </tr>`;
+  }).join('');
+
+  // total row
+  const totalSpentSlides = slides.reduce((a, s) => a + (s.spent || 0), 0);
+  const totalActualSlides = slides.reduce((a, s) => a + (s.actual_seconds || 0), 0);
+
+  const html = `
+    <!-- STAT ROW -->
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-icon cyan"><i class="fas fa-music-note" style="font-size:18px;"></i><i class="fas fa-music" style="font-size:14px;"></i></div>
+        <div>
+          <div class="stat-val">${totalAudio > 0 ? fmtHMS(totalAudio) : '—'}</div>
+          <div class="stat-lbl">Total Course Duration (from audio)</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-clock-rotate-left"></i></div>
+        <div>
+          <div class="stat-val">${totalSpent > 0 ? fmtHMS(totalSpent) : '—'}</div>
+          <div class="stat-lbl">Your Total Time Spent (incl. pauses &amp; replays)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <div class="layout">
+
+      <!-- LEFT: OVERALL COMPLETION -->
+      <div class="completion-card">
+        <div class="completion-title">Overall Completion</div>
+
+        <!-- Donut Chart -->
+        <div class="donut-wrap">
+          <canvas id="donutChart"></canvas>
+          <div class="donut-center">
+            <div class="donut-pct">${cPct}%</div>
+            <div class="donut-sub">Complete</div>
+          </div>
+        </div>
+
+        <div class="progress-section">
+          <div class="prog-row">
+            <div class="prog-label">
+              <span class="prog-dot" style="background:var(--green);"></span>
+              Progress
+            </div>
+            <div class="prog-bar-track">
+              <div class="prog-bar-fill fill-green" style="width:${cPct}%;"></div>
+            </div>
+          </div>
+          <div class="prog-row" style="margin-top:12px;">
+            <div class="prog-label">
+              <span class="prog-dot" style="background:var(--cyan);"></span>
+              Score
+            </div>
+            <div class="prog-bar-track">
+              <div class="prog-bar-fill fill-cyan" style="width:${scorePct}%;"></div>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--muted2);">
+            ${scorePct > 0 ? scoreRaw + ' / ' + scoreMax + ' marks' : 'No score recorded'}
+          </div>
+        </div>
+
+        <span class="status-badge ${badgeClass}">${badgeText}</span>
+
+        ${tracking ? `<div style="margin-top:16px;font-size:11px;color:var(--muted);text-align:center;">
+          Last accessed: ${tracking.last_accessed ? new Date(tracking.last_accessed).toLocaleString('en-IN') : 'Never'}
+        </div>` : '<div style="margin-top:16px;font-size:12px;color:var(--muted);text-align:center;">No progress recorded yet</div>'}
+      </div>
+
+      <!-- RIGHT: SLIDES TABLE -->
+      <div class="slides-card">
+        <div class="slides-header">
+          <div>
+            <div class="slides-title">${hasAnyActual ? 'Actual Time vs Time Spent' : 'TIME SPENT'} — PER SLIDE</div>
+            <div class="legend" style="margin-top:8px;">
+              ${hasAnyActual ? `<span class="leg-item"><span class="leg-dot cyan"></span> Actual Time (Audio)</span>` : ''}
+              <span class="leg-item"><span class="leg-dot purple"></span> Time Spent (with pauses/replays)</span>
+            </div>
+          </div>
+          <div class="slides-meta">
+            <span class="slides-count">${totalSlides} slides</span>
+            <span style="color:var(--muted);">${slidesViewed}/${totalSlides} slides viewed</span>
+          </div>
+        </div>
+
+        ${slides.length === 0 ? `
+          <div style="text-align:center;padding:60px 20px;color:var(--muted2);">
+            <i class="fas fa-chart-bar" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>
+            <div>No slide data available yet.</div>
+            <div style="font-size:12px;margin-top:6px;">Launch the SCORM module to start tracking.</div>
+          </div>
+        ` : `
+          <div class="slides-body">
+            <table class="slide-table">
+              <thead>
+                <tr>
+                  <th style="width:90px;">Slide</th>
+                  <th>Actual vs Spent</th>
+                  <th class="right" style="width:130px;">Difference</th>
+                  <th class="right" style="width:110px;">Visits</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+              <tfoot>
+                <tr class="slide-tfoot">
+                  <td><strong>Total</strong></td>
+                  <td style="color:var(--muted2);font-size:11px;">
+                    ${totalActualSlides > 0 ? `Actual: <strong style="color:var(--cyan);">${fmtSec(totalActualSlides)}</strong> &nbsp;` : ''}
+                    ${totalSpentSlides > 0 ? `Spent: <strong style="color:var(--purple);">${fmtSec(totalSpentSlides)}</strong>` : '—'}
+                  </td>
+                  <td></td>
+                  <td class="right">${slides.reduce((a,s)=>a+(s.visits||0),0)} visits</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        `}
+      </div>
+    </div>`;
+
+  document.getElementById('mainContent').innerHTML = html;
+
+  // Render donut chart
+  const ctx = document.getElementById('donutChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [cPct, 100 - cPct],
+          backgroundColor: [
+            cPct === 100 ? '#4ade80'
+            : cPct >= 60 ? '#06b6d4'
+            : cPct >= 30 ? '#f59e0b'
+            : '#f87171',
+            '#1e2539'
+          ],
+          borderWidth: 0,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        cutout: '72%',
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        animation: { duration: 800, easing: 'easeOutQuart' }
+      }
+    });
+  }
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!_analyticsData) return;
+  const { package: pkg, tracking, slides } = _analyticsData;
+  const rows = [
+    ['Package', pkg.name],
+    ['Total Slides', pkg.total_slides],
+    ['Completion Status', tracking?.completion_status || 'not attempted'],
+    ['Score', `${tracking?.score_raw || 0} / ${tracking?.score_max || 100}`],
+    ['Total Time Spent (s)', tracking?.total_time_seconds || 0],
+    [],
+    ['Slide #', 'Slide ID', 'Actual Time (s)', 'Time Spent (s)', 'Difference (s)', 'Visits', 'Viewed'],
+    ...slides.map(s => [
+      s.index, s.id,
+      s.actual_seconds ?? '',
+      s.spent,
+      s.diff !== null ? s.diff : '',
+      s.visits,
+      s.viewed ? 'Yes' : 'No'
+    ])
+  ];
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (pkg.name || 'scorm') + '_analytics.csv';
+  a.click();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+if (!TOKEN()) {
+  showError('Please log in to view analytics.');
+} else {
+  loadAnalytics();
+}
+</script>
+</body>
+</html>

@@ -509,8 +509,13 @@ async function initDB() {
     await client.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS requires_pass BOOLEAN DEFAULT FALSE`).catch(()=>{});
     // Per-slide time tracking for SCORM content
     await client.query(`ALTER TABLE scorm_tracking ADD COLUMN IF NOT EXISTS slide_times JSONB DEFAULT '{}'::jsonb`).catch(()=>{});
+    // Per-package slide audio durations (parsed from Articulate Storyline data.js)
+    await client.query(`ALTER TABLE scorm_packages ADD COLUMN IF NOT EXISTS slide_durations JSONB DEFAULT '{}'::jsonb`).catch(()=>{});
+    await client.query(`ALTER TABLE scorm_packages ADD COLUMN IF NOT EXISTS slide_order TEXT[] DEFAULT ARRAY[]::TEXT[]`).catch(()=>{});
     // Per-slide visit counts (how many times each slide was visited)
     await client.query(`ALTER TABLE scorm_tracking ADD COLUMN IF NOT EXISTS slide_visits JSONB DEFAULT '{}'::jsonb`).catch(()=>{});
+    // Bookmark: last lesson_location so SCORM content can resume at the correct slide
+    await client.query(`ALTER TABLE scorm_tracking ADD COLUMN IF NOT EXISTS lesson_location VARCHAR(255) DEFAULT ''`).catch(()=>{});
     // Total slides count per SCORM package (parsed from manifest at upload time)
     await client.query(`ALTER TABLE scorm_packages ADD COLUMN IF NOT EXISTS total_slides INTEGER DEFAULT 0`).catch(()=>{});
     // course_id on tracking so we can show course-level progress without needing module linkage
@@ -2933,17 +2938,36 @@ function countSlidesFromManifest(manifestFilePath) {
   try {
     if (!manifestFilePath || !fs.existsSync(manifestFilePath)) return 0;
     const xml = fs.readFileSync(manifestFilePath, 'utf8');
+    const dir = path.dirname(manifestFilePath);
 
-    // Strategy 1: items with identifierref (standard multi-SCO)
+    // Strategy 0: Articulate Storyline — data.js has slideref entries (most accurate)
+    const dataJsPath = path.join(dir, 'html5', 'data', 'js', 'data.js');
+    if (fs.existsSync(dataJsPath)) {
+      const djContent = fs.readFileSync(dataJsPath, 'utf8');
+      const artSlides = (djContent.match(/"kind":"slideref","id":"[^"]+","type":"slide"/g) || [])
+        .filter(s => !s.includes('"id":"PromptScene') && !s.includes('"id":"_player'));
+      if (artSlides.length > 0) return artSlides.length;
+    }
+
+    // Strategy 1: meta.xml slidecountdescription (Articulate meta)
+    for (const rel of ['meta.xml', '../meta.xml']) {
+      const fp = path.join(dir, rel);
+      if (fs.existsSync(fp)) {
+        const metaXml = fs.readFileSync(fp, 'utf8');
+        const m = metaXml.match(/viewslides="(\d+)"/i) || metaXml.match(/slidecountdescription="(\d+)/i);
+        if (m && parseInt(m[1]) > 0) return parseInt(m[1]);
+      }
+    }
+
+    // Strategy 2: items with identifierref (standard multi-SCO)
     const withRef = (xml.match(/<item[^>]+identifierref\s*=/gi) || []).length;
     if (withRef > 1) return withRef;
 
-    // Strategy 2: all <item> elements (catches packages that omit identifierref on sub-items)
+    // Strategy 3: all <item> elements (catches packages that omit identifierref on sub-items)
     const allItems = (xml.match(/<item[\s>]/gi) || []).length;
     if (allItems > 1) return allItems;
 
-    // Strategy 3: Articulate Storyline / Rise — story.xml has <slide> tags
-    const dir = path.dirname(manifestFilePath);
+    // Strategy 4: Articulate Storyline / Rise — story.xml has <slide> tags
     for (const rel of ['story.xml', 'story_content/story.xml', '../story.xml']) {
       const fp = path.join(dir, rel);
       if (fs.existsSync(fp)) {
@@ -2953,13 +2977,24 @@ function countSlidesFromManifest(manifestFilePath) {
       }
     }
 
-    // Strategy 4: count SCO-typed resources in manifest
+    // Strategy 5: count SCO-typed resources in manifest
     const scoCount = (xml.match(/scormtype\s*=\s*["']sco["']/gi) || []).length;
     if (scoCount > 1) return scoCount;
 
-    // Strategy 5: count <resource> elements with href pointing to HTML files
+    // Strategy 6: count <resource> elements with href pointing to HTML files
     const resCount = (xml.match(/<resource[^>]+href\s*=\s*["'][^"']+\.html?["']/gi) || []).length;
     if (resCount > 1) return resCount;
+
+    // Strategy 7: iSpring Suite — count res/data/slideN.js + quizN.js files
+    const ispringDataDir = path.join(dir, 'res', 'data');
+    if (fs.existsSync(ispringDataDir)) {
+      try {
+        const ispFiles = fs.readdirSync(ispringDataDir);
+        const ispSlides = ispFiles.filter(f => /^slide\d+\.js$/i.test(f)).length;
+        const ispQuiz   = ispFiles.filter(f => /^quiz\d*\.js$/i.test(f)).length;
+        if (ispSlides > 0) return ispSlides + ispQuiz;
+      } catch(e) {}
+    }
 
     return withRef || allItems || 0;
   } catch(e) { return 0; }
@@ -3083,11 +3118,29 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
       }
 
       const launchUrl = findLaunch(extractPath, manifestPath) || relManifest;
-      const totalSlides = countSlidesFromManifest(manifestPath);
-      console.log(`[SCORM] Package ${pkgId} launch URL: ${launchUrl}, slides: ${totalSlides}`);
-      await pool.query('UPDATE scorm_packages SET manifest_path=$1,upload_path=$2,total_slides=$3 WHERE id=$4',[relManifest, '/uploads/scorm/'+pkgId+'/'+launchUrl, totalSlides||0, pkgId]);
+      let totalSlides = countSlidesFromManifest(manifestPath);
+      // ── Articulate Storyline: parse slide order + per-slide audio durations ─
+      let slideOrder = getArticulateSlideOrder(extractPath);
+      let slideDurations = slideOrder.length > 0 ? parseArticulateSlideDurations(extractPath, slideOrder) : {};
+      // Use Articulate count if more accurate than manifest parsing
+      if (slideOrder.length > 0 && slideOrder.length > (totalSlides || 0)) totalSlides = slideOrder.length;
+      // ── iSpring Suite fallback: if Articulate found nothing, try iSpring ──────
+      if (slideOrder.length === 0) {
+        const isp = getISpringSlideInfo(extractPath);
+        if (isp) {
+          slideOrder = isp.slideOrder;
+          slideDurations = isp.durations;
+          if (slideOrder.length > (totalSlides || 0)) totalSlides = slideOrder.length;
+          console.log(`[SCORM] Package ${pkgId} detected as iSpring: ${slideOrder.length} slides, ${Object.keys(slideDurations).length} audio files`);
+        }
+      }
+      console.log(`[SCORM] Package ${pkgId} launch URL: ${launchUrl}, slides: ${totalSlides}, articulate: ${slideOrder.length}, durations: ${Object.keys(slideDurations).length}`);
+      await pool.query(
+        'UPDATE scorm_packages SET manifest_path=$1, upload_path=$2, total_slides=$3, slide_order=$4, slide_durations=$5 WHERE id=$6',
+        [relManifest, '/uploads/scorm/'+pkgId+'/'+launchUrl, totalSlides||0, slideOrder, JSON.stringify(slideDurations), pkgId]
+      );
       await logAudit(req.user.id, req.user.role, 'SCORM_UPLOAD', 'scorm_packages', pkgId, 'Uploaded SCORM package: '+pkgName, req.ip);
-      ok(res, { id:pkgId, package_name:pkgName, launch_url:'/uploads/scorm/'+pkgId+'/'+launchUrl, scorm_version:version, content_type:cType, total_slides:totalSlides }, 'SCORM package uploaded successfully');
+      ok(res, { id:pkgId, package_name:pkgName, launch_url:'/uploads/scorm/'+pkgId+'/'+launchUrl, scorm_version:version, content_type:cType, total_slides:totalSlides, slide_count_articulate: slideOrder.length }, 'SCORM package uploaded successfully');
     }
   } catch(e) { console.error('SCORM upload error:', e); err(res, e.message); }
 });
@@ -3211,11 +3264,28 @@ app.post('/api/v1/scorm/packages/:id/rescan', auth, adminOnly, async (req, res) 
     }
 
     const launchUrl = findLaunch(extractPath, manifestPath) || relManifest;
-    const totalSlides = countSlidesFromManifest(manifestPath);
+    let totalSlides = countSlidesFromManifest(manifestPath);
+    // ── Articulate Storyline: parse slide order + per-slide audio durations ─
+    let slideOrder = getArticulateSlideOrder(extractPath);
+    let slideDurations = slideOrder.length > 0 ? parseArticulateSlideDurations(extractPath, slideOrder) : {};
+    if (slideOrder.length > 0 && slideOrder.length > (totalSlides || 0)) totalSlides = slideOrder.length;
+    // ── iSpring Suite fallback ─────────────────────────────────────────────────
+    if (slideOrder.length === 0) {
+      const isp = getISpringSlideInfo(extractPath);
+      if (isp) {
+        slideOrder = isp.slideOrder;
+        slideDurations = isp.durations;
+        if (slideOrder.length > (totalSlides || 0)) totalSlides = slideOrder.length;
+        console.log(`[RESCAN] Package ${id} detected as iSpring: ${slideOrder.length} slides, ${Object.keys(slideDurations).length} audio files`);
+      }
+    }
     const newUploadPath = '/uploads/scorm/' + id + '/' + launchUrl;
-    console.log(`[RESCAN] Package ${id} -> launch URL: ${launchUrl}, slides: ${totalSlides}`);
-    await pool.query('UPDATE scorm_packages SET manifest_path=$1, upload_path=$2, total_slides=$3 WHERE id=$4', [relManifest, newUploadPath, totalSlides||0, id]);
-    ok(res, { id, launch_url: newUploadPath }, 'Package rescanned successfully. New launch URL: ' + newUploadPath);
+    console.log(`[RESCAN] Package ${id} -> launch URL: ${launchUrl}, slides: ${totalSlides}, articulate: ${slideOrder.length}, durations: ${Object.keys(slideDurations).length}`);
+    await pool.query(
+      'UPDATE scorm_packages SET manifest_path=$1, upload_path=$2, total_slides=$3, slide_order=$4, slide_durations=$5 WHERE id=$6',
+      [relManifest, newUploadPath, totalSlides||0, slideOrder, JSON.stringify(slideDurations), id]
+    );
+    ok(res, { id, launch_url: newUploadPath, total_slides: totalSlides, slide_count_articulate: slideOrder.length }, 'Package rescanned successfully. New launch URL: ' + newUploadPath);
   } catch(e) { console.error('Rescan error:', e); err(res, e.message); }
 });
 
@@ -3319,7 +3389,7 @@ app.get('/api/v1/scorm/my-progress', auth, studentOnly, async (req, res) => {
 // Save tracking data (called by SCORM player on LMSCommit/LMSFinish)
 app.post('/api/v1/scorm/tracking', auth, async (req, res) => {
   try {
-    const { package_id, course_id, completion_status, score_raw, score_max, total_time, suspend_data, slide_times, slide_visits } = req.body;
+    const { package_id, course_id, completion_status, score_raw, score_max, total_time, suspend_data, lesson_location, slide_times, slide_visits, force_zero } = req.body;
     const isCompleted = completion_status === 'passed' || completion_status === 'completed';
     const slideTimesJson = JSON.stringify(slide_times && typeof slide_times === 'object' ? slide_times : {});
     const slideVisitsJson = JSON.stringify(slide_visits && typeof slide_visits === 'object' ? slide_visits : {});
@@ -3339,24 +3409,26 @@ app.post('/api/v1/scorm/tracking', auth, async (req, res) => {
         effectivePartCourseId = assigned.rows[0]?.course_id || null;
       }
       if (isCc) {
-        await pool.query(`INSERT INTO scorm_tracking(participant_id,cc_content_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,slide_times,slide_visits,last_accessed)
-          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,NOW())
+        await pool.query(`INSERT INTO scorm_tracking(participant_id,cc_content_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,lesson_location,slide_times,slide_visits,last_accessed)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,NOW())
           ON CONFLICT(participant_id,cc_content_id) WHERE participant_id IS NOT NULL AND cc_content_id IS NOT NULL DO UPDATE SET
             course_id=COALESCE($3,scorm_tracking.course_id),
             completion_status=$4,score_raw=$5,score_max=$6,total_time=$7,suspend_data=$8,
-            slide_times=CASE WHEN $9::jsonb='{}' THEN scorm_tracking.slide_times ELSE $9::jsonb END,
-            slide_visits=CASE WHEN $10::jsonb='{}' THEN scorm_tracking.slide_visits ELSE $10::jsonb END,last_accessed=NOW()`,
-          [req.user.id, ccId, effectivePartCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', slideTimesJson, slideVisitsJson]);
+            lesson_location=COALESCE(NULLIF($9,''),scorm_tracking.lesson_location),
+            slide_times=CASE WHEN $12 OR $10::jsonb<>'{}' THEN $10::jsonb ELSE scorm_tracking.slide_times END,
+            slide_visits=CASE WHEN $12 OR $11::jsonb<>'{}' THEN $11::jsonb ELSE scorm_tracking.slide_visits END,last_accessed=NOW()`,
+          [req.user.id, ccId, effectivePartCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', lesson_location||'', slideTimesJson, slideVisitsJson, force_zero||false]);
       } else {
         // ── PARTICIPANT tracking ────────────────────────────────────────────────
-        await pool.query(`INSERT INTO scorm_tracking(participant_id,package_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,slide_times,slide_visits,last_accessed)
-          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,NOW())
+        await pool.query(`INSERT INTO scorm_tracking(participant_id,package_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,lesson_location,slide_times,slide_visits,last_accessed)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,NOW())
           ON CONFLICT (participant_id,package_id) WHERE participant_id IS NOT NULL DO UPDATE SET
             course_id=COALESCE($3,scorm_tracking.course_id),
             completion_status=$4,score_raw=$5,score_max=$6,total_time=$7,suspend_data=$8,
-            slide_times=CASE WHEN $9::jsonb='{}' THEN scorm_tracking.slide_times ELSE $9::jsonb END,
-            slide_visits=CASE WHEN $10::jsonb='{}' THEN scorm_tracking.slide_visits ELSE $10::jsonb END,last_accessed=NOW()`,
-          [req.user.id, pkgId, effectivePartCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', slideTimesJson, slideVisitsJson]);
+            lesson_location=COALESCE(NULLIF($9,''),scorm_tracking.lesson_location),
+            slide_times=CASE WHEN $12 OR $10::jsonb<>'{}' THEN $10::jsonb ELSE scorm_tracking.slide_times END,
+            slide_visits=CASE WHEN $12 OR $11::jsonb<>'{}' THEN $11::jsonb ELSE scorm_tracking.slide_visits END,last_accessed=NOW()`,
+          [req.user.id, pkgId, effectivePartCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', lesson_location||'', slideTimesJson, slideVisitsJson, force_zero||false]);
         const tStr = total_time || '0000:00:00.00';
         const tMatch = tStr.match(/(\d+):(\d+):(\d+)/);
         const timeSeconds = tMatch ? parseInt(tMatch[1])*3600 + parseInt(tMatch[2])*60 + parseInt(tMatch[3]) : 0;
@@ -3386,23 +3458,25 @@ app.post('/api/v1/scorm/tracking', auth, async (req, res) => {
         effectiveCourseId = pkgCourse.rows[0]?.course_id || null;
       }
       if (isCc) {
-        await pool.query(`INSERT INTO scorm_tracking(student_id,cc_content_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,slide_times,slide_visits,last_accessed)
-          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,NOW())
+        await pool.query(`INSERT INTO scorm_tracking(student_id,cc_content_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,lesson_location,slide_times,slide_visits,last_accessed)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,NOW())
           ON CONFLICT(student_id,cc_content_id) WHERE student_id IS NOT NULL AND cc_content_id IS NOT NULL DO UPDATE SET
             course_id=COALESCE($3,scorm_tracking.course_id),
             completion_status=$4,score_raw=$5,score_max=$6,total_time=$7,suspend_data=$8,
-            slide_times=CASE WHEN $9::jsonb='{}' THEN scorm_tracking.slide_times ELSE $9::jsonb END,
-            slide_visits=CASE WHEN $10::jsonb='{}' THEN scorm_tracking.slide_visits ELSE $10::jsonb END,last_accessed=NOW()`,
-          [studentId, ccId, effectiveCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', slideTimesJson, slideVisitsJson]);
+            lesson_location=COALESCE(NULLIF($9,''),scorm_tracking.lesson_location),
+            slide_times=CASE WHEN $12 OR $10::jsonb<>'{}' THEN $10::jsonb ELSE scorm_tracking.slide_times END,
+            slide_visits=CASE WHEN $12 OR $11::jsonb<>'{}' THEN $11::jsonb ELSE scorm_tracking.slide_visits END,last_accessed=NOW()`,
+          [studentId, ccId, effectiveCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', lesson_location||'', slideTimesJson, slideVisitsJson, force_zero||false]);
       } else {
-        await pool.query(`INSERT INTO scorm_tracking(student_id,package_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,slide_times,slide_visits,last_accessed)
-          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,NOW())
+        await pool.query(`INSERT INTO scorm_tracking(student_id,package_id,course_id,completion_status,score_raw,score_max,total_time,suspend_data,lesson_location,slide_times,slide_visits,last_accessed)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,NOW())
           ON CONFLICT(student_id,package_id) DO UPDATE SET
             course_id=COALESCE($3,scorm_tracking.course_id),
             completion_status=$4,score_raw=$5,score_max=$6,total_time=$7,suspend_data=$8,
-            slide_times=CASE WHEN $9::jsonb='{}' THEN scorm_tracking.slide_times ELSE $9::jsonb END,
-            slide_visits=CASE WHEN $10::jsonb='{}' THEN scorm_tracking.slide_visits ELSE $10::jsonb END,last_accessed=NOW()`,
-          [studentId, pkgId, effectiveCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', slideTimesJson, slideVisitsJson]);
+            lesson_location=COALESCE(NULLIF($9,''),scorm_tracking.lesson_location),
+            slide_times=CASE WHEN $12 OR $10::jsonb<>'{}' THEN $10::jsonb ELSE scorm_tracking.slide_times END,
+            slide_visits=CASE WHEN $12 OR $11::jsonb<>'{}' THEN $11::jsonb ELSE scorm_tracking.slide_visits END,last_accessed=NOW()`,
+          [studentId, pkgId, effectiveCourseId, completion_status||'incomplete', score_raw||0, score_max||100, total_time||'0000:00:00.00', suspend_data||'', lesson_location||'', slideTimesJson, slideVisitsJson, force_zero||false]);
         if (isCompleted) {
           const pkg = await pool.query('SELECT module_id FROM scorm_packages WHERE id=$1',[pkgId]);
           if (pkg.rows[0]?.module_id) {
@@ -3412,6 +3486,26 @@ app.post('/api/v1/scorm/tracking', auth, async (req, res) => {
       }
     }
     ok(res, {}, 'Tracking saved');
+  } catch(e) { err(res, e.message); }
+});
+
+// Reset tracking — called when user clicks Restart in the SCORM player
+app.post('/api/v1/scorm/tracking/reset', auth, async (req, res) => {
+  try {
+    const { package_id } = req.body;
+    const isCc = String(package_id || '').startsWith('cc-');
+    const ccId = isCc ? parseInt(String(package_id).slice(3)) : null;
+    const pkgId = isCc ? null : (package_id || null);
+    const resetSql = `completion_status='not attempted',score_raw=0,suspend_data='',lesson_location='',slide_times='{}',slide_visits='{}',last_accessed=NOW()`;
+    if (req.user.role === 'participant') {
+      if (isCc) await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE participant_id=$1 AND cc_content_id=$2`,[req.user.id,ccId]);
+      else       await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE participant_id=$1 AND package_id=$2`,[req.user.id,pkgId]);
+    } else {
+      const studentId = req.user.role === 'student' ? req.user.id : (req.body.student_id || req.user.id);
+      if (isCc) await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE student_id=$1 AND cc_content_id=$2`,[studentId,ccId]);
+      else       await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE student_id=$1 AND package_id=$2`,[studentId,pkgId]);
+    }
+    ok(res, {}, 'Tracking reset');
   } catch(e) { err(res, e.message); }
 });
 
@@ -3456,6 +3550,365 @@ app.get('/api/v1/scorm/slide-times/:packageId', auth, async (req, res) => {
     }
     ok(res, r.rows[0] || { slide_times: {}, total_time: '0000:00:00.00', completion_status: 'not attempted' });
   } catch(e) { err(res, e.message); }
+});
+
+// ── RE-PARSE ALL EXISTING PACKAGES (admin one-time fix) ───────────────────────
+app.post('/api/v1/scorm/reparse-all', auth, adminOnly, async (req, res) => {
+  try {
+    const pkgs = await pool.query("SELECT id, content_type FROM scorm_packages WHERE content_type != 'video' OR content_type IS NULL");
+    let updated = 0, skipped = 0;
+    for (const pkg of pkgs.rows) {
+      const extractPath = path.join(scormDir, String(pkg.id));
+      if (!fs.existsSync(extractPath)) { skipped++; continue; }
+      // Find manifest
+      function findFile2(dir, name) {
+        const direct = path.join(dir, name);
+        if (fs.existsSync(direct)) return direct;
+        try {
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const e of entries) {
+            if (e.isDirectory()) { const f = findFile2(path.join(dir, e.name), name); if (f) return f; }
+          }
+        } catch(e) {}
+        return null;
+      }
+      const manifestPath = findFile2(extractPath, 'imsmanifest.xml');
+      let slideOrder = getArticulateSlideOrder(extractPath);
+      let slideDurations = slideOrder.length > 0 ? parseArticulateSlideDurations(extractPath, slideOrder) : {};
+      let totalSlides = countSlidesFromManifest(manifestPath);
+      if (slideOrder.length > 0 && slideOrder.length > (totalSlides || 0)) totalSlides = slideOrder.length;
+      // iSpring fallback
+      if (slideOrder.length === 0) {
+        const isp = getISpringSlideInfo(extractPath);
+        if (isp) {
+          slideOrder = isp.slideOrder;
+          slideDurations = isp.durations;
+          if (slideOrder.length > (totalSlides || 0)) totalSlides = slideOrder.length;
+        }
+      }
+      if (slideOrder.length > 0 || totalSlides > 0) {
+        await pool.query(
+          'UPDATE scorm_packages SET total_slides=$1, slide_order=$2, slide_durations=$3 WHERE id=$4',
+          [totalSlides || 0, slideOrder, JSON.stringify(slideDurations), pkg.id]
+        );
+        updated++;
+      } else {
+        skipped++;
+      }
+    }
+    ok(res, { updated, skipped, total: pkgs.rows.length }, `Re-parsed ${updated} packages. ${skipped} skipped.`);
+  } catch(e) { err(res, e.message); }
+});
+
+// ── SCORM ANALYTICS HELPERS ──────────────────────────────────────────────────
+
+/** Parse Articulate Storyline slide order from data.js */
+function getArticulateSlideOrder(extractPath) {
+  try {
+    const jsDir = path.join(extractPath, 'html5', 'data', 'js');
+    const dataJsPath = path.join(jsDir, 'data.js');
+    if (!fs.existsSync(dataJsPath)) return [];
+    const content = fs.readFileSync(dataJsPath, 'utf8');
+    const slideIds = [];
+    const pattern = /"kind":"slideref","id":"([^"]+)","type":"slide"/g;
+    let m;
+    while ((m = pattern.exec(content)) !== null) {
+      if (!m[1].startsWith('PromptScene') && !m[1].startsWith('_player')) {
+        slideIds.push(m[1]);
+      }
+    }
+    return slideIds;
+  } catch(e) { return []; }
+}
+
+/** Parse Articulate Storyline per-slide audio durations (in ms) from individual slide JS files */
+function parseArticulateSlideDurations(extractPath, slideIds) {
+  try {
+    const jsDir = path.join(extractPath, 'html5', 'data', 'js');
+    if (!fs.existsSync(jsDir)) return {};
+    const durations = {};
+    for (const slideId of (slideIds || [])) {
+      const shortId = slideId.includes('.') ? slideId.split('.').pop() : slideId;
+      const slideJsPath = path.join(jsDir, shortId + '.js');
+      if (fs.existsSync(slideJsPath)) {
+        const content = fs.readFileSync(slideJsPath, 'utf8');
+        const durMatch = content.match(/"duration":(\d+)/);
+        if (durMatch) durations[slideId] = parseInt(durMatch[1]);
+      }
+    }
+    return durations;
+  } catch(e) { return {}; }
+}
+
+/** Parse SCORM total_time string "HHHH:MM:SS.cc" → seconds */
+function scormTimeToSec(timeStr) {
+  const m = (timeStr || '').match(/(\d+):(\d+):(\d+)/);
+  return m ? parseInt(m[1])*3600 + parseInt(m[2])*60 + parseInt(m[3]) : 0;
+}
+
+/**
+ * iSpring Suite: detect slide order and per-slide MP3 audio durations.
+ * iSpring packages have res/data/slideN.js + optional res/data/soundN.mp3
+ * Returns { slideOrder: ["1","2",...], durations: {"1": ms, ...} } or null
+ */
+function getISpringSlideInfo(extractPath) {
+  const dataDir = path.join(extractPath, 'res', 'data');
+  if (!fs.existsSync(dataDir)) return null;
+  try {
+    const files = fs.readdirSync(dataDir);
+    const slideNums = files
+      .filter(f => /^slide\d+\.js$/i.test(f))
+      .map(f => parseInt(f.match(/\d+/)[0]))
+      .sort((a, b) => a - b);
+    if (slideNums.length === 0) return null;
+
+    // quiz slides (quizN.js) come after regular slides
+    const quizFiles = files.filter(f => /^quiz\d*\.js$/i.test(f));
+    const slideOrder = slideNums.map(n => String(n));
+    for (let i = 1; i <= quizFiles.length; i++) slideOrder.push('quiz' + i);
+
+    // estimate per-slide duration from soundN.mp3
+    const durations = {};
+    for (const n of slideNums) {
+      const mp3Path = path.join(dataDir, 'sound' + n + '.mp3');
+      if (fs.existsSync(mp3Path)) {
+        const ms = estimateMp3DurationMs(mp3Path);
+        if (ms > 0) durations[String(n)] = ms;
+      }
+    }
+    return { slideOrder, durations };
+  } catch(e) { return null; }
+}
+
+/**
+ * Estimate MP3 duration in milliseconds by reading the first MPEG frame header.
+ * Falls back to file-size / 32kbps if header not found.
+ */
+function estimateMp3DurationMs(filePath) {
+  try {
+    const fileSize = fs.statSync(filePath).size;
+    if (fileSize === 0) return 0;
+
+    // read enough bytes to skip ID3v2 tag and find first MPEG frame sync
+    const buf = Buffer.alloc(Math.min(8192, fileSize));
+    const fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, buf, 0, buf.length, 0);
+    fs.closeSync(fd);
+
+    let startOffset = 0;
+    // skip ID3v2 tag: "ID3" + version(2) + flags(1) + syncsafe size(4)
+    if (buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33 && buf.length >= 10) {
+      const id3Size = ((buf[6] & 0x7f) << 21) | ((buf[7] & 0x7f) << 14) |
+                      ((buf[8] & 0x7f) << 7)  |  (buf[9] & 0x7f);
+      startOffset = 10 + id3Size;
+    }
+
+    // MPEG bitrate table (Layer III, MPEG1): index → kbps
+    const bitrateTable = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320,0];
+    // sample-rate table (MPEG1): index → Hz
+    const srTable = [44100,48000,32000,0];
+
+    for (let i = startOffset; i < buf.length - 3; i++) {
+      // frame sync: 0xFF + next byte high 3 bits = 0xE0
+      if (buf[i] === 0xff && (buf[i+1] & 0xe0) === 0xe0) {
+        const brIdx  = (buf[i+2] >> 4) & 0x0f;
+        const srIdx  = (buf[i+2] >> 2) & 0x03;
+        const br     = bitrateTable[brIdx] * 1000;  // bits/s
+        const sr     = srTable[srIdx];               // samples/s
+        if (br > 0 && sr > 0) {
+          // bytes per frame for Layer III MPEG1 = 144 * bitrate / samplerate
+          // total frames ≈ (fileSize - startOffset) / frameSize
+          const frameSize = Math.floor(144 * br / sr) + ((buf[i+2] & 0x02) ? 1 : 0);
+          const totalFrames = (fileSize - startOffset) / frameSize;
+          const durationSec = (totalFrames * 1152) / sr; // 1152 samples per frame (Layer III)
+          return Math.round(durationSec * 1000);
+        }
+      }
+    }
+    // fallback: assume 32 kbps (iSpring typically uses 32–40 kbps for narration)
+    return Math.round((fileSize / (32000 / 8)) * 1000);
+  } catch(e) { return 0; }
+}
+
+// ── SCORM ANALYTICS API ───────────────────────────────────────────────────────
+// GET /api/v1/scorm/analytics?package_id=X[&student_id=Y][&participant_id=Z]
+// Accessible by: student (own), participant (own), admin (any), trainer (own batch),
+//                corporate (own participants)
+app.get('/api/v1/scorm/analytics', auth, async (req, res) => {
+  try {
+    const { package_id, student_id, participant_id } = req.query;
+    const role = req.user.role;
+    if (!package_id) return err(res, 'package_id required', 400);
+
+    // ── resolve target user ───────────────────────────────────────────────────
+    let targetStudentId = null;
+    let targetParticipantId = null;
+
+    if (role === 'student') {
+      targetStudentId = req.user.id;
+    } else if (role === 'participant') {
+      targetParticipantId = req.user.id;
+    } else if (role === 'admin' || role === 'bschool') {
+      targetParticipantId = participant_id || null;
+      targetStudentId = participant_id ? null : (student_id || null);
+    } else if (role === 'trainer') {
+      if (!student_id) return err(res, 'student_id required', 400);
+      const chk = await pool.query(
+        'SELECT s.id FROM students s JOIN batches b ON s.batch_id=b.id WHERE s.id=$1 AND b.trainer_id=$2',
+        [student_id, req.user.id]
+      );
+      if (!chk.rows[0]) return err(res, 'Access denied', 403);
+      targetStudentId = student_id;
+    } else if (role === 'corporate') {
+      if (!participant_id) return err(res, 'participant_id required', 400);
+      const chk = await pool.query(
+        'SELECT id FROM corporate_participants WHERE id=$1 AND corporate_id=$2',
+        [participant_id, req.user.id]
+      );
+      if (!chk.rows[0]) return err(res, 'Access denied', 403);
+      targetParticipantId = participant_id;
+    } else {
+      return err(res, 'Access denied', 403);
+    }
+
+    // ── get package info ──────────────────────────────────────────────────────
+    const pkgR = await pool.query('SELECT * FROM scorm_packages WHERE id=$1', [package_id]);
+    const pkg = pkgR.rows[0];
+    if (!pkg) return err(res, 'Package not found', 404);
+
+    // ── get tracking row ──────────────────────────────────────────────────────
+    let trackingRow = null;
+    if (targetParticipantId) {
+      const r = await pool.query('SELECT * FROM scorm_tracking WHERE participant_id=$1 AND package_id=$2', [targetParticipantId, package_id]);
+      trackingRow = r.rows[0] || null;
+    } else if (targetStudentId) {
+      const r = await pool.query('SELECT * FROM scorm_tracking WHERE student_id=$1 AND package_id=$2', [targetStudentId, package_id]);
+      trackingRow = r.rows[0] || null;
+    }
+
+    // ── get/build slide data ──────────────────────────────────────────────────
+    const extractPath = path.join(scormDir, String(package_id));
+    let slideOrder = (pkg.slide_order && pkg.slide_order.length > 0) ? pkg.slide_order : null;
+    let slideDurations = (pkg.slide_durations && Object.keys(pkg.slide_durations).length > 0) ? pkg.slide_durations : null;
+
+    // parse from Articulate files if not yet stored
+    if (!slideOrder || !slideDurations) {
+      const parsed = getArticulateSlideOrder(extractPath);
+      if (parsed.length > 0) {
+        slideOrder = parsed;
+        slideDurations = parseArticulateSlideDurations(extractPath, parsed);
+        // persist for future calls
+        await pool.query('UPDATE scorm_packages SET slide_order=$1, slide_durations=$2 WHERE id=$3',
+          [parsed, JSON.stringify(slideDurations), package_id]).catch(() => {});
+      } else {
+        // try iSpring fallback
+        const isp = getISpringSlideInfo(extractPath);
+        if (isp) {
+          slideOrder = isp.slideOrder;
+          slideDurations = Object.keys(isp.durations).length > 0 ? isp.durations : null;
+          await pool.query('UPDATE scorm_packages SET slide_order=$1, slide_durations=$2, total_slides=$3 WHERE id=$4',
+            [isp.slideOrder, JSON.stringify(isp.durations), isp.slideOrder.length, package_id]).catch(() => {});
+        }
+      }
+    }
+
+    let slideTimes = (trackingRow?.slide_times && typeof trackingRow.slide_times === 'object') ? { ...trackingRow.slide_times } : {};
+    let slideVisits = (trackingRow?.slide_visits && typeof trackingRow.slide_visits === 'object') ? { ...trackingRow.slide_visits } : {};
+
+    // ── Key-mismatch fix: numeric slide_times (from hash-polling or lesson_location="1","2"…)
+    // vs GUID slideOrder (Articulate Storyline). Map numeric → GUID by 1-based position.
+    if (slideOrder && slideOrder.length > 0) {
+      const numericTimeKeys = Object.keys(slideTimes).filter(
+        k => k !== 'video_seconds' && k !== 'video_duration' && /^\d+$/.test(k) && (slideTimes[k] || 0) > 0
+      );
+      const slideOrderHasGuids = slideOrder.some(id => !/^\d+$/.test(id));
+      if (numericTimeKeys.length > 0 && slideOrderHasGuids) {
+        numericTimeKeys.forEach(numKey => {
+          const idx = parseInt(numKey) - 1;
+          if (idx >= 0 && idx < slideOrder.length) {
+            const guid = slideOrder[idx];
+            if (!(slideTimes[guid] > 0)) slideTimes[guid] = slideTimes[numKey];
+          }
+        });
+        Object.keys(slideVisits).filter(k => /^\d+$/.test(k) && (slideVisits[k] || 0) > 0).forEach(numKey => {
+          const idx = parseInt(numKey) - 1;
+          if (idx >= 0 && idx < slideOrder.length) {
+            const guid = slideOrder[idx];
+            if (!(slideVisits[guid] > 0)) slideVisits[guid] = slideVisits[numKey];
+          }
+        });
+      }
+    }
+
+    const totalTimeSecFallback = scormTimeToSec(trackingRow?.total_time);
+    const hasSlideData = Object.keys(slideTimes).some(k => k !== 'video_seconds' && k !== 'video_duration' && parseInt(slideTimes[k]) > 0);
+
+    // Edge case: single-slide package — attribute total_time to Slide 1
+    if (!hasSlideData && totalTimeSecFallback > 0 && (pkg.total_slides || 0) <= 1 && !slideOrder) {
+      slideTimes['1'] = totalTimeSecFallback;
+      slideVisits['1'] = 1;
+    }
+
+    // build ordered slide list
+    const effectiveSlideOrder = slideOrder || Object.keys({ ...slideTimes, ...slideVisits }).filter(k => k !== 'video_seconds' && k !== 'video_duration');
+    const totalSlides = pkg.total_slides || effectiveSlideOrder.length || 0;
+
+    const slides = effectiveSlideOrder.map((id, idx) => {
+      const spent = Math.round(slideTimes[id] || 0);
+      const visits = Math.round(slideVisits[id] || 0);
+      const actualMs = slideDurations ? (slideDurations[id] || null) : null;
+      const actualSec = actualMs ? Math.round(actualMs / 1000) : null;
+      const viewed = visits > 0 || spent > 0;
+      let diff = null;
+      if (actualSec !== null && spent > 0) {
+        diff = spent - actualSec; // positive = over, negative = under
+      }
+      return { index: idx + 1, id, spent, visits, actual_seconds: actualSec, diff, viewed };
+    });
+
+    // total audio duration from package
+    const totalAudioMs = slideDurations ? Object.values(slideDurations).reduce((a, b) => a + (b || 0), 0) : 0;
+    const totalAudioSec = Math.round(totalAudioMs / 1000);
+
+    // total time student spent
+    const totalSpentSec = scormTimeToSec(trackingRow?.total_time);
+
+    // completion %
+    const slidesViewed = slides.filter(s => s.viewed).length;
+    let completionPct = 0;
+    const cStatus = trackingRow?.completion_status || 'not attempted';
+    if (cStatus === 'completed' || cStatus === 'passed') {
+      completionPct = 100;
+    } else if (totalSlides > 0 && slidesViewed > 0) {
+      completionPct = Math.min(99, Math.round((slidesViewed / totalSlides) * 100));
+    } else if (trackingRow?.score_raw > 0) {
+      completionPct = Math.min(99, parseInt(trackingRow.score_raw) || 0);
+    }
+
+    ok(res, {
+      package: {
+        id: pkg.id,
+        name: pkg.package_name,
+        content_type: pkg.content_type || 'scorm',
+        scorm_version: pkg.scorm_version,
+        total_slides: totalSlides,
+        total_audio_seconds: totalAudioSec,
+      },
+      tracking: trackingRow ? {
+        completion_status: cStatus,
+        score_raw: parseInt(trackingRow.score_raw) || 0,
+        score_max: parseInt(trackingRow.score_max) || 100,
+        total_time_seconds: totalSpentSec,
+        last_accessed: trackingRow.last_accessed,
+      } : null,
+      summary: {
+        completion_pct: completionPct,
+        slides_viewed: slidesViewed,
+        total_slides: totalSlides,
+      },
+      slides,
+    });
+  } catch(e) { console.error('[analytics]', e); err(res, e.message); }
 });
 
 // ── BSCHOOL PORTAL ENDPOINTS ──────────────────────────────────────────────────

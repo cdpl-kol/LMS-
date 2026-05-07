@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<manifest identifier="_6kqV119ITWm" version="1.0" xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">
+  <metadata>
+    <schema>ADL SCORM</schema>
+    <schemaversion>1.2</schemaversion>
+    <lom xmlns="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd">
+      <general>
+        <title>
+          <langstring xml:lang="x-none">Non Fund Based Working Capital | Module 5C I</langstring>
+        </title>
+      </general>
+      <lifecycle>
+        <version>
+          <langstring xml:lang="x-none">1</langstring>
+        </version>
+        <status>
+          <source>
+            <langstring xml:lang="x-none">LOMv1.0</langstring>
+          </source>
+          <value>
+            <langstring xml:lang="x-none">Final</langstring>
+          </value>
+        </status>
+      </lifecycle>
+      <metametadata>
+        <metadatascheme>ADL SCORM 1.2</metadatascheme>
+      </metametadata>
+      <educational>
+        <typicallearningtime>
+          <datetime>PT0H0M0S</datetime>
+        </typicallearningtime>
+      </educational>
+      <rights>
+        <cost>
+          <source>
+            <langstring xml:lang="x-none">LOMv1.0</langstring>
+          </source>
+          <value>
+            <langstring xml:lang="x-none">yes</langstring>
+          </value>
+        </cost>
+        <copyrightandotherrestrictions>
+          <source>
+            <langstring xml:lang="x-none">LOMv1.0</langstring>
+          </source>
+          <value>
+            <langstring xml:lang="x-none">yes</langstring>
+          </value>
+        </copyrightandotherrestrictions>
+      </rights>
+    </lom>
+  </metadata>
+  <organizations default="Non_Fund_Based_Working_Capital_|_Module_5C_I_ORG">
+    <organization identifier="Non_Fund_Based_Working_Capital_|_Module_5C_I_ORG">
+      <title>Non Fund Based Working Capital | Module 5C I</title>
+      <item identifier="Axis_Bank_|_neo_for_business_SCO" isvisible="true" identifierref="__6kqV119ITWm_RES">
+        <title>Non Fund Based Working Capital | Module 5C I</title>
+      </item>
+    </organization>
+  </organizations>
+  <resources>
+    <resource identifier="__6kqV119ITWm_RES" type="webcontent" href="index_lms.html" adlcp:scormtype="sco">
+      <file href="story_content/thumbnail.jpg" />
+      <file href="mobile/6EEDTVzHWOV.png" />
+      <file href="mobile/6OOdSJdJM54.png" />
+      <file href="story_content/5c5QhOqnbw3_44100_128_0.mp3" />
+      <file href="story_content/5fKznLyZvc7_captions.js" />
+      <file href="mobile/5zGa8e7gmqS.jpg" />
+      <file href="mobile/6IroskgUHxQ.png" />
+      <file href="mobile/6kZHFSYBWja_X.png" />
+      <file href="story_content/6krbz9vMQej_44100_128_0.mp3" />
+      <file href="story_content/video_5W6lhbVSuF5_9_128_960x540.mp4" />
+      <file href="mobile/poster_6OFDfwvm47H_video_5W6lhbVSuF5_9_128_960x540.jpg" />
+      <file href="mobile/poster_6IBgWxAwr1u_video_5W6lhbVSuF5_9_128_960x540.jpg" />
+      <file href="mobile/5W7bq5K2lPL.png" />
+      <file href="mobile/6KWK1r69ZdY_R062F62.png" />
+      <file href="mobile/6OtxyT5OjmT_B40_RW.png" />
+      <file href="mobile/6KWK1r69ZdY_RG.png" />
+      <file href="mobile/5hDH6GqHoh1_B40_RW.png" />
+      <file href="mobile/6PQQPC164an_B40_RW.png" />
+      <file href="mobile/5kAVsqGiPlJ_B40_RW.png" />
+      <file href="mobile/5dbTNxilij4_B40_RW.png" />
+      <file href="mobile/6HTl3C5Wfij_B40_RW.png" />
+      <file href="story_content/6r9sL8n0hoP_44100_128_0.mp3" />
+      <file href="story_content/video_6M58Ck94Vog_9_128_960x540.mp4" />
+      <file href="mobile/poster_5Y89lF3n3rc_video_6M58Ck94Vog_9_128_960x540.jpg" />
+      <file href="mobile/poster_5Vy1iDndqRo_video_6M58Ck94Vog_9_128_960x540.jpg" />
+      <file href="story_content/6OcZFPtQA2m_44100_128_0.mp3" />
+      <file href="story_content/6q9uveG8GJq_44100_128_0.mp3" />
+      <file href="story_content/video_6YKXUD3t2pZ_9_128_960x540.mp4" />
+      <file href="mobile/poster_6G3lFHqIJ8G_video_6YKXUD3t2pZ_9_128_960x540.jpg" />
+      <file href="mobile/poster_6QKX56qBjEA_video_6YKXUD3t2pZ_9_128_960x540.jpg" />
+      <file href="mobile/60Qc9oqgbPu.jpg" />
+      <file href="mobile/6loadsgWKhd.png" />
+      <file href="story_content/5koZ5RfO66m_44100_128_0.mp3" />
+      <file href="story_content/5u4BEdYDHeC_44100_128_0.mp3" />
+      <file href="story_content/65U5IhIXN2t_44100_128_0.mp3" />
+      <file href="story_content/5dEOY8Q6oD4_44100_128_0.mp3" />
+      <file href="story_content/6cGQLLFzXAT_44100_128_0.mp3" />
+      <file href="story_content/5d0ZUHoEBRn_44100_128_0.mp3" />
+      <file href="story_content/6a0pviIpMJJ_44100_128_0.mp3" />
+      <file href="story_content/6O39en9kYUl_44100_128_0.mp3" />
+      <file href="story_content/6QsEYSjamhq_44100_128_0.mp3" />
+      <file href="mobile/5gdhyzEtTYp_RG.png" />
+      <file href="mobile/6lTizfv4aUA_R062F62.png" />
+      <file href="story_content/6R1VEuplJ9V_44100_128_0.mp3" />
+      <file href="story_content/6mhi0TPNjpf_44100_128_0.mp3" />
+      <file href="mobile/6jkLVxp0FpA_P_0_103_418_128.jpg" />
+      <file href="story_content/5wI6KeYVmPl_44100_128_0.mp3" />
+      <file href="mobile/6N5Ol2km1xN.png" />
+      <file href="mobile/6LNajVbOFqj.png" />
+      <file href="mobile/6Gl5oZwKH4l.png" />
+      <file href="story_content/5khPfaG96Xk_44100_128_0.mp3" />
+      <file href="story_content/video_5wRL8AL1mxQ_9_128_960x486.mp4" />
+      <file href="mobile/poster_5guTxKkex8d_video_5wRL8AL1mxQ_9_128_960x486.jpg" />
+      <file href="mobile/6VSpkTarmki.png" />
+      <file href="story_content/5YA3X3Vj6vq_44100_128_0.mp3" />
+      <file href="story_content/5smrfMk061A_44100_128_0.mp3" />
+      <file href="mobile/6r80EBmG2UR.png" />
+      <file href="mobile/5uAFcF36UUt.png" />
+      <file href="story_content/6AJkNCE5V7E_44100_128_0.mp3" />
+      <file href="story_content/6Exl87Wnqo3_captions.js" />
+      <file href="meta.xml" />
+      <file href="story_content/triggers.js" />
+      <file href="story_content/user.js" />
+      <file href="mobile/txt__default_5wFWqsDEV5h.png" />
+      <file href="html5/data/css/output.min.css" />
+      <file href="html5/data/js/5cPahv6qIGV.js" />
+      <file href="html5/data/js/5d8Foy56YQe.js" />
+      <file href="html5/data/js/5idRZSyFefi.js" />
+      <file href="html5/data/js/5pQLga6qmtP.js" />
+      <file href="html5/data/js/5teImPwraU6.js" />
+      <file href="html5/data/js/5vgVIimCRY3.js" />
+      <file href="html5/data/js/5YCIBawH2tI.js" />
+      <file href="html5/data/js/5YvY9VlhWFm.js" />
+      <file href="html5/data/js/5ZfJuNSUeAV.js" />
+      <file href="html5/data/js/60g0To4b1wi.js" />
+      <file href="html5/data/js/61EgjTNwM16.js" />
+      <file href="html5/data/js/67TKzi35vHh.js" />
+      <file href="html5/data/js/6GwkaK2PhcC.js" />
+      <file href="html5/data/js/6pEx4TupLJQ.js" />
+      <file href="html5/data/js/6qORE6yc2Jt.js" />
+      <file href="html5/data/js/6RIixOWIfdI.js" />
+      <file href="html5/data/js/6V0C0UECoXL.js" />
+      <file href="html5/data/js/6VBiilEPotG.js" />
+      <file href="html5/data/js/data.js" />
+      <file href="html5/data/js/frame.js" />
+      <file href="html5/data/js/paths.js" />
+      <file href="html5/lib/scripts/bootstrapper.min.js" />
+      <file href="html5/lib/scripts/frame.desktop.min.js" />
+      <file href="html5/lib/scripts/frame.mobile.min.js" />
+      <file href="html5/lib/scripts/slides.min.js" />
+      <file href="html5/lib/stylesheets/desktop.min.css" />
+      <file href="html5/lib/stylesheets/mobile.min.css" />
+      <file href="html5/lib/stylesheets/mobile-fonts/open-sans-bold.woff" />
+      <file href="html5/lib/stylesheets/mobile-fonts/open-sans-light.woff" />
+      <file href="html5/lib/stylesheets/mobile-fonts/open-sans-regular.woff" />
+      <file href="analytics-frame.html" />
+      <file href="story.html" />
+      <file href="index_lms.html" />
+      <file href="lms/AICCComm.html" />
+      <file href="lms/blank.html" />
+      <file href="lms/browsersniff.js" />
+      <file href="lms/goodbye.html" />
+      <file href="lms/scormdriver.js" />
+    </resource>
+  </resources>
+</manifest>
