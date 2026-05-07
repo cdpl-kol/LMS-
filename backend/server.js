@@ -3530,6 +3530,7 @@ app.get('/api/v1/scorm/my-progress', auth, studentOnly, async (req, res) => {
     `, [sid]).catch(() => ({ rows: [] }));
     const allRows = [...r.rows, ...r2.rows];
     const courseMap = {};
+    console.log('[progress-debug] student rows:', allRows.map(r=>({cid:r.course_id,total_slides:r.total_slides,slide_order_len:r.slide_order?.length,slide_times:r.slide_times,slide_visits:r.slide_visits,status:r.completion_status,score:r.score_raw})));
     for (const row of allRows) {
       const cid = String(row.course_id);
       if (!courseMap[cid]) courseMap[cid] = { slides_visited: 0, total_slides: 0, score_raw: 0, time_seconds: 0, completed: false, is_video: false };
