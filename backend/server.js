@@ -154,16 +154,21 @@ const JWT_SECRET  = process.env.JWT_SECRET  || 'lms-secret-2024-secure';
 const JWT_REFRESH = process.env.JWT_REFRESH || 'lms-refresh-secret-2024';
 
 // ── EMAIL TRANSPORTER ─────────────────────────────────────────────────────────
+// Brevo SMTP relay (works on Render) — set SMTP_HOST=smtp-relay.brevo.com in env
+// Gmail SMTP is blocked by Render free tier (connection timeout)
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
+  host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
-  family: 4, // force IPv4 — Render does not support IPv6 SMTP
-  auth: { user: process.env.EMAIL_USER || '', pass: process.env.EMAIL_PASS || '' }
+  auth: {
+    user: process.env.SMTP_USER || process.env.EMAIL_USER || '',
+    pass: process.env.SMTP_PASS || process.env.EMAIL_PASS || ''
+  }
 });
 async function sendEmail(to, subject, html, options={}) {
-  if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('your-gmail')) {
-    console.warn('⚠️  EMAIL_USER not configured — skipping email to', to);
+  const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER || '';
+  if (!smtpUser || smtpUser.includes('your-gmail') || smtpUser.includes('your-email')) {
+    console.warn('⚠️  SMTP not configured — skipping email to', to);
     return false;
   }
   try {
