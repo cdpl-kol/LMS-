@@ -4000,6 +4000,7 @@ app.get('/api/v1/scorm/analytics', auth, async (req, res) => {
 
     let slideTimes = (trackingRow?.slide_times && typeof trackingRow.slide_times === 'object') ? { ...trackingRow.slide_times } : {};
     let slideVisits = (trackingRow?.slide_visits && typeof trackingRow.slide_visits === 'object') ? { ...trackingRow.slide_visits } : {};
+    console.log('[analytics debug] pkg:', package_id, 'slideOrder len:', slideOrder?.length, 'slideTimes keys:', Object.keys(slideTimes), 'slideVisits:', JSON.stringify(slideVisits));
 
     // ── Key-mismatch fix: numeric slide_times (from hash-polling or lesson_location="1","2"…)
     // vs GUID slideOrder (Articulate Storyline). Map numeric → GUID by 1-based position.
