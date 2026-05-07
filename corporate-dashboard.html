@@ -857,86 +857,22 @@ async function addParticipant(){
   const courseIds=[];
   document.querySelectorAll('.add-course-chk:checked').forEach(c=>courseIds.push(parseInt(c.value)));
 
-  // Calculate total price of selected courses
-  const selectedCourses = allCoursesList.filter(c=>courseIds.includes(Number(c.id)));
-  const totalPrice = selectedCourses.reduce((sum,c)=>sum+(parseFloat(c.price)||0),0);
-
+  // Corporate payments handled outside LMS — always direct assign, no payment popup
   const btn=document.querySelector('[onclick="addParticipant()"]');
-
-  if(courseIds.length > 0 && totalPrice > 0){
-    // Step 1: Add participant first (without courses)
-    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Adding...';}
-    const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:[],plain_password:plain_password||undefined});
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant & Send Email';}
-    if(!r.success){showAlertSticky('addParticipantAlert',r.error||'Failed to add participant.');return;}
-
-    const pid=r.data.id;
-    const emailMsg=r.data.email_sent===false?' (Email not configured — share OTP manually)':'';
-    showAlertSticky('addParticipantAlert',`✅ Participant added!${emailMsg} Now initiating payment for ${courseIds.length} course(s)…`,'success');
-
-    // Step 2: Create Razorpay order for paid courses
-    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating order...';}
-    const orderRes=await api('POST','/corporate/razorpay/create-order',{participant_id:pid,course_ids:courseIds});
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant & Send Email';}
-    if(!orderRes.success){showAlertSticky('addParticipantAlert',`Participant added but payment failed: ${orderRes.error}`);return;}
-
-    const options={
-      key: orderRes.data.key,
-      amount: orderRes.data.amount,
-      currency: orderRes.data.currency||'INR',
-      name: 'Smart LMS – Connecting Dot',
-      description: `${courseIds.length} Course(s) for ${name}`,
-      order_id: orderRes.data.order_id,
-      handler: async function(response){
-        const verifyRes=await api('POST','/corporate/razorpay/verify',{
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-          participant_id: pid,
-          course_ids: courseIds
-        });
-        if(verifyRes.success){
-          showAlertSticky('addParticipantAlert',`✅ Payment done! Participant added & ${courseIds.length} course(s) assigned.`,'success');
-          document.getElementById('p-name').value='';
-          document.getElementById('p-email').value='';
-          document.getElementById('p-contact').value='';
-          document.querySelectorAll('.add-course-chk').forEach(c=>c.checked=false);
-          setTimeout(()=>showSection('participants'),2000);
-        } else {
-          showAlertSticky('addParticipantAlert',`Participant added but course assignment failed: ${verifyRes.error}`);
-        }
-      },
-      prefill:{name,email},
-      theme:{color:'#004d40'},
-      modal:{ondismiss:()=>{
-        showAlertSticky('addParticipantAlert',`Participant added but payment cancelled — courses not assigned yet. Use "Add Courses" button from the participants list.`);
-        document.getElementById('p-name').value='';
-        document.getElementById('p-email').value='';
-        document.getElementById('p-contact').value='';
-        document.querySelectorAll('.add-course-chk').forEach(c=>c.checked=false);
-        setTimeout(()=>showSection('participants'),2500);
-      }}
-    };
-    const rzp=new Razorpay(options);
-    rzp.open();
-
-  } else {
-    // Free courses or no courses — direct add with course assignment
-    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Adding...';}
-    const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:courseIds,plain_password:plain_password||undefined});
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant';}
-    if(r.success){
-      showAlertSticky('addParticipantAlert',`✅ Participant added! Username: ${email} | Password: ${plain_password||'(auto-generated — view from list)'}`,'success');
-      document.getElementById('p-name').value='';
-      document.getElementById('p-email').value='';
-      document.getElementById('p-contact').value='';
-      document.getElementById('p-password').value='';
-      document.querySelectorAll('.add-course-chk').forEach(c=>c.checked=false);
-      loadParticipants(); // refresh list immediately
-      setTimeout(()=>showSection('participants'),1500);
-    }else{
-      showAlertSticky('addParticipantAlert',r.error||'Failed to add participant. Check if email already exists.');
-    }
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Adding...';}
+  const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:courseIds,plain_password:plain_password||undefined});
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant';}
+  if(r.success){
+    showAlertSticky('addParticipantAlert',`✅ Participant added! Username: ${email} | Password: ${plain_password||'(auto-generated — view from list)'}`,'success');
+    document.getElementById('p-name').value='';
+    document.getElementById('p-email').value='';
+    document.getElementById('p-contact').value='';
+    document.getElementById('p-password').value='';
+    document.querySelectorAll('.add-course-chk').forEach(c=>c.checked=false);
+    loadParticipants();
+    setTimeout(()=>showSection('participants'),1500);
+  }else{
+    showAlertSticky('addParticipantAlert',r.error||'Failed to add participant. Check if email already exists.');
   }
 }
 
@@ -1509,52 +1445,13 @@ async function assignCourse(){
   const newCourseIds=[];
   document.querySelectorAll('.assign-course-chk:checked:not(:disabled)').forEach(c=>newCourseIds.push(parseInt(c.value)));
   if(!newCourseIds.length){showAlertSticky('assignAlert','Please select at least one new course to assign.');return;}
-
-  // Calculate total price of selected courses
-  const selectedCourses = allCoursesList.filter(c=>newCourseIds.includes(Number(c.id)));
-  const totalPrice = selectedCourses.reduce((sum,c)=>sum+(parseFloat(c.price)||0),0);
-
-  if(totalPrice > 0){
-    // Paid courses — initiate Razorpay payment
-    const btn=document.querySelector('[onclick="assignCourse()"]');
-    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating order...';}
-    const orderRes = await api('POST','/corporate/razorpay/create-order',{participant_id:parseInt(pid),course_ids:newCourseIds});
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Assign Selected Courses';}
-    if(!orderRes.success){showAlertSticky('assignAlert',orderRes.error||'Could not create payment order.');return;}
-
-    const options={
-      key: orderRes.data.key,
-      amount: orderRes.data.amount,
-      currency: orderRes.data.currency||'INR',
-      name: 'Smart LMS – Connecting Dot',
-      description: `${newCourseIds.length} Course(s) Assignment`,
-      order_id: orderRes.data.order_id,
-      handler: async function(response){
-        const verifyRes = await api('POST','/corporate/razorpay/verify',{
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-          participant_id: parseInt(pid),
-          course_ids: newCourseIds
-        });
-        if(verifyRes.success){showToast(`✅ Payment successful! ${newCourseIds.length} course(s) assigned.`,'success');closeModal();loadParticipants();}
-        else showAlertSticky('assignAlert',verifyRes.error||'Payment verification failed.');
-      },
-      prefill:{name:document.getElementById('assignModalTitle')?.textContent||'',email:''},
-      theme:{color:'#004d40'},
-      modal:{ondismiss:()=>{showAlertSticky('assignAlert','Payment cancelled.');}}
-    };
-    const rzp = new Razorpay(options);
-    rzp.open();
-  } else {
-    // Free courses — direct assign
-    const btn=document.querySelector('[onclick="assignCourse()"]');
-    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Assigning...';}
-    const r=await api('POST',`/corporate/participants/${pid}/assign-course`,{course_ids:newCourseIds});
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Assign Selected Courses';}
-    if(r.success){showToast(`✅ ${newCourseIds.length} course(s) assigned successfully!`,'success');closeModal();loadParticipants();}
-    else showAlertSticky('assignAlert',r.error||'Failed to assign course(s). Please try again.');
-  }
+  // Corporate payments handled outside LMS — always direct assign
+  const btn=document.querySelector('[onclick="assignCourse()"]');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Assigning...';}
+  const r=await api('POST',`/corporate/participants/${pid}/assign-course`,{course_ids:newCourseIds});
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-link"></i> Assign Selected Courses';}
+  if(r.success){showToast(`✅ ${newCourseIds.length} course(s) assigned successfully!`,'success');closeModal();loadParticipants();}
+  else showAlertSticky('assignAlert',r.error||'Failed to assign course(s). Please try again.');
 }
 
 async function deleteParticipant(participantId, name){
