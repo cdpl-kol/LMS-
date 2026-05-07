@@ -387,9 +387,11 @@ window.API = {
       if (!scormApiSetLocation) {
         commitSlideCount++;
         recordSlideTime('pg_' + commitSlideCount);
+        // Save immediately on slide change so new slide visit isn't lost if user exits
+        saveTracking(false);
       }
     }
-    // Trigger auto-save after 3s of inactivity
+    // Also trigger auto-save after 3s of inactivity
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveTracking(false), 3000);
     updateStatusBar();

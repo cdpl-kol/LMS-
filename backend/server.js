@@ -3119,6 +3119,36 @@ app.get('/api/v1/participant/mycourses', auth, requireRole('participant'), async
 });
 
 // ── SCORM ENDPOINTS ───────────────────────────────────────────────────────────
+
+// Shared launch-URL detection used by upload + rescan handlers
+function findLaunch(dir, mFile) {
+  const candidates = ['index_lms.html','index_lms.htm','story_html5.html','story.html','index.html','index.htm','launch.html','launch.htm','default.html','default.htm','start.html','start.htm','scorm.html','scorm.htm'];
+  for (const c of candidates) { if (fs.existsSync(path.join(dir, c))) return c; }
+  if (mFile) {
+    const mDir = path.dirname(mFile);
+    for (const c of candidates) { const full = path.join(mDir, c); if (fs.existsSync(full)) return path.relative(dir, full).replace(/\\/g, '/'); }
+  }
+  if (mFile && fs.existsSync(mFile)) {
+    try {
+      const xml = fs.readFileSync(mFile, 'utf8');
+      const match = xml.match(/href=["']([^"']*\.html?)['"]/i);
+      if (match) {
+        const mDir = path.dirname(mFile);
+        const full = path.join(mDir, match[1]); if (fs.existsSync(full)) return path.relative(dir, full).replace(/\\/g, '/');
+        const fromRoot = path.join(dir, match[1]); if (fs.existsSync(fromRoot)) return match[1].replace(/\\/g, '/');
+      }
+    } catch(e) {}
+  }
+  function findAnyHtml(searchDir, depth=0) {
+    if (depth > 4) return null;
+    const entries = fs.readdirSync(searchDir, { withFileTypes: true });
+    for (const f of entries) { if (f.isFile() && /\.(html?|htm)$/i.test(f.name)) return path.relative(dir, path.join(searchDir, f.name)).replace(/\\/g, '/'); }
+    for (const f of entries) { if (f.isDirectory()) { const found = findAnyHtml(path.join(searchDir, f.name), depth+1); if (found) return found; } }
+    return null;
+  }
+  return findAnyHtml(dir);
+}
+
 // Count slides from imsmanifest.xml — tries multiple strategies
 function countSlidesFromManifest(manifestFilePath) {
   try {
@@ -3530,7 +3560,6 @@ app.get('/api/v1/scorm/my-progress', auth, studentOnly, async (req, res) => {
     `, [sid]).catch(() => ({ rows: [] }));
     const allRows = [...r.rows, ...r2.rows];
     const courseMap = {};
-    console.log('[progress-debug] student rows:', allRows.map(r=>({cid:r.course_id,total_slides:r.total_slides,slide_order_len:r.slide_order?.length,slide_times:r.slide_times,slide_visits:r.slide_visits,status:r.completion_status,score:r.score_raw})));
     for (const row of allRows) {
       const cid = String(row.course_id);
       if (!courseMap[cid]) courseMap[cid] = { slides_visited: 0, total_slides: 0, score_raw: 0, time_seconds: 0, completed: false, is_video: false };
@@ -3562,7 +3591,9 @@ app.get('/api/v1/scorm/my-progress', auth, studentOnly, async (req, res) => {
             }
           });
         courseMap[cid].slides_visited += visitedSet.size;
-        courseMap[cid].total_slides += (row.total_slides || 0);
+        // Use slide_order length as authoritative total when total_slides is missing/wrong
+        const effectiveTotal = Math.max(row.total_slides || 0, row.slide_order?.length || 0);
+        courseMap[cid].total_slides += effectiveTotal;
       }
       if (row.completion_status === 'passed' || row.completion_status === 'completed') courseMap[cid].completed = true;
     }
