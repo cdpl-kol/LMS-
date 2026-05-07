@@ -704,6 +704,8 @@ async function loadContent() {
                 CMI['cmi.core.lesson_location'] = sid;
                 dirty = true;
               }
+              // Save immediately so the new slide visit isn't lost if user exits
+              saveTracking(false);
             }
           } catch(e) {} // cross-origin guard (same-origin should always pass)
         }, 500);

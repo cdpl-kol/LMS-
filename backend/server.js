@@ -3562,8 +3562,7 @@ app.get('/api/v1/scorm/my-progress', auth, studentOnly, async (req, res) => {
     const courseMap = {};
     for (const row of allRows) {
       const cid = String(row.course_id);
-      console.log('[slide-debug] cid:'+cid+' times:'+JSON.stringify(row.slide_times)+' visits:'+JSON.stringify(row.slide_visits));
-      if (!courseMap[cid]) courseMap[cid] = { slides_visited: 0, total_slides: 0, score_raw: 0, time_seconds: 0, completed: false, is_video: false };
+if (!courseMap[cid]) courseMap[cid] = { slides_visited: 0, total_slides: 0, score_raw: 0, time_seconds: 0, completed: false, is_video: false };
       const st = row.slide_times && typeof row.slide_times === 'object' ? row.slide_times : {};
       // Parse total_time "HHHH:MM:SS.cc" → seconds
       const tm = (row.total_time||'').match(/(\d+):(\d+):(\d+)/);
