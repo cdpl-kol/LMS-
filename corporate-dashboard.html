@@ -157,7 +157,16 @@ tr:hover td{background:#f0fdf4;}
         <div class="form-group"><label>Full Name <span style="color:red;">*</span></label><input type="text" id="p-name" placeholder="John Doe"/></div>
         <div class="form-group"><label>Email <span style="color:red;">*</span></label><input type="email" id="p-email" placeholder="john@company.com"/></div>
       </div>
-      <div class="form-group"><label>Contact</label><input type="text" id="p-contact" placeholder="+91 98765..."/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Contact</label><input type="text" id="p-contact" placeholder="+91 98765..."/></div>
+        <div class="form-group">
+          <label>Password <span style="color:var(--muted);font-size:12px;">(optional — auto-generated if empty)</span></label>
+          <div style="position:relative;">
+            <input type="password" id="p-password" placeholder="Set a password for participant" style="padding-right:40px;"/>
+            <button type="button" onclick="togglePwd('p-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+      </div>
       <div class="form-group">
         <label>Assign Courses</label>
         <div id="addCoursesCheckboxes" style="border:1px solid var(--brd);border-radius:8px;padding:12px;max-height:180px;overflow-y:auto;">
@@ -165,9 +174,9 @@ tr:hover td{background:#f0fdf4;}
         </div>
       </div>
       <div style="background:#f0fdf4;border:1px solid #a5d6a7;border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;">
-        <i class="fas fa-info-circle" style="color:var(--teal);"></i> A <strong>One-Time Password</strong> will be auto-generated and sent to the participant's email with login instructions.
+        <i class="fas fa-info-circle" style="color:var(--teal);"></i> <strong>Login ID</strong> = participant ka email. <strong>Password</strong> = aapka set kiya hua (ya auto-generated). Participant in credentials se login kar sakta hai.
       </div>
-      <button class="btn btn-primary" onclick="addParticipant()"><i class="fas fa-user-plus"></i> Add Participant & Send Email</button>
+      <button class="btn btn-primary" onclick="addParticipant()"><i class="fas fa-user-plus"></i> Add Participant</button>
     </div>
   </div>
 
@@ -351,6 +360,42 @@ tr:hover td{background:#f0fdf4;}
     </div>
     <div id="progressModalSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
     <div id="progressModalBody"></div>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal-overlay" id="pwdModalOverlay" onclick="if(event.target===this)closePwdModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center;">
+  <div class="modal-box" style="max-width:440px;width:100%;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;color:var(--navy);" id="pwdModalTitle">Credentials</span>
+      <button onclick="closePwdModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
+    </div>
+    <input type="hidden" id="pwd-pid"/>
+    <div style="background:#f0f4ff;border-radius:10px;padding:14px;margin-bottom:16px;">
+      <p style="margin:0 0 6px;font-size:13px;color:var(--muted);">Login ID (Email)</p>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <strong id="pwd-email-display" style="font-size:14px;flex:1;word-break:break-all;"></strong>
+        <button onclick="copyText('pwd-email-display')" style="background:none;border:1px solid var(--brd);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:var(--muted);" title="Copy"><i class="fas fa-copy"></i></button>
+      </div>
+    </div>
+    <div style="background:#fff8e1;border-radius:10px;padding:14px;margin-bottom:16px;">
+      <p style="margin:0 0 6px;font-size:13px;color:var(--muted);">Current Password</p>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="pwd-current-display" style="font-size:20px;font-weight:700;color:#e65100;letter-spacing:3px;flex:1;">••••••</span>
+        <button onclick="togglePwdDisplay()" id="pwd-eye-btn" style="background:none;border:1px solid var(--brd);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:var(--muted);" title="Show/Hide"><i class="fas fa-eye"></i></button>
+        <button onclick="copyText('pwd-current-display')" style="background:none;border:1px solid var(--brd);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:var(--muted);" title="Copy"><i class="fas fa-copy"></i></button>
+      </div>
+    </div>
+    <hr style="margin:16px 0;border:none;border-top:1px solid var(--brd);"/>
+    <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px;">Change Password</p>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div style="position:relative;flex:1;">
+        <input type="password" id="pwd-new-input" placeholder="New password (min 4 chars)" style="width:100%;padding-right:40px;"/>
+        <button type="button" onclick="togglePwd('pwd-new-input',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);"><i class="fas fa-eye"></i></button>
+      </div>
+      <button class="btn btn-primary" onclick="changePassword()" style="white-space:nowrap;padding:10px 18px;"><i class="fas fa-save"></i> Save</button>
+    </div>
+    <div class="alert" id="pwdModalAlert" style="margin-top:10px;"></div>
   </div>
 </div>
 
@@ -742,11 +787,11 @@ async function loadParticipants(){
     btnAdd.onclick=()=>openAssignCourse(p.id,p.name,p.assigned_courses?p.assigned_courses.map(c=>c.id):[]);
     t8.appendChild(btnAdd);
 
-    const btnResend=document.createElement('button');
-    btnResend.className='btn btn-sm';btnResend.innerHTML='<i class="fas fa-paper-plane"></i>';
-    btnResend.style.cssText='background:#1565c0;color:#fff;font-size:11px;padding:4px 8px;margin-right:4px;';
-    btnResend.title='Resend Email';btnResend.onclick=()=>resendCredentials(p.id,p.email);
-    t8.appendChild(btnResend);
+    const btnPwd=document.createElement('button');
+    btnPwd.className='btn btn-sm';btnPwd.innerHTML='<i class="fas fa-key"></i>';
+    btnPwd.style.cssText='background:#f57c00;color:#fff;font-size:11px;padding:4px 8px;margin-right:4px;';
+    btnPwd.title='View / Change Password';btnPwd.onclick=()=>openPasswordModal(p.id,p.name,p.email);
+    t8.appendChild(btnPwd);
 
     const btnDel=document.createElement('button');
     btnDel.className='btn btn-sm btn-danger';btnDel.innerHTML='<i class="fas fa-trash"></i>';
@@ -807,6 +852,7 @@ async function addParticipant(){
   const name=document.getElementById('p-name').value.trim();
   const email=document.getElementById('p-email').value.trim();
   const contact=document.getElementById('p-contact').value.trim();
+  const plain_password=document.getElementById('p-password').value.trim();
   if(!name||!email){showAlertSticky('addParticipantAlert','Name and Email are required.');return;}
   const courseIds=[];
   document.querySelectorAll('.add-course-chk:checked').forEach(c=>courseIds.push(parseInt(c.value)));
@@ -820,7 +866,7 @@ async function addParticipant(){
   if(courseIds.length > 0 && totalPrice > 0){
     // Step 1: Add participant first (without courses)
     if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Adding...';}
-    const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:[]});
+    const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:[],plain_password:plain_password||undefined});
     if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant & Send Email';}
     if(!r.success){showAlertSticky('addParticipantAlert',r.error||'Failed to add participant.');return;}
 
@@ -877,13 +923,14 @@ async function addParticipant(){
   } else {
     // Free courses or no courses — direct add with course assignment
     if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Adding...';}
-    const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:courseIds});
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant & Send Email';}
+    const r=await api('POST','/corporate/participants',{name,email,contact,course_ids:courseIds,plain_password:plain_password||undefined});
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-user-plus"></i> Add Participant';}
     if(r.success){
-      showAlertSticky('addParticipantAlert',`✅ Participant added! Login credentials sent to ${email}.`,'success');
+      showAlertSticky('addParticipantAlert',`✅ Participant added! Username: ${email} | Password: ${plain_password||'(auto-generated — view from list)'}`,'success');
       document.getElementById('p-name').value='';
       document.getElementById('p-email').value='';
       document.getElementById('p-contact').value='';
+      document.getElementById('p-password').value='';
       document.querySelectorAll('.add-course-chk').forEach(c=>c.checked=false);
       loadParticipants(); // refresh list immediately
       setTimeout(()=>showSection('participants'),1500);
@@ -1520,6 +1567,68 @@ async function deleteParticipant(participantId, name){
 async function resendCredentials(participantId,email){
   if(!confirm(`Resend login credentials to ${email}?`))return;
   showToast('Sending credentials...','');
+}
+
+// ── Password Modal ────────────────────────────────────────────────────────────
+let _pwdActual='';
+async function openPasswordModal(pid,name,email){
+  document.getElementById('pwd-pid').value=pid;
+  document.getElementById('pwdModalTitle').textContent=`Credentials — ${name}`;
+  document.getElementById('pwd-email-display').textContent=email;
+  document.getElementById('pwd-current-display').textContent='••••••';
+  document.getElementById('pwd-new-input').value='';
+  document.getElementById('pwdModalAlert').style.display='none';
+  _pwdActual='';
+  const overlay=document.getElementById('pwdModalOverlay');
+  overlay.style.display='flex';
+  // Fetch current password
+  const r=await api('GET',`/corporate/participants/${pid}/password`);
+  if(r.success) _pwdActual=r.data.password||'';
+}
+function closePwdModal(){
+  document.getElementById('pwdModalOverlay').style.display='none';
+  _pwdActual='';
+}
+function togglePwdDisplay(){
+  const el=document.getElementById('pwd-current-display');
+  const btn=document.getElementById('pwd-eye-btn');
+  if(el.textContent==='••••••'){
+    el.textContent=_pwdActual||'(not available)';
+    btn.innerHTML='<i class="fas fa-eye-slash"></i>';
+  } else {
+    el.textContent='••••••';
+    btn.innerHTML='<i class="fas fa-eye"></i>';
+  }
+}
+async function changePassword(){
+  const pid=document.getElementById('pwd-pid').value;
+  const newPwd=document.getElementById('pwd-new-input').value.trim();
+  const alertEl=document.getElementById('pwdModalAlert');
+  if(!newPwd||newPwd.length<4){
+    alertEl.textContent='Password must be at least 4 characters.';
+    alertEl.className='alert error';alertEl.style.display='block';return;
+  }
+  const r=await api('PUT',`/corporate/participants/${pid}/password`,{new_password:newPwd});
+  if(r.success){
+    _pwdActual=newPwd;
+    document.getElementById('pwd-current-display').textContent='••••••';
+    document.getElementById('pwd-new-input').value='';
+    alertEl.textContent='✅ Password updated successfully!';
+    alertEl.className='alert success';alertEl.style.display='block';
+    setTimeout(()=>{alertEl.style.display='none';},3000);
+  } else {
+    alertEl.textContent=r.error||'Failed to update password.';
+    alertEl.className='alert error';alertEl.style.display='block';
+  }
+}
+function togglePwd(inputId,btn){
+  const inp=document.getElementById(inputId);
+  if(inp.type==='password'){inp.type='text';btn.innerHTML='<i class="fas fa-eye-slash"></i>';}
+  else{inp.type='password';btn.innerHTML='<i class="fas fa-eye"></i>';}
+}
+function copyText(elId){
+  const text=document.getElementById(elId).textContent;
+  navigator.clipboard.writeText(text).then(()=>showToast('Copied!','success'));
 }
 
 // Sticky alert — does not auto-hide (for critical errors)

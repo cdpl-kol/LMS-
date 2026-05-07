@@ -2862,11 +2862,11 @@ app.post('/api/v1/corporate/login', async (req,res)=>{
 // Corporate: Add participant manually
 app.post('/api/v1/corporate/participants', auth, requireRole('corporate','admin'), async (req,res)=>{
   try{
-    const {name,email,contact,course_ids}=req.body;
+    const {name,email,contact,course_ids,plain_password}=req.body;
     if(!name||!email) return err(res,'Name and email required',400);
     const corpId=req.user.role==='corporate'?req.user.id:req.body.corporate_id;
-    // Generate OTP password
-    const otp=Math.floor(100000+Math.random()*900000).toString();
+    // Use admin-provided password or auto-generate
+    const otp=plain_password||Math.floor(100000+Math.random()*900000).toString();
     const hash=await bcrypt.hash(otp,10);
     const r=await pool.query(`INSERT INTO corporate_participants(corporate_id,name,email,password_hash,otp_password,contact,status) VALUES($1,$2,$3,$4,$5,$6,'Active') ON CONFLICT(email) DO UPDATE SET corporate_id=$1,name=$2,password_hash=$4,otp_password=$5,contact=$6,status='Active',first_login=TRUE RETURNING id`,
       [corpId,sanitize(name),sanitize(email.toLowerCase()),hash,otp,sanitize(contact||'')]);
@@ -2985,6 +2985,36 @@ app.post('/api/v1/corporate/participants/bulk', auth, requireRole('corporate','a
       }catch(e2){results.push({name:p.name,email:p.email,status:'error',error:e2.message});}
     }
     ok(res,{results,success:results.filter(r=>r.status==='success').length,failed:results.filter(r=>r.status==='error').length},'Bulk upload processed');
+  }catch(e){err(res,e.message);}
+});
+
+// Corporate: View participant password (plain text stored in otp_password field)
+app.get('/api/v1/corporate/participants/:pid/password', auth, requireRole('corporate','admin'), async (req,res)=>{
+  try{
+    const corpId=req.user.role==='corporate'?req.user.id:null;
+    const q=corpId
+      ?'SELECT otp_password FROM corporate_participants WHERE id=$1 AND corporate_id=$2'
+      :'SELECT otp_password FROM corporate_participants WHERE id=$1';
+    const params=corpId?[req.params.pid,corpId]:[req.params.pid];
+    const r=await pool.query(q,params);
+    if(!r.rows[0]) return err(res,'Participant not found',404);
+    ok(res,{password:r.rows[0].otp_password||'(not set)'},'Password fetched');
+  }catch(e){err(res,e.message);}
+});
+
+// Corporate: Change participant password
+app.put('/api/v1/corporate/participants/:pid/password', auth, requireRole('corporate','admin'), async (req,res)=>{
+  try{
+    const {new_password}=req.body;
+    if(!new_password||new_password.length<4) return err(res,'Password must be at least 4 characters',400);
+    const corpId=req.user.role==='corporate'?req.user.id:null;
+    const check=corpId
+      ?await pool.query('SELECT id FROM corporate_participants WHERE id=$1 AND corporate_id=$2',[req.params.pid,corpId])
+      :await pool.query('SELECT id FROM corporate_participants WHERE id=$1',[req.params.pid]);
+    if(!check.rows[0]) return err(res,'Participant not found',404);
+    const hash=await bcrypt.hash(new_password,10);
+    await pool.query('UPDATE corporate_participants SET password_hash=$1,otp_password=$2,first_login=TRUE WHERE id=$3',[hash,new_password,req.params.pid]);
+    ok(res,{},'Password updated successfully');
   }catch(e){err(res,e.message);}
 });
 
