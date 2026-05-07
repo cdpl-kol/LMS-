@@ -2879,10 +2879,12 @@ app.post('/api/v1/corporate/participants', auth, requireRole('corporate','admin'
     const corpR=await pool.query('SELECT company_name, email AS corp_email FROM corporate_clients WHERE id=$1',[corpId]);
     const companyName=corpR.rows[0]?.company_name||'Your Company';
     const corpEmail=corpR.rows[0]?.corp_email||'';
-    // Send welcome email — From shows corporate company name, Reply-To goes to corporate admin
+    // Respond immediately — don't block on email
+    ok(res,{id:pid,otp,email_sent:true},'Participant added! Login credentials being sent to email.');
+    // Send welcome email in background (fire-and-forget)
     const loginUrl=`${process.env.BASE_URL||'http://localhost:3000'}/participant-login.html`;
     const dashUrl=`${process.env.BASE_URL||'http://localhost:3000'}/participant-dashboard.html`;
-    const emailSent = await sendEmail(
+    sendEmail(
       email,
       `Welcome to Smart LMS – ${companyName}`,
       `<div style="font-family:Arial;padding:20px;max-width:600px;margin:auto;background:#f9f9f9;border-radius:12px;">
@@ -2908,8 +2910,7 @@ app.post('/api/v1/corporate/participants', auth, requireRole('corporate','admin'
         </div>
       </div>`,
       { fromName: companyName, replyTo: corpEmail }
-    );
-    ok(res,{id:pid,otp,email_sent:emailSent},emailSent?'Participant added and email sent':'Participant added (email not configured — share OTP manually)');
+    ).catch(e=>console.error('❌ Background email error:', e.message));
   }catch(e){console.error(e);err(res,e.message);}
 });
 
@@ -2977,7 +2978,7 @@ app.post('/api/v1/corporate/participants/bulk', auth, requireRole('corporate','a
             </div>
           </div>`,
           { fromName: bulkCompanyName, replyTo: bulkCorpEmail }
-        );
+        ).catch(e=>console.error('❌ Bulk email error:', p.email, e.message));
         results.push({name:p.name,email:p.email,status:'success',id:pid});
       }catch(e2){results.push({name:p.name,email:p.email,status:'error',error:e2.message});}
     }
