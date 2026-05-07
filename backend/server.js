@@ -3512,8 +3512,8 @@ app.get('/api/v1/scorm/my-progress', auth, studentOnly, async (req, res) => {
     // scorm_packages-based tracking
     const r = await pool.query(`
       SELECT COALESCE(st.course_id, m.course_id) AS course_id,
-             sp.total_slides, sp.content_type,
-             st.slide_times, st.completion_status, st.score_raw, st.total_time
+             sp.total_slides, sp.content_type, sp.slide_order,
+             st.slide_times, st.slide_visits, st.completion_status, st.score_raw, st.total_time
       FROM scorm_tracking st
       JOIN scorm_packages sp ON st.package_id = sp.id
       LEFT JOIN modules m ON sp.module_id = m.id
@@ -3544,8 +3544,23 @@ app.get('/api/v1/scorm/my-progress', auth, studentOnly, async (req, res) => {
         if (st.video_seconds) courseMap[cid].slides_visited = Math.max(courseMap[cid].slides_visited, parseInt(st.video_seconds) || 0);
         if (st.video_duration) courseMap[cid].total_slides = Math.max(courseMap[cid].total_slides, parseInt(st.video_duration) || 0);
       } else {
-        const visited = Object.entries(st).filter(([k,v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0).length;
-        courseMap[cid].slides_visited += visited;
+        const sv = row.slide_visits && typeof row.slide_visits === 'object' ? row.slide_visits : {};
+        const slOrd = Array.isArray(row.slide_order) && row.slide_order.length > 0 ? row.slide_order : null;
+        const slOrdHasGuids = slOrd && slOrd.some(id => !/^\d+$/.test(id));
+        const posKeyRe = /^[a-zA-Z_]*(\d+)$/;
+        const visitedSet = new Set();
+        [...Object.keys(st), ...Object.keys(sv)]
+          .filter(k => k !== 'video_seconds' && k !== 'video_duration')
+          .forEach(k => {
+            if ((st[k] || 0) > 0 || (sv[k] || 0) > 0) {
+              if (slOrdHasGuids && !slOrd.includes(k)) {
+                const m = k.match(posKeyRe);
+                if (m) { const idx = parseInt(m[1]) - 1; if (idx >= 0 && idx < slOrd.length) { visitedSet.add(slOrd[idx]); return; } }
+              }
+              visitedSet.add(k);
+            }
+          });
+        courseMap[cid].slides_visited += visitedSet.size;
         courseMap[cid].total_slides += (row.total_slides || 0);
       }
       if (row.completion_status === 'passed' || row.completion_status === 'completed') courseMap[cid].completed = true;
@@ -3685,11 +3700,19 @@ app.post('/api/v1/scorm/tracking/reset', auth, async (req, res) => {
     const resetSql = `completion_status='not attempted',score_raw=0,suspend_data='',lesson_location='',slide_times='{}',slide_visits='{}',last_accessed=NOW()`;
     if (req.user.role === 'participant') {
       if (isCc) await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE participant_id=$1 AND cc_content_id=$2`,[req.user.id,ccId]);
-      else       await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE participant_id=$1 AND package_id=$2`,[req.user.id,pkgId]);
+      else {
+        await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE participant_id=$1 AND package_id=$2`,[req.user.id,pkgId]);
+        // Also reset participant_progress so course card shows 0% after restart
+        await pool.query(`UPDATE participant_progress SET completed=FALSE,completed_at=NULL WHERE participant_id=$1 AND module_id IN (SELECT module_id FROM scorm_packages WHERE id=$2 AND module_id IS NOT NULL)`,[req.user.id,pkgId]).catch(()=>{});
+      }
     } else {
       const studentId = req.user.role === 'student' ? req.user.id : (req.body.student_id || req.user.id);
       if (isCc) await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE student_id=$1 AND cc_content_id=$2`,[studentId,ccId]);
-      else       await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE student_id=$1 AND package_id=$2`,[studentId,pkgId]);
+      else {
+        await pool.query(`UPDATE scorm_tracking SET ${resetSql} WHERE student_id=$1 AND package_id=$2`,[studentId,pkgId]);
+        // Also reset student_progress so course card shows 0% after restart
+        await pool.query(`UPDATE student_progress SET completed=FALSE,completed_at=NULL WHERE student_id=$1 AND module_id IN (SELECT module_id FROM scorm_packages WHERE id=$2 AND module_id IS NOT NULL)`,[studentId,pkgId]).catch(()=>{});
+      }
     }
     ok(res, {}, 'Tracking reset');
   } catch(e) { err(res, e.message); }
