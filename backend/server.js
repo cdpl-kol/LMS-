@@ -4000,32 +4000,28 @@ app.get('/api/v1/scorm/analytics', auth, async (req, res) => {
 
     let slideTimes = (trackingRow?.slide_times && typeof trackingRow.slide_times === 'object') ? { ...trackingRow.slide_times } : {};
     let slideVisits = (trackingRow?.slide_visits && typeof trackingRow.slide_visits === 'object') ? { ...trackingRow.slide_visits } : {};
-    console.log('[analytics debug] pkg:', package_id, 'slideOrder len:', slideOrder?.length, 'slideTimes keys:', Object.keys(slideTimes), 'slideVisits:', JSON.stringify(slideVisits));
-
-    // ── Key-mismatch fix: numeric slide_times (from hash-polling or lesson_location="1","2"…)
-    // vs GUID slideOrder (Articulate Storyline). Map numeric → GUID by 1-based position.
+    // ── Key-mismatch fix: positional keys ('1','2' or 'pg_1','pg_2') vs GUID slideOrder
     if (slideOrder && slideOrder.length > 0) {
       const slideOrderHasGuids = slideOrder.some(id => !/^\d+$/.test(id));
       if (slideOrderHasGuids) {
-        // Map numeric slide_times keys → GUID keys
-        const numericTimeKeys = Object.keys(slideTimes).filter(
-          k => k !== 'video_seconds' && k !== 'video_duration' && /^\d+$/.test(k) && (slideTimes[k] || 0) > 0
-        );
-        numericTimeKeys.forEach(numKey => {
-          const idx = parseInt(numKey) - 1;
-          if (idx >= 0 && idx < slideOrder.length) {
-            const guid = slideOrder[idx];
-            if (!(slideTimes[guid] > 0)) slideTimes[guid] = slideTimes[numKey];
-          }
-        });
-        // Map numeric slide_visits keys → GUID keys (independent of slide_times)
-        Object.keys(slideVisits).filter(k => /^\d+$/.test(k) && (slideVisits[k] || 0) > 0).forEach(numKey => {
-          const idx = parseInt(numKey) - 1;
-          if (idx >= 0 && idx < slideOrder.length) {
-            const guid = slideOrder[idx];
-            if (!(slideVisits[guid] > 0)) slideVisits[guid] = slideVisits[numKey];
-          }
-        });
+        // Matches '1', 'pg_1', 'pg_2', 'slide_3', etc. — extracts trailing number as 1-based index
+        const posKeyRegex = /^[a-zA-Z_]*(\d+)$/;
+        const mapPositional = (obj) => {
+          Object.keys(obj)
+            .filter(k => k !== 'video_seconds' && k !== 'video_duration' && !slideOrder.includes(k) && (obj[k] || 0) > 0)
+            .forEach(key => {
+              const m = key.match(posKeyRegex);
+              if (m) {
+                const idx = parseInt(m[1]) - 1;
+                if (idx >= 0 && idx < slideOrder.length) {
+                  const guid = slideOrder[idx];
+                  if (!(obj[guid] > 0)) obj[guid] = obj[key];
+                }
+              }
+            });
+        };
+        mapPositional(slideTimes);
+        mapPositional(slideVisits);
       }
     }
 
