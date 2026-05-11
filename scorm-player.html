@@ -272,36 +272,60 @@ function updateStatusBar() {
     if (st === 'completed' || st === 'passed') {
       pct = 100;
     } else {
-      // Prefer currentSlide (hash-based, always up-to-date) over lesson_location which
-      // iSpring sets to '0' at init then never updates per-slide — causing 0% progress.
-      const loc = currentSlide || CMI['cmi.core.lesson_location'] || '';
+      // ── Resolve current slide position from multiple sources ──────────────
       let currentPos = 0;
-      if (loc && loc !== 'video_seconds' && loc !== 'video_duration') {
-        // 1. Pure float/int: "8" or "8.0"
-        const fv = parseFloat(loc);
-        if (!isNaN(fv) && fv > 0 && fv < 10000) {
-          currentPos = Math.floor(fv);
-        } else {
-          // 2. GUID — look up in slide_order
-          const idx = pkgSlideOrder.indexOf(loc);
-          if (idx >= 0) {
-            currentPos = idx + 1;
-          } else {
-            // 3. Strings like "pg_7", "slide_7", "Slide7Layer0" — leading number
-            const lead = /^(\d+)/.exec(loc);
-            if (lead) currentPos = parseInt(lead[1]);
+
+      // 1. Read iframe hash DIRECTLY (most real-time; beats any cached value)
+      try {
+        const frame = document.getElementById('scormFrame');
+        if (frame && frame.contentWindow) {
+          const h = frame.contentWindow.location.hash;
+          const nums = (h.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 5000);
+          if (nums.length) currentPos = nums[0];
+        }
+      } catch(e) {}
+
+      // 2. currentSlide — set by hash-polling recordSlideTime()
+      if (!currentPos && currentSlide) {
+        const fv = parseFloat(currentSlide);
+        if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
+        else {
+          const idx = pkgSlideOrder.indexOf(currentSlide);
+          if (idx >= 0) { currentPos = idx + 1; }
+          else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
+        }
+      }
+
+      // 3. lesson_location — but skip '0' (iSpring init value, never meaningful)
+      if (!currentPos) {
+        const loc = CMI['cmi.core.lesson_location'] || '';
+        if (loc && loc !== 'video_seconds' && loc !== 'video_duration') {
+          const fv = parseFloat(loc);
+          if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
+          else {
+            const idx = pkgSlideOrder.indexOf(loc);
+            if (idx >= 0) { currentPos = idx + 1; }
+            else { const m = /^(\d+)/.exec(loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
           }
         }
       }
-      if (totalSlidesInPkg > 0 && currentPos > 0) {
-        pct = Math.min(100, Math.round((currentPos / totalSlidesInPkg) * 100));
-      } else if (currentPos > 0) {
-        // total_slides unknown — show slide number
-        document.getElementById('progressDisplay').textContent = currentPos + ' slides';
-        document.getElementById('progressBar').style.width = Math.min(100, currentPos * 5) + '%';
-        return;
+
+      // 4. Count slides with genuine time (last resort)
+      if (!currentPos) {
+        const visited = Object.keys(slideTimings)
+          .filter(k => k !== 'video_seconds' && k !== 'video_duration' && slideTimings[k] > 0);
+        if (visited.length) currentPos = Math.max(...visited.map(k => parseInt(k) || 0).filter(n => n > 0)) || visited.length;
       }
-      // If position still unknown (no lesson_location yet), show 0%
+
+      if (currentPos > 0) {
+        if (totalSlidesInPkg > 0) {
+          pct = Math.min(100, Math.round((currentPos / totalSlidesInPkg) * 100));
+        } else {
+          // total_slides unknown — show rough % (5% per slide, cap 99%)
+          pct = Math.min(99, currentPos * 5);
+        }
+      }
+      // If position still unknown → 0%
     }
   }
   document.getElementById('progressDisplay').textContent = pct + '%';
