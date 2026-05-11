@@ -502,10 +502,11 @@
       const { data } = await r.json();
       if (!data) return;
 
-      // Logo
-      if (data.logo_path) {
+      // Logo — prefer base64 (persists across restarts), fallback to path
+      const logoSrc = data.logo_data || data.logo_path || '';
+      if (logoSrc) {
         const img = document.getElementById('logoImg');
-        img.src = data.logo_path;
+        img.src = logoSrc;
         img.style.display = 'block';
         document.getElementById('logoFallback').style.display = 'none';
       }

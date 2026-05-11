@@ -605,6 +605,9 @@ async function initDB() {
 
     await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS org_name VARCHAR(255) DEFAULT 'Connecting Dot Consultancy Pvt. Ltd.'`).catch(()=>{});
     await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS site_subtitle VARCHAR(500) DEFAULT ''`).catch(()=>{});
+    // Store logo as base64 in DB so it persists across server restarts (ephemeral filesystem fix)
+    await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS logo_data TEXT DEFAULT NULL`).catch(()=>{});
+    await client.query(`ALTER TABLE corporate_clients ADD COLUMN IF NOT EXISTS logo_data TEXT DEFAULT NULL`).catch(()=>{});
 
     // Corporate course payments table
     await client.query(`CREATE TABLE IF NOT EXISTS corporate_course_payments (
@@ -845,8 +848,12 @@ app.post('/api/v1/settings/logo', auth, adminOnly, (req, res) => {
     if (uploadErr) return err(res, uploadErr.message, 400);
     if (!req.file) return err(res,'No file uploaded',400);
     const logoPath = '/uploads/logos/' + req.file.filename;
-    await pool.query('UPDATE site_settings SET logo_path=$1 WHERE id=1',[logoPath]);
-    ok(res, { logo_path: logoPath });
+    // Convert to base64 and store in DB so logo persists across server restarts
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const base64 = fileBuffer.toString('base64');
+    const logoData = `data:${req.file.mimetype};base64,${base64}`;
+    await pool.query('UPDATE site_settings SET logo_path=$1, logo_data=$2 WHERE id=1',[logoPath, logoData]);
+    ok(res, { logo_path: logoPath, logo_data: logoData });
   });
 });
 
@@ -857,27 +864,32 @@ app.post('/api/v1/corporate/settings/logo', auth, requireRole('corporate','admin
     if (uploadErr) return err(res, uploadErr.message, 400);
     if (!req.file) return err(res,'No file uploaded',400);
     const logoPath = '/uploads/logos/' + req.file.filename;
+    // Convert to base64 and store in DB so logo persists across server restarts
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const base64 = fileBuffer.toString('base64');
+    const logoData = `data:${req.file.mimetype};base64,${base64}`;
     const corpId = req.user.role === 'corporate' ? req.user.id : req.body.corporate_id;
-    await pool.query('UPDATE corporate_clients SET logo_path=$1 WHERE id=$2',[logoPath, corpId]);
-    ok(res, { logo_path: logoPath });
+    await pool.query('UPDATE corporate_clients SET logo_path=$1, logo_data=$2 WHERE id=$3',[logoPath, logoData, corpId]);
+    ok(res, { logo_path: logoPath, logo_data: logoData });
   });
 });
 
 // ── BRANDING (logos for certificate rendering) ─────────────────────────────────
 app.get('/api/v1/branding', auth, async (req, res) => {
   try {
-    const ss = await pool.query('SELECT logo_path FROM site_settings WHERE id=1');
-    const superLogo = ss.rows[0]?.logo_path || '';
+    const ss = await pool.query('SELECT logo_path, logo_data FROM site_settings WHERE id=1');
+    // Prefer base64 data (persists across restarts), fallback to file path
+    const superLogo = ss.rows[0]?.logo_data || ss.rows[0]?.logo_path || '';
     let corpLogo = '';
     if (req.user.role === 'participant') {
       const r = await pool.query(
-        'SELECT cc.logo_path FROM corporate_participants cp JOIN corporate_clients cc ON cp.corporate_id=cc.id WHERE cp.id=$1',
+        'SELECT cc.logo_path, cc.logo_data FROM corporate_participants cp JOIN corporate_clients cc ON cp.corporate_id=cc.id WHERE cp.id=$1',
         [req.user.id]
       );
-      corpLogo = r.rows[0]?.logo_path || '';
+      corpLogo = r.rows[0]?.logo_data || r.rows[0]?.logo_path || '';
     } else if (req.user.role === 'corporate') {
-      const r = await pool.query('SELECT logo_path FROM corporate_clients WHERE id=$1',[req.user.id]);
-      corpLogo = r.rows[0]?.logo_path || '';
+      const r = await pool.query('SELECT logo_path, logo_data FROM corporate_clients WHERE id=$1',[req.user.id]);
+      corpLogo = r.rows[0]?.logo_data || r.rows[0]?.logo_path || '';
     }
     ok(res, { super_logo: superLogo, corp_logo: corpLogo });
   } catch(e){ err(res, e.message); }

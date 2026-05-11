@@ -3431,6 +3431,8 @@ function filterCertTable(){
 // Convert image path to base64 data URL — works inside about:blank certificate window
 async function imgToDataUrl(rawPath){
   if(!rawPath) return '';
+  // Already a base64 data URL — return directly (no fetch needed)
+  if(rawPath.startsWith('data:')) return rawPath;
   try{
     const origin = window.location.origin;
     const url = rawPath.startsWith('http') ? rawPath : origin + (rawPath.startsWith('/') ? rawPath : '/' + rawPath);
@@ -3796,7 +3798,8 @@ async function loadSettings(){
   document.getElementById('set-tw').value=d.twitter_url||'';
   document.getElementById('set-yt').value=d.youtube_url||'';
   document.getElementById('set-wa').value=d.whatsapp_url||'';
-  if(d.logo_path){document.getElementById('logoPreview').src=d.logo_path;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=d.logo_path;document.getElementById('sbLogo').style.display='block';}
+  const logoSrc=d.logo_data||d.logo_path||'';
+  if(logoSrc){document.getElementById('logoPreview').src=logoSrc;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=logoSrc;document.getElementById('sbLogo').style.display='block';}
   // Update footer copyright & social
   if(d.copyright_text)document.getElementById('adminFooterCopy').textContent=d.copyright_text;
   const sfm={facebook:'adf-fb',instagram:'adf-ig',linkedin:'adf-li',twitter:'adf-tw',youtube:'adf-yt',whatsapp:'adf-wa'};
@@ -3813,7 +3816,7 @@ async function uploadLogo(){
   const fd=new FormData();fd.append('logo',file);
   const r=await fetch(API('/settings/logo'),{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
   const d=await r.json();
-  if(d.success){document.getElementById('logoPreview').src=d.data.logo_path;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=d.data.logo_path;showFormAlert('settingsAlert','Logo updated!','success');}
+  if(d.success){const ls=d.data.logo_data||d.data.logo_path;document.getElementById('logoPreview').src=ls;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=ls;document.getElementById('sbLogo').style.display='block';showFormAlert('settingsAlert','Logo updated!','success');}
   else showFormAlert('settingsAlert',d.error||'Upload failed.');
 }
 
@@ -4076,8 +4079,8 @@ async function uploadScorm(){
 // ─ Init ─
 (async()=>{
   try{
-    // Load sidebar logo from DB on startup
-    try{const ss=await fetch('/api/v1/settings');if(ss.ok){const sd=await ss.json();const lp=(sd.data||sd).logo_path;if(lp){document.getElementById('sbLogo').src=lp;document.getElementById('sbLogo').style.display='block';}}}catch{}
+    // Load sidebar logo from DB on startup (prefer base64 which persists across server restarts)
+    try{const ss=await fetch('/api/v1/settings');if(ss.ok){const sd=await ss.json();const sdd=sd.data||sd;const lp=sdd.logo_data||sdd.logo_path||'';if(lp){document.getElementById('sbLogo').src=lp;document.getElementById('sbLogo').style.display='block';}}}catch{}
 
     // Load courses and batches first
     await loadCourses();

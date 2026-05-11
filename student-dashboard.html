@@ -1821,7 +1821,8 @@ async function loadSiteSettings(){
     if(!r.ok)return;
     const {data}=await r.json();
     if(!data)return;
-    if(data.logo_path){document.getElementById('sbLogo').src=data.logo_path;document.getElementById('sbLogo').style.display='block';}
+    const logoSrc=data.logo_data||data.logo_path||'';
+    if(logoSrc){document.getElementById('sbLogo').src=logoSrc;document.getElementById('sbLogo').style.display='block';}
     if(data.footer_text)document.getElementById('footerCopy').textContent=data.footer_text;
     const sm={fb_url:'sf-fb',instagram_url:'sf-ig',linkedin_url:'sf-li',twitter_url:'sf-tw',youtube_url:'sf-yt',whatsapp_url:'sf-wa'};
     Object.entries(sm).forEach(([key,id])=>{const el=document.getElementById(id);if(el&&data[key]){el.href=data[key];el.style.display='inline-flex';}});
@@ -2313,6 +2314,7 @@ async function viewStudentCertificate(certNo, courseName, issuedDate){
   const date=issuedDate?new Date(issuedDate).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}):'—';
   const toDataUrl=async rawPath=>{
     if(!rawPath) return '';
+    if(rawPath.startsWith('data:')) return rawPath; // already base64
     try{
       const url=rawPath.startsWith('http')?rawPath:window.location.origin+(rawPath.startsWith('/')?rawPath:'/'+rawPath);
       const resp=await fetch(url); if(!resp.ok) return '';

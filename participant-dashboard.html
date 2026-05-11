@@ -926,6 +926,7 @@ async function viewCertificate(certNo, courseName, issuedDate){
   // Helper: convert image path to base64 data URL (works in about:blank window)
   const toDataUrl = async rawPath => {
     if(!rawPath) return '';
+    if(rawPath.startsWith('data:')) return rawPath; // already base64, return directly
     try{
       const origin = window.location.origin;
       const url = rawPath.startsWith('http') ? rawPath : origin + (rawPath.startsWith('/') ? rawPath : '/' + rawPath);
