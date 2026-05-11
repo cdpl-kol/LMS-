@@ -3796,7 +3796,7 @@ async function loadSettings(){
   document.getElementById('set-tw').value=d.twitter_url||'';
   document.getElementById('set-yt').value=d.youtube_url||'';
   document.getElementById('set-wa').value=d.whatsapp_url||'';
-  if(d.logo_path){document.getElementById('logoPreview').src=d.logo_path;document.getElementById('logoPreview').style.display='block';}
+  if(d.logo_path){document.getElementById('logoPreview').src=d.logo_path;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=d.logo_path;document.getElementById('sbLogo').style.display='block';}
   // Update footer copyright & social
   if(d.copyright_text)document.getElementById('adminFooterCopy').textContent=d.copyright_text;
   const sfm={facebook:'adf-fb',instagram:'adf-ig',linkedin:'adf-li',twitter:'adf-tw',youtube:'adf-yt',whatsapp:'adf-wa'};
@@ -4076,6 +4076,9 @@ async function uploadScorm(){
 // ─ Init ─
 (async()=>{
   try{
+    // Load sidebar logo from DB on startup
+    try{const ss=await fetch('/api/v1/settings');if(ss.ok){const sd=await ss.json();const lp=(sd.data||sd).logo_path;if(lp){document.getElementById('sbLogo').src=lp;document.getElementById('sbLogo').style.display='block';}}}catch{}
+
     // Load courses and batches first
     await loadCourses();
     await loadBatches();
