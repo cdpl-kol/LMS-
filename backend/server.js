@@ -610,6 +610,16 @@ async function initDB() {
     await client.query(`ALTER TABLE corporate_clients ADD COLUMN IF NOT EXISTS logo_data TEXT DEFAULT NULL`).catch(()=>{});
     // Direct course_id on scorm_packages so packages link to courses without needing a module
     await client.query(`ALTER TABLE scorm_packages ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL`).catch(()=>{});
+    // Fix old packages: module_id was incorrectly set to a course_id (before the fix).
+    // Detect those rows (no real module exists with that id, but a course does) and move to course_id.
+    await client.query(`
+      UPDATE scorm_packages sp
+      SET course_id = sp.module_id, module_id = NULL
+      WHERE sp.course_id IS NULL
+        AND sp.module_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM modules WHERE id = sp.module_id)
+        AND EXISTS    (SELECT 1 FROM courses  WHERE id = sp.module_id)
+    `).catch(()=>{});
 
     // Corporate course payments table
     await client.query(`CREATE TABLE IF NOT EXISTS corporate_course_payments (
@@ -3402,6 +3412,18 @@ app.get('/api/v1/scorm/packages', auth, async (req, res) => {
     // Admin / trainer / others see all
     const r = await pool.query(baseQuery + ` ORDER BY sp.created_at DESC`);
     ok(res, r.rows);
+  } catch(e) { err(res, e.message); }
+});
+
+// Reassign SCORM package to a different course (admin only)
+app.patch('/api/v1/scorm/packages/:id/course', auth, adminOnly, async (req, res) => {
+  try {
+    const { course_id } = req.body;
+    await pool.query(
+      'UPDATE scorm_packages SET course_id=$1 WHERE id=$2',
+      [course_id || null, req.params.id]
+    );
+    ok(res, { id: req.params.id, course_id: course_id || null });
   } catch(e) { err(res, e.message); }
 });
 

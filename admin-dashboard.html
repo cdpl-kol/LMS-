@@ -3880,12 +3880,43 @@ async function loadScormPackages(){
       <td>${dateFmt(p.created_at)}</td>
       <td>
         ${previewBtn}
+        <button class="btn btn-sm" style="background:#7c3aed;color:#fff;" onclick="reassignScormCourse(${p.id},'${fmt(p.package_name).replace(/'/g,"\\'")}',${p.course_id||'null'})" title="Change Course Assignment"><i class="fas fa-link"></i></button>
         ${!isVideo?`<button class="btn btn-sm btn-secondary" onclick="rescanScorm(${p.id})" title="Re-scan launch URL"><i class="fas fa-sync-alt"></i></button>`:''}
         <button class="btn btn-sm btn-danger" onclick="deleteScorm(${p.id})" title="Delete"><i class="fas fa-trash"></i></button>
       </td>
     </tr>`;
   }).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">No content uploaded yet.</td></tr>';
 }
+
+/* Reassign a SCORM package to a different course */
+async function reassignScormCourse(pkgId, pkgName, currentCourseId){
+  const cr=await api('GET','/courses');
+  const courses=Array.isArray(cr.data)?cr.data:[];
+  const opts=courses.map(c=>`<option value="${c.id}"${c.id==currentCourseId?' selected':''}>${c.name||c.title}</option>`).join('');
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <h3 style="margin:0 0 6px;color:#1a237e;font-size:16px;"><i class="fas fa-link" style="color:#7c3aed;margin-right:8px;"></i>Course Assign Karo</h3>
+    <p style="margin:0 0 18px;color:#78909c;font-size:13px;">${pkgName}</p>
+    <label style="font-size:12px;font-weight:600;color:#546e7a;display:block;margin-bottom:6px;">Course Select Karo</label>
+    <select id="_rcSel" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;margin-bottom:18px;outline:none;">
+      <option value="">— Koi nahi —</option>${opts}
+    </select>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">Cancel</button>
+      <button id="_rcSaveBtn" style="padding:8px 18px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">Save</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#_rcSaveBtn').onclick=async()=>{
+    const newCourseId=modal.querySelector('#_rcSel').value;
+    const r=await api('PATCH',`/scorm/packages/${pkgId}/course`,{course_id:newCourseId||null});
+    modal.remove();
+    if(r.success){showToast('Course updated!','success');loadScormPackages();}
+    else showToast(r.error||'Failed','error');
+  };
+}
+
 let _adminScormRows=[];
 function _adminFmtSec(s){s=parseInt(s)||0;if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';}
 
