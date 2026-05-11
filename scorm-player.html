@@ -205,6 +205,7 @@ let dirty = false;
 let sessionStart = Date.now();
 let saveTimer = null;
 let totalSlidesInPkg = 0;  // set after package loads
+let pkgSlideOrder = [];   // slide_order array from package (for GUID-based SCORM)
 let scormApiSetLocation = false; // true when SCORM content sets lesson_location via LMSSetValue
 let lastSuspendData = '';        // fingerprint: detect slide changes via suspend_data
 let commitSlideCount = 0;        // synthetic slide counter for LMSCommit-based tracking
@@ -262,29 +263,43 @@ function updateStatusBar() {
     'browsed':'badge-blue','not attempted':'badge-gray'
   }[status] || 'badge-gray');
 
-  // Progress % — slides visited / total_slides, fallback to score_raw
-  // After restart, show 0% until the user actually visits a new slide
-  const visitedKeys = new Set(
-    Object.entries(slideTimings)
-      .filter(([k, v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0)
-      .map(([k]) => k)
-  );
-  if (currentSlide && currentSlide !== 'video_seconds' && currentSlide !== 'video_duration') {
-    visitedKeys.add(currentSlide); // count the slide currently being viewed
-  }
-  const scormSlides = visitedKeys.size;
+  // Progress % — based on CURRENT slide position (not cumulative visited count)
+  // This way PREV slide decreases progress and NEXT increases it correctly.
   const raw = parseInt(CMI['cmi.core.score.raw']) || 0;
   let pct = 0;
   if (!justRestarted) {
-    if (totalSlidesInPkg > 0 && scormSlides > 0) {
-      pct = Math.min(100, Math.round((scormSlides / totalSlidesInPkg) * 100));
+    const st = CMI['cmi.core.lesson_status'] || 'not attempted';
+    if (st === 'completed' || st === 'passed') {
+      pct = 100;
+    } else if (currentSlide && currentSlide !== 'video_seconds' && currentSlide !== 'video_duration') {
+      // Resolve current slide to a 1-based position number
+      let currentPos = 0;
+      const exactNum = /^(\d+)$/.exec(currentSlide);
+      if (exactNum) {
+        currentPos = parseInt(exactNum[1]);
+      } else {
+        // GUID-based (Articulate) — look up index in slide_order
+        const idx = pkgSlideOrder.indexOf(currentSlide);
+        if (idx >= 0) {
+          currentPos = idx + 1;
+        } else {
+          // pg_N or other fallback keys — extract trailing number
+          const trail = /(\d+)$/.exec(currentSlide);
+          if (trail) currentPos = parseInt(trail[1]);
+        }
+      }
+      if (totalSlidesInPkg > 0 && currentPos > 0) {
+        pct = Math.min(100, Math.round((currentPos / totalSlidesInPkg) * 100));
+      } else if (currentPos > 0) {
+        // total_slides unknown — show slide number instead of %
+        document.getElementById('progressDisplay').textContent = currentPos + ' slide' + (currentPos !== 1 ? 's' : '');
+        document.getElementById('progressBar').style.width = Math.min(100, currentPos * 5) + '%';
+        return;
+      } else if (raw > 0) {
+        pct = Math.min(100, raw);
+      }
     } else if (raw > 0) {
       pct = Math.min(100, raw);
-    } else if (scormSlides > 0) {
-      // total_slides unknown — show visited count instead of 0%
-      document.getElementById('progressDisplay').textContent = scormSlides + ' slide' + (scormSlides !== 1 ? 's' : '');
-      document.getElementById('progressBar').style.width = Math.min(100, scormSlides * 5) + '%';
-      return;
     }
   }
   document.getElementById('progressDisplay').textContent = pct + '%';
@@ -651,6 +666,7 @@ async function loadContent() {
     if (!d.success || !d.data) { showError('Package not found.'); return; }
     const pkg = d.data;
     totalSlidesInPkg = parseInt(pkg.total_slides) || 0;
+    pkgSlideOrder = Array.isArray(pkg.slide_order) ? pkg.slide_order : [];
     document.getElementById('pkgTitle').textContent = pkg.package_name || PKG_NAME;
     document.title = (pkg.package_name || 'Content') + ' – Smart LMS';
 
