@@ -3,16 +3,8 @@ backend/uploads/*.pdf
 backend/uploads/*.doc
 backend/uploads/*.docx
 backend/.env
-*.xlsx
-node_modules/
-backend/node_modules/
-android/
-www/
-build_err.txt
-build_out.txt
 backend/server.log
 backend/server_err.log
 *.log
-
 
 .claude/worktrees/
