@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart LMS – Connecting Dot Consultancy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root {
+      --navy:   #1a237e;
+      --navy2:  #283593;
+      --blue:   #1565c0;
+      --orange: #ff6b35;
+      --orange2:#e55a2b;
+      --white:  #ffffff;
+      --gray:   #f4f6fb;
+      --text:   #263238;
+      --muted:  #78909c;
+      --shadow: 0 8px 32px rgba(26,35,126,0.13);
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--gray);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0d1b6e 0%, #1a237e 40%, #1565c0 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 40px 20px 120px;
+    }
+    .hero::before {
+      content:'';
+      position:absolute; inset:0;
+      background: url("data:image/svg+xml,%3Csvg width='80' height='92' viewBox='0 0 80 92' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='40,5 70,22 70,56 40,73 10,56 10,22' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='1.5'/%3E%3C/svg%3E") repeat;
+      opacity:1;
+    }
+    .hero-glow {
+      position:absolute;
+      border-radius:50%;
+      filter:blur(80px);
+      pointer-events:none;
+    }
+    .hero-glow.g1 { width:500px;height:500px;background:rgba(255,107,53,0.15); top:-100px;right:-100px; }
+    .hero-glow.g2 { width:400px;height:400px;background:rgba(21,101,192,0.2); bottom:-80px;left:-80px; }
+
+    .hero-inner {
+      position: relative;
+      z-index:10;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      width:100%;
+      max-width:520px;
+    }
+
+    .logo-box {
+      background: rgba(255,255,255,0.1);
+      border: 1.5px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 18px 36px;
+      margin-bottom: 8px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .logo-box img { max-height:64px; max-width:220px; display:block; }
+    .logo-box .logo-text {
+      font-family:'Poppins',sans-serif;
+      font-size:22px;
+      font-weight:700;
+      color:#fff;
+      letter-spacing:-0.5px;
+    }
+
+    .hero-tagline {
+      font-size:14px;
+      letter-spacing:3px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.65);
+      font-weight:500;
+      margin-bottom:4px;
+    }
+    .hero-title {
+      font-family:'Poppins',sans-serif;
+      font-size:clamp(24px,5vw,38px);
+      font-weight:800;
+      color:#fff;
+      text-align:center;
+      line-height:1.2;
+      margin-bottom:8px;
+    }
+    .hero-title span { color:var(--orange); }
+    .hero-subtitle {
+      font-size:15px;
+      color:rgba(255,255,255,0.72);
+      text-align:center;
+      max-width:420px;
+      line-height:1.7;
+      margin-bottom:28px;
+    }
+
+    /* Portal Cards */
+    .portals-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+      width:100%;
+    }
+    /* Last card (Participant Login) centered alone at bottom */
+    .portals-grid .portal-card:last-child {
+      grid-column: 1 / -1;
+      max-width: calc(50% - 7px);
+      margin: 0 auto;
+    }
+    .portal-card {
+      background:rgba(255,255,255,0.10);
+      border:1.5px solid rgba(255,255,255,0.18);
+      backdrop-filter:blur(10px);
+      border-radius:16px;
+      padding:22px 18px;
+      text-decoration:none;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+      cursor:pointer;
+    }
+    .portal-card:hover {
+      transform:translateY(-4px);
+      background:rgba(255,255,255,0.18);
+      box-shadow:0 12px 40px rgba(0,0,0,0.25);
+    }
+    .portal-card .icon-wrap {
+      width:52px;height:52px;
+      border-radius:14px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;
+      color:#fff;
+    }
+    .portal-card .card-label {
+      font-size:14px;
+      font-weight:700;
+      color:#fff;
+      text-align:center;
+    }
+    .portal-card .card-desc {
+      font-size:11px;
+      color:rgba(255,255,255,0.6);
+      text-align:center;
+      line-height:1.5;
+    }
+
+    /* Icon colors */
+    .ic-admin   { background:linear-gradient(135deg,#26d0ce,#1a8fe3); }
+    .ic-student { background:linear-gradient(135deg,#e91e8c,#9c27b0); }
+    .ic-bschool { background:linear-gradient(135deg,#7c4dff,#6a1fd8); }
+    .ic-trainer { background:linear-gradient(135deg,#ff6b35,#e53935); }
+
+    /* Stats strip */
+    .stats-strip {
+      display:flex;
+      gap:28px;
+      margin-top:32px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+    .stat-item {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:2px;
+    }
+    .stat-num {
+      font-family:'Poppins',sans-serif;
+      font-size:22px;
+      font-weight:800;
+      color:var(--orange);
+    }
+    .stat-lbl {
+      font-size:11px;
+      color:rgba(255,255,255,0.55);
+      text-transform:uppercase;
+      letter-spacing:1px;
+    }
+
+    /* Wave divider */
+    .wave {
+      position:absolute;
+      bottom:0; left:0;
+      width:100%; height:90px;
+      overflow:hidden;
+      line-height:0;
+    }
+    .wave svg { display:block; width:100%; height:90px; }
+
+    /* ── FEATURES SECTION ── */
+    .features {
+      background:var(--white);
+      padding:72px 24px;
+    }
+    .section-label {
+      text-align:center;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:3px;
+      color:var(--orange);
+      font-weight:600;
+      margin-bottom:10px;
+    }
+    .section-title {
+      font-family:'Poppins',sans-serif;
+      font-size:clamp(22px,4vw,32px);
+      font-weight:700;
+      color:var(--navy);
+      text-align:center;
+      margin-bottom:14px;
+    }
+    .section-sub {
+      text-align:center;
+      color:var(--muted);
+      font-size:15px;
+      max-width:560px;
+      margin:0 auto 48px;
+      line-height:1.7;
+    }
+    .features-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
+      gap:24px;
+      max-width:1100px;
+      margin:0 auto;
+    }
+    .feat-card {
+      background:var(--gray);
+      border-radius:16px;
+      padding:28px 24px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      transition:transform 0.2s, box-shadow 0.2s;
+    }
+    .feat-card:hover { transform:translateY(-3px); box-shadow:var(--shadow); }
+    .feat-icon {
+      width:48px;height:48px;
+      background:linear-gradient(135deg,var(--navy),var(--blue));
+      border-radius:12px;
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;
+      font-size:20px;
+    }
+    .feat-title { font-size:16px; font-weight:700; color:var(--navy); }
+    .feat-desc  { font-size:13px; color:var(--muted); line-height:1.65; }
+
+    /* ── FOOTER ── */
+    footer {
+      background:var(--navy);
+      color:rgba(255,255,255,0.75);
+      padding:40px 24px 24px;
+    }
+    .footer-inner {
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      flex-wrap:wrap;
+      gap:32px;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+    .footer-brand { max-width:280px; }
+    .footer-brand .brand-name {
+      font-family:'Poppins',sans-serif;
+      font-size:18px;
+      font-weight:700;
+      color:#fff;
+      margin-bottom:10px;
+    }
+    .footer-brand p { font-size:13px; line-height:1.7; }
+
+    .footer-links h4 { color:#fff; font-size:14px; font-weight:700; margin-bottom:14px; }
+    .footer-links ul { list-style:none; display:flex; flex-direction:column; gap:8px; }
+    .footer-links a { color:rgba(255,255,255,0.65); text-decoration:none; font-size:13px; transition:color 0.2s; }
+    .footer-links a:hover { color:var(--orange); }
+
+    .footer-social h4 { color:#fff; font-size:14px; font-weight:700; margin-bottom:14px; }
+    .social-row {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .social-btn {
+      width:38px;height:38px;
+      border-radius:10px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      display:flex;align-items:center;justify-content:center;
+      color:rgba(255,255,255,0.75);
+      font-size:16px;
+      text-decoration:none;
+      transition:background 0.2s, color 0.2s, transform 0.15s;
+    }
+    .social-btn:hover { background:var(--orange); color:#fff; transform:translateY(-2px); }
+
+    .footer-bottom {
+      max-width:1100px;
+      margin:28px auto 0;
+      padding-top:18px;
+      border-top:1px solid rgba(255,255,255,0.1);
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:space-between;
+      align-items:center;
+      font-size:12px;
+      color:rgba(255,255,255,0.45);
+    }
+    .footer-bottom .powered { color:rgba(255,255,255,0.3); }
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:540px){
+      .portals-grid { grid-template-columns:1fr; }
+      .portals-grid .portal-card:last-child { max-width:100%; }
+      .hero-inner { max-width:100%; }
+      .stats-strip { gap:18px; }
+      .footer-inner { flex-direction:column; }
+    }
+    @media(max-width:360px){
+      .portal-card { padding:16px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero">
+  <div class="hero-glow g1"></div>
+  <div class="hero-glow g2"></div>
+
+  <div class="hero-inner">
+    <!-- Logo (dynamic via settings, fallback to text) -->
+    <div class="logo-box" id="logoBox">
+      <img src="logo.png" alt="Connecting Dot" id="logoImg"
+           onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block'"/>
+      <span class="logo-text" id="logoFallback" style="display:none">Connecting Dot</span>
+    </div>
+
+    <p class="hero-tagline" id="heroTagline">Learning Management System</p>
+    <h1 class="hero-title" id="heroTitle">
+      Empower Your <span>Learning</span> Journey
+    </h1>
+    <p class="hero-subtitle" id="heroSubtitle">
+      A unified, modern platform for students, trainers, B‑Schools and administrators — all in one place.
+    </p>
+
+    <!-- Portal Buttons -->
+    <div class="portals-grid">
+      <a href="admin-login.html" class="portal-card">
+        <div class="icon-wrap ic-admin"><i class="fas fa-user-shield"></i></div>
+        <span class="card-label">Admin Portal</span>
+        <span class="card-desc">Manage users, courses & settings</span>
+      </a>
+      <a href="student-login.html" class="portal-card">
+        <div class="icon-wrap ic-student"><i class="fas fa-user-graduate"></i></div>
+        <span class="card-label">Student Portal</span>
+        <span class="card-desc">Access courses, exams & results</span>
+      </a>
+      <a href="trainer-login.html" class="portal-card">
+        <div class="icon-wrap ic-trainer"><i class="fas fa-chalkboard-user"></i></div>
+        <span class="card-label">Trainer Portal</span>
+        <span class="card-desc">Manage attendance & assignments</span>
+      </a>
+      <a href="corporate-login.html" class="portal-card">
+        <div class="icon-wrap" style="background:linear-gradient(135deg,#00897b,#004d40);"><i class="fas fa-building"></i></div>
+        <span class="card-label">Corporate / B‑School Portal</span>
+        <span class="card-desc">Manage company participants & training</span>
+      </a>
+      <a href="participant-login.html" class="portal-card">
+        <div class="icon-wrap" style="background:linear-gradient(135deg,#1565c0,#00897b);"><i class="fas fa-id-badge"></i></div>
+        <span class="card-label">Participant Login</span>
+        <span class="card-desc">Access your corporate training courses</span>
+      </a>
+    </div>
+
+    <!-- Live stats (fetched from API) -->
+    <div class="stats-strip" id="statsStrip" style="display:none">
+      <div class="stat-item"><span class="stat-num" id="statStudents">—</span><span class="stat-lbl">Students</span></div>
+      <div class="stat-item"><span class="stat-num" id="statCourses">—</span><span class="stat-lbl">Courses</span></div>
+      <div class="stat-item"><span class="stat-num" id="statTrainers">—</span><span class="stat-lbl">Trainers</span></div>
+      <div class="stat-item"><span class="stat-num" id="statBatches">—</span><span class="stat-lbl">Batches</span></div>
+    </div>
+  </div>
+
+  <!-- Wave -->
+  <div class="wave">
+    <svg viewBox="0 0 1440 90" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,60 C360,100 1080,10 1440,60 L1440,90 L0,90 Z" fill="#f4f6fb"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<section class="features">
+  <p class="section-label">Why Choose Us</p>
+  <h2 class="section-title">Everything You Need in One Platform</h2>
+  <p class="section-sub">Connecting Dot LMS is built for the modern learner — powerful analytics, SCORM support, secure access, and a beautiful interface.</p>
+
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon"><i class="fas fa-shield-halved"></i></div>
+      <div class="feat-title">VAPT-Ready Security</div>
+      <div class="feat-desc">OWASP Top 10 compliance, rate limiting, JWT auth, input sanitization and audit logs built in.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><i class="fas fa-chart-line"></i></div>
+      <div class="feat-title">Deep Analytics</div>
+      <div class="feat-desc">Real-time dashboards with student progress, attendance trends, batch performance and fee reports.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><i class="fas fa-boxes-stacked"></i></div>
+      <div class="feat-title">SCORM 1.2 / 2004</div>
+      <div class="feat-desc">Upload and serve SCORM packages for rich, interactive e-learning content delivery and tracking.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><i class="fas fa-mobile-screen"></i></div>
+      <div class="feat-title">Fully Responsive</div>
+      <div class="feat-desc">Seamless experience across desktop, tablet and mobile — no separate app required.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><i class="fas fa-sliders"></i></div>
+      <div class="feat-title">Admin CMS</div>
+      <div class="feat-desc">Customise logos, titles, social links and branding from the Admin panel without touching code.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><i class="fas fa-certificate"></i></div>
+      <div class="feat-title">Auto Certificates</div>
+      <div class="feat-desc">Issue branded completion certificates automatically when students pass courses or exams.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="brand-name" id="footerBrand">Connecting Dot Consultancy</div>
+      <p>Empowering learners and institutions with a modern, centralised learning management platform.</p>
+    </div>
+
+    <div class="footer-links">
+      <h4>Portals</h4>
+      <ul>
+        <li><a href="admin-login.html"><i class="fas fa-chevron-right fa-xs"></i> Admin</a></li>
+        <li><a href="student-login.html"><i class="fas fa-chevron-right fa-xs"></i> Student</a></li>
+        <li><a href="trainer-login.html"><i class="fas fa-chevron-right fa-xs"></i> Trainer</a></li>
+        <li><a href="corporate-login.html"><i class="fas fa-chevron-right fa-xs"></i> Corporate / B‑School</a></li>
+        <li><a href="participant-login.html"><i class="fas fa-chevron-right fa-xs"></i> Participant</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-social">
+      <h4>Follow Us</h4>
+      <div class="social-row" id="socialRow">
+        <!-- Dynamically populated from settings API; static fallbacks shown below -->
+        <a href="#" class="social-btn" id="sm-facebook"  title="Facebook"  style="display:none"><i class="fab fa-facebook-f"></i></a>
+        <a href="#" class="social-btn" id="sm-instagram" title="Instagram" style="display:none"><i class="fab fa-instagram"></i></a>
+        <a href="#" class="social-btn" id="sm-linkedin"  title="LinkedIn"  style="display:none"><i class="fab fa-linkedin-in"></i></a>
+        <a href="#" class="social-btn" id="sm-twitter"   title="Twitter/X" style="display:none"><i class="fab fa-x-twitter"></i></a>
+        <a href="#" class="social-btn" id="sm-youtube"   title="YouTube"   style="display:none"><i class="fab fa-youtube"></i></a>
+        <a href="#" class="social-btn" id="sm-whatsapp"  title="WhatsApp"  style="display:none"><i class="fab fa-whatsapp"></i></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span id="copyrightText">© 2026 Connecting Dot Consultancy Pvt. Ltd. All rights reserved.</span>
+    <span class="powered">Powered by Smart LMS v2.0</span>
+  </div>
+</footer>
+
+<script>
+  /* ── Load dynamic settings from backend ── */
+  (async () => {
+    try {
+      const r = await fetch('/api/v1/settings');
+      if (!r.ok) return;
+      const { data } = await r.json();
+      if (!data) return;
+
+      // Logo — prefer base64 (persists across restarts), fallback to path
+      const logoSrc = data.logo_data || data.logo_path || '';
+      if (logoSrc) {
+        const img = document.getElementById('logoImg');
+        img.src = logoSrc;
+        img.style.display = 'block';
+        document.getElementById('logoFallback').style.display = 'none';
+      }
+
+      // Hero text
+      if (data.tagline)      document.getElementById('heroTagline').textContent  = data.tagline;
+      if (data.site_title)   document.getElementById('heroTitle').innerHTML      = data.site_title;
+      if (data.site_subtitle) document.getElementById('heroSubtitle').textContent = data.site_subtitle;
+
+      // Footer brand
+      if (data.org_name)     document.getElementById('footerBrand').textContent  = data.org_name;
+      if (data.footer_text)  document.getElementById('copyrightText').textContent = data.footer_text;
+
+      // Social media
+      const socialMap = {
+        fb_url: 'sm-facebook', instagram_url: 'sm-instagram',
+        linkedin_url: 'sm-linkedin', twitter_url: 'sm-twitter',
+        youtube_url: 'sm-youtube',   whatsapp_url: 'sm-whatsapp'
+      };
+      Object.entries(socialMap).forEach(([key, id]) => {
+        if (data[key]) {
+          const el = document.getElementById(id);
+          el.href = data[key];
+          el.style.display = 'flex';
+        }
+      });
+    } catch(e) {
+      // silently fail — static defaults remain
+    }
+
+    // Fetch public stats
+    try {
+      const rs = await fetch('/api/v1/analytics/public-stats');
+      if (rs.ok) {
+        const { data } = await rs.json();
+        if (data) {
+          document.getElementById('statStudents').textContent = (data.students||0).toLocaleString();
+          document.getElementById('statCourses').textContent  = (data.courses||0).toLocaleString();
+          document.getElementById('statTrainers').textContent = (data.trainers||0).toLocaleString();
+          document.getElementById('statBatches').textContent  = (data.batches||0).toLocaleString();
+          document.getElementById('statsStrip').style.display = 'flex';
+        }
+      }
+    } catch(e) {}
+  })();
+</script>
+</body>
+</html>

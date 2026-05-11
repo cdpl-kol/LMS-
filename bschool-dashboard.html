@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>B-School Dashboard – Smart LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --navy:#1a237e;--purple:#7c4dff;--purple2:#6a1fd8;--teal:#00897b;
+      --orange:#ff6b35;--white:#fff;--gray:#f4f6fb;--text:#263238;
+      --muted:#78909c;--border:#e8ecf0;--red:#e53935;--green:#2e7d32;
+      --sid-w:256px;--top-h:60px;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:var(--gray);color:var(--text);min-height:100vh;}
+
+    /* ── SIDEBAR ── */
+    .sidebar{position:fixed;top:0;left:0;width:var(--sid-w);height:100vh;background:var(--navy);
+      display:flex;flex-direction:column;z-index:200;overflow-y:auto;transition:transform .3s;}
+    .sb-brand{padding:0 20px;height:var(--top-h);display:flex;align-items:center;gap:10px;
+      border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;}
+    .sb-brand img{max-height:36px;max-width:140px;object-fit:contain;}
+    .sb-brand-txt{font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;color:#fff;line-height:1.2;}
+    .sb-brand-sub{font-size:10px;color:rgba(255,255,255,.55);font-weight:400;font-family:'Inter',sans-serif;}
+    .sb-section{padding:16px 12px 4px;font-size:10px;color:rgba(255,255,255,.4);
+      letter-spacing:1.2px;text-transform:uppercase;font-weight:600;}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:11px 16px;margin:1px 8px;
+      border-radius:10px;color:rgba(255,255,255,.75);text-decoration:none;font-size:13.5px;
+      font-weight:500;cursor:pointer;transition:all .2s;}
+    .nav-item:hover{background:rgba(255,255,255,.1);color:#fff;}
+    .nav-item.active{background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;
+      box-shadow:0 4px 12px rgba(124,77,255,.35);}
+    .nav-item i{width:18px;text-align:center;font-size:14px;}
+    .nav-badge{margin-left:auto;background:var(--orange);color:#fff;font-size:10px;font-weight:700;
+      padding:2px 7px;border-radius:10px;min-width:20px;text-align:center;}
+    .sb-footer{margin-top:auto;padding:16px;border-top:1px solid rgba(255,255,255,.08);}
+    .sb-logout{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;
+      color:rgba(255,255,255,.65);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s;}
+    .sb-logout:hover{background:rgba(255,107,53,.2);color:var(--orange);}
+
+    /* ── TOPBAR ── */
+    .topbar{position:fixed;top:0;left:var(--sid-w);right:0;height:var(--top-h);
+      background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;
+      padding:0 24px;gap:16px;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    .tb-hamburger{display:none;font-size:20px;cursor:pointer;color:var(--muted);padding:6px;}
+    .tb-title{font-family:'Poppins',sans-serif;font-size:17px;font-weight:700;color:var(--navy);}
+    .tb-search{flex:1;max-width:340px;position:relative;}
+    .tb-search input{width:100%;padding:9px 14px 9px 38px;border:1.5px solid var(--border);
+      border-radius:10px;font-size:13px;font-family:'Inter',sans-serif;background:var(--gray);
+      color:var(--text);outline:none;transition:border-color .2s;}
+    .tb-search input:focus{border-color:var(--purple);background:#fff;}
+    .tb-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;}
+    .tb-actions{margin-left:auto;display:flex;align-items:center;gap:6px;}
+    .tb-icon-btn{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--border);
+      background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
+      color:var(--muted);font-size:15px;position:relative;transition:all .2s;}
+    .tb-icon-btn:hover{border-color:var(--purple);color:var(--purple);}
+    .tb-notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--orange);
+      border-radius:50%;border:2px solid #fff;}
+    .tb-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--purple),var(--purple2));
+      display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;
+      cursor:pointer;position:relative;}
+    .tb-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:12px;
+      box-shadow:0 8px 30px rgba(0,0,0,.15);min-width:200px;z-index:300;display:none;
+      border:1px solid var(--border);overflow:hidden;}
+    .tb-dropdown.show{display:block;}
+    .tb-drop-head{padding:14px 16px;border-bottom:1px solid var(--border);}
+    .tb-drop-name{font-weight:600;font-size:14px;color:var(--text);}
+    .tb-drop-role{font-size:11px;color:var(--muted);margin-top:2px;}
+    .tb-drop-item{display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;
+      color:var(--text);cursor:pointer;transition:background .15s;}
+    .tb-drop-item:hover{background:var(--gray);}
+    .tb-drop-item.danger{color:var(--red);}
+
+    /* ── MAIN CONTENT ── */
+    .main{margin-left:var(--sid-w);padding-top:var(--top-h);min-height:100vh;display:flex;flex-direction:column;}
+    .content{flex:1;padding:24px;max-width:1400px;width:100%;}
+    .sec{display:none;}.sec.active{display:block;}
+    .pg-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+    .pg-title{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:var(--navy);}
+    .pg-bread{font-size:12px;color:var(--muted);}
+
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:9px;
+      font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;
+      border:none;transition:all .2s;text-decoration:none;}
+    .btn-primary{background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;}
+    .btn-primary:hover{opacity:.9;transform:translateY(-1px);}
+    .btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--text);}
+    .btn-outline:hover{border-color:var(--purple);color:var(--purple);}
+    .btn-sm{padding:7px 14px;font-size:12px;}
+    .btn-danger{background:#fdecea;color:var(--red);border:1.5px solid #f5c6c6;}
+    .btn-success{background:#e8f5e9;color:var(--green);border:1.5px solid #c8e6c9;}
+
+    /* ── COMPANY CARD ── */
+    .co-card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06);
+      margin-bottom:20px;display:flex;align-items:center;gap:20px;
+      border-left:5px solid var(--purple);}
+    .co-logo{width:72px;height:72px;background:linear-gradient(135deg,var(--purple),var(--purple2));
+      border-radius:14px;display:flex;align-items:center;justify-content:center;
+      font-size:28px;color:#fff;flex-shrink:0;}
+    .co-logo img{max-width:60px;max-height:60px;object-fit:contain;border-radius:8px;}
+    .co-info{flex:1;}
+    .co-name{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:var(--navy);}
+    .co-sub{font-size:13px;color:var(--muted);margin-top:3px;}
+    .co-badges{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+    .co-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;
+      font-size:11px;font-weight:600;background:rgba(124,77,255,.1);color:var(--purple);}
+
+    /* ── STAT CARDS ── */
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+    .stat-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);
+      display:flex;align-items:center;gap:16px;}
+    .stat-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;
+      justify-content:center;font-size:22px;flex-shrink:0;}
+    .stat-icon.purple{background:rgba(124,77,255,.12);color:var(--purple);}
+    .stat-icon.teal{background:rgba(0,137,123,.12);color:var(--teal);}
+    .stat-icon.orange{background:rgba(255,107,53,.12);color:var(--orange);}
+    .stat-icon.navy{background:rgba(26,35,126,.12);color:var(--navy);}
+    .stat-icon.green{background:rgba(46,125,50,.12);color:var(--green);}
+    .stat-val{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;color:var(--navy);line-height:1;}
+    .stat-lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+    .stat-change{font-size:11px;margin-top:6px;font-weight:600;}
+    .stat-change.up{color:var(--green);}
+    .stat-change.down{color:var(--red);}
+
+    /* ── CARDS ── */
+    .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:20px;}
+    .card-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;
+      align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+    .card-title{font-weight:700;font-size:15px;color:var(--navy);display:flex;align-items:center;gap:8px;}
+    .card-title i{color:var(--purple);}
+    .card-body{padding:20px;}
+
+    /* ── CHART GRID ── */
+    .chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px;}
+    .chart-box{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+    .chart-box h4{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:16px;
+      display:flex;align-items:center;gap:7px;}
+    .chart-box h4 i{color:var(--purple);}
+    .chart-canvas-wrap{position:relative;height:220px;}
+
+    /* ── TABLE ── */
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;
+      color:var(--muted);text-transform:uppercase;letter-spacing:.6px;
+      background:#f8f9fc;border-bottom:1px solid var(--border);}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+    tbody tr:hover{background:#f8f9fc;}
+    tbody tr:last-child{border-bottom:none;}
+    td{padding:12px 14px;font-size:13.5px;color:var(--text);}
+    .td-bold{font-weight:600;color:var(--navy);}
+
+    /* ── BADGE ── */
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;
+      font-size:11px;font-weight:600;}
+    .badge-purple{background:rgba(124,77,255,.12);color:var(--purple);}
+    .badge-green{background:#e8f5e9;color:var(--green);}
+    .badge-orange{background:rgba(255,107,53,.12);color:var(--orange);}
+    .badge-red{background:#fdecea;color:var(--red);}
+    .badge-teal{background:rgba(0,137,123,.12);color:var(--teal);}
+    .badge-gray{background:#f0f2f5;color:var(--muted);}
+
+    /* ── AVATAR ── */
+    .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple2));
+      color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+    /* ── SEARCH + FILTER BAR ── */
+    .filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+    .filter-bar input,.filter-bar select{padding:9px 12px;border:1.5px solid var(--border);
+      border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);
+      background:#fff;outline:none;transition:border-color .2s;}
+    .filter-bar input:focus,.filter-bar select:focus{border-color:var(--purple);}
+    .filter-bar input{flex:1;min-width:180px;}
+
+    /* ── FORM ── */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .form-group{display:flex;flex-direction:column;gap:6px;}
+    .form-group.full{grid-column:1/-1;}
+    .form-group label{font-size:12px;font-weight:600;color:var(--text);}
+    .form-group input,.form-group select,.form-group textarea{
+      padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;
+      font-size:13px;font-family:'Inter',sans-serif;color:var(--text);
+      background:#fafafa;outline:none;transition:border-color .2s;}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+      border-color:var(--purple);background:#fff;}
+    .form-group textarea{resize:vertical;min-height:80px;}
+
+    /* ── ATTENDANCE TABLE ── */
+    .att-grid{overflow-x:auto;}
+    .att-table{width:100%;border-collapse:collapse;min-width:600px;}
+    .att-table th{padding:10px 12px;background:#f8f9fc;font-size:11px;font-weight:700;
+      color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:left;
+      border-bottom:1px solid var(--border);}
+    .att-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;}
+    .att-status{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+      border-radius:20px;font-size:11px;font-weight:700;}
+    .att-status.present{background:#e8f5e9;color:#2e7d32;}
+    .att-status.absent{background:#fdecea;color:#c62828;}
+    .att-status.late{background:rgba(255,107,53,.12);color:#e55a2b;}
+
+    /* ── NOTIFICATION ITEM ── */
+    .notif-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+    .notif-item:last-child{border-bottom:none;}
+    .notif-dot{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+      justify-content:center;font-size:15px;flex-shrink:0;}
+    .notif-dot.purple{background:rgba(124,77,255,.12);color:var(--purple);}
+    .notif-dot.orange{background:rgba(255,107,53,.12);color:var(--orange);}
+    .notif-dot.green{background:#e8f5e9;color:var(--green);}
+    .notif-dot.teal{background:rgba(0,137,123,.12);color:var(--teal);}
+    .notif-title{font-size:13.5px;font-weight:600;color:var(--text);}
+    .notif-time{font-size:11px;color:var(--muted);margin-top:3px;}
+    .notif-msg{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
+    /* ── PROGRESS BAR ── */
+    .progress-bar{height:8px;background:var(--border);border-radius:10px;overflow:hidden;}
+    .progress-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--purple),var(--purple2));}
+
+    /* ── PROFILE SECTION ── */
+    .profile-banner{background:linear-gradient(135deg,var(--navy),var(--purple));border-radius:14px;
+      padding:32px;color:#fff;text-align:center;margin-bottom:20px;}
+    .profile-av{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.2);
+      border:3px solid rgba(255,255,255,.4);margin:0 auto 12px;display:flex;
+      align-items:center;justify-content:center;font-size:32px;font-weight:700;}
+    .profile-name{font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;}
+    .profile-role{font-size:13px;opacity:.8;margin-top:4px;}
+    .profile-meta{display:flex;gap:24px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+    .profile-meta-item{display:flex;align-items:center;gap:6px;font-size:13px;opacity:.85;}
+
+    /* ── MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;
+      display:none;align-items:center;justify-content:center;padding:20px;}
+    .modal-overlay.show{display:flex;}
+    .modal{background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:90vh;
+      overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+    .modal-head{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;
+      align-items:center;justify-content:space-between;}
+    .modal-head h3{font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;color:var(--navy);}
+    .modal-close{width:32px;height:32px;border-radius:8px;border:none;background:var(--gray);
+      cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted);}
+    .modal-close:hover{background:var(--border);}
+    .modal-body{padding:24px;}
+    .modal-footer{padding:16px 24px;border-top:1px solid var(--border);
+      display:flex;justify-content:flex-end;gap:10px;}
+
+    /* ── ALERT ── */
+    .alert{padding:12px 16px;border-radius:9px;font-size:13px;margin-bottom:16px;display:none;}
+    .alert.success{background:#e8f5e9;color:var(--green);border:1px solid #c8e6c9;}
+    .alert.error{background:#fdecea;color:var(--red);border:1px solid #f5c6c6;}
+
+    /* ── EMPTY STATE ── */
+    .empty{text-align:center;padding:48px 24px;}
+    .empty i{font-size:48px;color:var(--border);margin-bottom:12px;display:block;}
+    .empty p{font-size:14px;color:var(--muted);}
+
+    /* ── REPORT CARD ── */
+    .report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+    .report-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+    .report-card h4{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;
+      display:flex;align-items:center;gap:6px;}
+    .report-card h4 i{color:var(--purple);}
+
+    /* ── FOOTER ── */
+    footer{margin-left:var(--sid-w);background:var(--navy);color:rgba(255,255,255,.6);
+      padding:16px 24px;display:flex;flex-wrap:wrap;align-items:center;
+      justify-content:space-between;gap:10px;font-size:12px;
+      border-top:1px solid rgba(255,255,255,.08);}
+    footer a{color:rgba(255,255,255,.7);text-decoration:none;width:30px;height:30px;
+      border-radius:8px;background:rgba(255,255,255,.08);display:inline-flex;
+      align-items:center;justify-content:center;transition:background .2s;font-size:13px;}
+    footer a:hover{background:rgba(255,255,255,.18);}
+    #bsFooterSocial{display:flex;gap:8px;}
+
+    /* ── SIDEBAR OVERLAY (mobile) ── */
+    .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:190;}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:1100px){
+      .stat-grid{grid-template-columns:repeat(2,1fr);}
+      .chart-grid{grid-template-columns:1fr;}
+      .report-grid{grid-template-columns:repeat(2,1fr);}
+    }
+    @media(max-width:768px){
+      .sidebar{transform:translateX(-100%);}
+      .sidebar.open{transform:translateX(0);}
+      .sb-overlay.show{display:block;}
+      .topbar{left:0;}
+      .main{margin-left:0;}
+      footer{margin-left:0 !important;}
+      .tb-hamburger{display:flex;}
+      .stat-grid{grid-template-columns:repeat(2,1fr);}
+      .form-grid{grid-template-columns:1fr;}
+      .report-grid{grid-template-columns:1fr;}
+      .co-card{flex-direction:column;text-align:center;}
+      .co-badges{justify-content:center;}
+    }
+    @media(max-width:480px){
+      .stat-grid{grid-template-columns:1fr;}
+      .content{padding:16px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <img src="/api/v1/settings/logo" alt="Logo" id="sbLogo" onerror="this.style.display='none';document.getElementById('sbTxt').style.display='block'"/>
+    <div id="sbTxt" style="display:none">
+      <div class="sb-brand-txt">Smart LMS</div>
+      <div class="sb-brand-sub">B-School Portal</div>
+    </div>
+  </div>
+
+  <div class="sb-section">Main</div>
+  <a class="nav-item active" onclick="showSec('overview')">
+    <i class="fas fa-chart-pie"></i> Overview
+  </a>
+  <a class="nav-item" onclick="showSec('students')">
+    <i class="fas fa-user-graduate"></i> My Students
+  </a>
+  <a class="nav-item" onclick="showSec('batches')">
+    <i class="fas fa-layer-group"></i> Batches
+  </a>
+
+  <div class="sb-section">Academics</div>
+  <a class="nav-item" onclick="showSec('attendance')">
+    <i class="fas fa-calendar-check"></i> Attendance Reports
+  </a>
+  <a class="nav-item" onclick="showSec('exams')">
+    <i class="fas fa-file-alt"></i> Exam Results
+  </a>
+  <a class="nav-item" onclick="showSec('timetable')">
+    <i class="fas fa-clock"></i> Timetable
+  </a>
+
+  <div class="sb-section">Content</div>
+  <a class="nav-item" onclick="showSec('courses')">
+    <i class="fas fa-book-open"></i> Courses
+  </a>
+  <a class="nav-item" onclick="showSec('elearning')">
+    <i class="fas fa-cube"></i> E-Learning
+  </a>
+
+  <div class="sb-section">Insights</div>
+  <a class="nav-item" onclick="showSec('analytics')">
+    <i class="fas fa-chart-bar"></i> Reports & Analytics
+  </a>
+  <a class="nav-item" onclick="showSec('notifications')" id="navNotif">
+    <i class="fas fa-bell"></i> Notifications
+    <span class="nav-badge" id="notifCount" style="display:none">0</span>
+  </a>
+
+  <div class="sb-section">Account</div>
+  <a class="nav-item" onclick="showSec('profile')">
+    <i class="fas fa-user-circle"></i> My Profile
+  </a>
+
+  <div class="sb-footer">
+    <div class="sb-logout" onclick="doLogout()">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </div>
+  </div>
+</aside>
+
+<!-- ── TOPBAR ── -->
+<div class="topbar">
+  <button class="tb-hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+  <div class="tb-title" id="tbTitle">B-School Dashboard</div>
+  <div class="tb-search">
+    <i class="fas fa-search"></i>
+    <input type="text" placeholder="Search students, batches…" id="globalSearch"/>
+  </div>
+  <div class="tb-actions">
+    <div class="tb-icon-btn" onclick="showSec('notifications')">
+      <i class="fas fa-bell"></i>
+      <span class="tb-notif-dot" id="tbNotifDot" style="display:none"></span>
+    </div>
+    <div style="position:relative;">
+      <div class="tb-avatar" id="tbAvatar" onclick="toggleDrop()">B</div>
+      <div class="tb-dropdown" id="tbDrop">
+        <div class="tb-drop-head">
+          <div class="tb-drop-name" id="tbDropName">B-School User</div>
+          <div class="tb-drop-role">B-School Portal</div>
+        </div>
+        <div class="tb-drop-item" onclick="showSec('profile')"><i class="fas fa-user-circle"></i> My Profile</div>
+        <div class="tb-drop-item danger" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+<div class="content">
+
+  <!-- ── OVERVIEW ── -->
+  <div class="sec active" id="sec-overview">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">Overview</div>
+        <div class="pg-bread">B-School Portal / Overview</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="loadOverview()"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+
+    <!-- Company Card -->
+    <div class="co-card" id="coCard">
+      <div class="co-logo" id="coLogoWrap"><i class="fas fa-building-columns"></i></div>
+      <div class="co-info">
+        <div class="co-name" id="coName">My Organisation</div>
+        <div class="co-sub" id="coSub">B-School • Smart LMS</div>
+        <div class="co-badges">
+          <div class="co-badge"><i class="fas fa-shield-halved"></i> Verified Partner</div>
+          <div class="co-badge"><i class="fas fa-star"></i> Premium Access</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-user-graduate"></i></div>
+        <div>
+          <div class="stat-val" id="ov-students">—</div>
+          <div class="stat-lbl">Total Students</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon teal"><i class="fas fa-layer-group"></i></div>
+        <div>
+          <div class="stat-val" id="ov-batches">—</div>
+          <div class="stat-lbl">Active Batches</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-calendar-check"></i></div>
+        <div>
+          <div class="stat-val" id="ov-attendance">—%</div>
+          <div class="stat-lbl">Avg Attendance</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon navy"><i class="fas fa-trophy"></i></div>
+        <div>
+          <div class="stat-val" id="ov-passrate">—%</div>
+          <div class="stat-lbl">Exam Pass Rate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h4><i class="fas fa-chart-line"></i> Student Enrollment Trend</h4>
+        <div class="chart-canvas-wrap"><canvas id="enrollChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h4><i class="fas fa-chart-pie"></i> Batch Distribution</h4>
+        <div class="chart-canvas-wrap"><canvas id="batchPieChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Top students -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-medal"></i> Top Performing Students</div>
+        <button class="btn btn-outline btn-sm" onclick="showSec('students')">View All</button>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Student</th><th>Batch</th><th>Attendance</th><th>Avg Score</th><th>Status</th></tr></thead>
+            <tbody id="topStudentsTbl"><tr><td colspan="6" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STUDENTS ── -->
+  <div class="sec" id="sec-students">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">My Students</div>
+        <div class="pg-bread">B-School Portal / Students</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-user-graduate"></i> Student Directory</div>
+      </div>
+      <div class="card-body">
+        <div class="filter-bar">
+          <input type="text" placeholder="Search by name or email…" id="stuSearch" oninput="filterStudents()"/>
+          <select id="stuBatchFilter" onchange="filterStudents()">
+            <option value="">All Batches</option>
+          </select>
+          <select id="stuStatusFilter" onchange="filterStudents()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Student</th><th>Email</th><th>Batch</th><th>Enrolled</th><th>Attendance</th><th>Status</th></tr>
+            </thead>
+            <tbody id="studentsTbl"><tr><td colspan="7" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BATCHES ── -->
+  <div class="sec" id="sec-batches">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">Batches</div>
+        <div class="pg-bread">B-School Portal / Batches</div>
+      </div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-play-circle"></i></div>
+        <div>
+          <div class="stat-val" id="bt-active">—</div>
+          <div class="stat-lbl">Active Batches</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon teal"><i class="fas fa-users"></i></div>
+        <div>
+          <div class="stat-val" id="bt-students">—</div>
+          <div class="stat-lbl">Total Enrolled</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div>
+          <div class="stat-val" id="bt-trainers">—</div>
+          <div class="stat-lbl">Trainers Assigned</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-layer-group"></i> All Batches</div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Batch Name</th><th>Course</th><th>Trainer</th><th>Students</th><th>Start Date</th><th>End Date</th><th>Status</th></tr></thead>
+            <tbody id="batchesTbl"><tr><td colspan="8" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ATTENDANCE REPORTS ── -->
+  <div class="sec" id="sec-attendance">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">Attendance Reports</div>
+        <div class="pg-bread">B-School Portal / Attendance</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="exportAttendance()"><i class="fas fa-download"></i> Export</button>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-filter"></i> Filter Attendance</div>
+      </div>
+      <div class="card-body">
+        <div class="filter-bar">
+          <select id="attBatch" onchange="loadAttendance()">
+            <option value="">Select Batch</option>
+          </select>
+          <input type="date" id="attFrom" onchange="loadAttendance()"/>
+          <input type="date" id="attTo" onchange="loadAttendance()"/>
+        </div>
+      </div>
+    </div>
+    <!-- Attendance summary cards -->
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+        <div>
+          <div class="stat-val" id="att-present">—</div>
+          <div class="stat-lbl">Present</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fdecea;color:#c62828;"><i class="fas fa-times-circle"></i></div>
+        <div>
+          <div class="stat-val" id="att-absent">—</div>
+          <div class="stat-lbl">Absent</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+        <div>
+          <div class="stat-val" id="att-late">—</div>
+          <div class="stat-lbl">Late</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-percent"></i></div>
+        <div>
+          <div class="stat-val" id="att-pct">—%</div>
+          <div class="stat-lbl">Attendance %</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-calendar-check"></i> Attendance Records</div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="att-grid">
+          <table class="att-table">
+            <thead><tr><th>Student</th><th>Date</th><th>Status</th><th>Remarks</th></tr></thead>
+            <tbody id="attTbl"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);">Select a batch and date range to view attendance.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EXAM RESULTS ── -->
+  <div class="sec" id="sec-exams">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">Exam Results</div>
+        <div class="pg-bread">B-School Portal / Results</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="exportResults()"><i class="fas fa-download"></i> Export</button>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-filter"></i> Filter Results</div>
+      </div>
+      <div class="card-body">
+        <div class="filter-bar">
+          <select id="examBatch" onchange="loadExamResults()">
+            <option value="">All Batches</option>
+          </select>
+          <select id="examFilter" onchange="loadExamResults()">
+            <option value="">All Exams</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="chart-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="chart-box">
+        <h4><i class="fas fa-chart-bar"></i> Score Distribution</h4>
+        <div class="chart-canvas-wrap"><canvas id="scoreDistChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h4><i class="fas fa-chart-pie"></i> Pass / Fail Ratio</h4>
+        <div class="chart-canvas-wrap"><canvas id="passfailChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-file-alt"></i> Results Table</div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Student</th><th>Batch</th><th>Exam</th><th>Score</th><th>Max</th><th>%</th><th>Result</th></tr></thead>
+            <tbody id="examTbl"><tr><td colspan="8" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TIMETABLE ── -->
+  <div class="sec" id="sec-timetable">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">Timetable</div>
+        <div class="pg-bread">B-School Portal / Timetable</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-filter"></i> Select Batch</div>
+      </div>
+      <div class="card-body">
+        <div class="filter-bar">
+          <select id="ttBatch" onchange="loadTimetable()">
+            <option value="">All Batches</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-clock"></i> Weekly Schedule</div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Trainer</th><th>Batch</th><th>Room</th></tr></thead>
+            <tbody id="ttTbl"><tr><td colspan="6" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COURSES ── -->
+  <div class="sec" id="sec-courses">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">All Courses</div>
+        <div class="pg-bread">B-School Portal / Courses</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>#</th><th>Course Name</th><th>Category</th><th>Duration</th><th>Students</th><th>Status</th></tr></thead>
+          <tbody id="bschoolCoursesTbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── E-LEARNING ── -->
+  <div class="sec" id="sec-elearning">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">E-Learning Content</div>
+        <div class="pg-bread">B-School Portal / E-Learning</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid var(--border);">
+      <div id="bschoolElearningGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;padding:4px 0;">
+        <div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ANALYTICS ── -->
+  <div class="sec" id="sec-analytics">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">Reports & Analytics</div>
+        <div class="pg-bread">B-School Portal / Analytics</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="exportReport()"><i class="fas fa-download"></i> Export Report</button>
+    </div>
+
+    <div class="report-grid">
+      <div class="report-card">
+        <h4><i class="fas fa-calendar-check"></i> Attendance Rate</h4>
+        <div style="font-size:32px;font-weight:700;color:var(--purple);margin-bottom:8px;" id="rpt-att">—%</div>
+        <div class="progress-bar"><div class="progress-fill" id="rpt-att-bar" style="width:0%"></div></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">Organisation average</div>
+      </div>
+      <div class="report-card">
+        <h4><i class="fas fa-trophy"></i> Pass Rate</h4>
+        <div style="font-size:32px;font-weight:700;color:var(--teal);margin-bottom:8px;" id="rpt-pass">—%</div>
+        <div class="progress-bar"><div class="progress-fill" id="rpt-pass-bar" style="width:0%;background:linear-gradient(90deg,var(--teal),#00bcd4)"></div></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">Across all exams</div>
+      </div>
+      <div class="report-card">
+        <h4><i class="fas fa-star"></i> Avg Score</h4>
+        <div style="font-size:32px;font-weight:700;color:var(--orange);margin-bottom:8px;" id="rpt-score">—</div>
+        <div class="progress-bar"><div class="progress-fill" id="rpt-score-bar" style="width:0%;background:linear-gradient(90deg,var(--orange),#ff9800)"></div></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">Average marks out of 100</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h4><i class="fas fa-chart-line"></i> Monthly Attendance Trend</h4>
+        <div class="chart-canvas-wrap"><canvas id="attTrendChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h4><i class="fas fa-chart-bar"></i> Batch-wise Performance</h4>
+        <div class="chart-canvas-wrap"><canvas id="batchPerfChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fas fa-table"></i> Batch Summary Report</div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Batch</th><th>Students</th><th>Attendance%</th><th>Exams</th><th>Pass Rate</th><th>Avg Score</th></tr></thead>
+            <tbody id="batchSummaryTbl"><tr><td colspan="6" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NOTIFICATIONS ── -->
+  <div class="sec" id="sec-notifications">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">Notifications</div>
+        <div class="pg-bread">B-School Portal / Notifications</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="markAllRead()"><i class="fas fa-check-double"></i> Mark All Read</button>
+    </div>
+    <div class="card">
+      <div class="card-body" id="notifList">
+        <div class="empty"><i class="fas fa-bell-slash"></i><p>No notifications yet.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROFILE ── -->
+  <div class="sec" id="sec-profile">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">My Profile</div>
+        <div class="pg-bread">B-School Portal / Profile</div>
+      </div>
+    </div>
+    <div class="profile-banner">
+      <div class="profile-av" id="profAv">B</div>
+      <div class="profile-name" id="profName">B-School User</div>
+      <div class="profile-role">B-School Representative</div>
+      <div class="profile-meta">
+        <div class="profile-meta-item"><i class="fas fa-envelope"></i> <span id="profEmail">—</span></div>
+        <div class="profile-meta-item"><i class="fas fa-phone"></i> <span id="profPhone">—</span></div>
+        <div class="profile-meta-item"><i class="fas fa-building-columns"></i> <span id="profOrg">—</span></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fas fa-user-edit"></i> Edit Profile</div></div>
+        <div class="card-body">
+          <div class="alert" id="profAlert"></div>
+          <div class="form-grid">
+            <div class="form-group"><label>First Name</label><input id="profFirst" type="text"/></div>
+            <div class="form-group"><label>Last Name</label><input id="profLast" type="text"/></div>
+            <div class="form-group"><label>Email</label><input id="profEmailEdit" type="email"/></div>
+            <div class="form-group"><label>Phone</label><input id="profPhoneEdit" type="text"/></div>
+            <div class="form-group full"><label>Organisation</label><input id="profOrgEdit" type="text"/></div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:12px;" onclick="saveProfile()"><i class="fas fa-save"></i> Save Changes</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fas fa-lock"></i> Change Password</div></div>
+        <div class="card-body">
+          <div class="alert" id="pwAlert"></div>
+          <div class="form-group" style="margin-bottom:14px;"><label>Current Password</label><input id="curPw" type="password" placeholder="Current password"/></div>
+          <div class="form-group" style="margin-bottom:14px;"><label>New Password</label><input id="newPw" type="password" placeholder="Min. 8 characters"/></div>
+          <div class="form-group" style="margin-bottom:14px;"><label>Confirm New Password</label><input id="conPw" type="password" placeholder="Repeat new password"/></div>
+          <button class="btn btn-primary" onclick="changePassword()"><i class="fas fa-key"></i> Update Password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- ── FOOTER ── -->
+<footer>
+  <span id="bsFooterCopy">© 2026 Connecting Dot Consultancy Pvt. Ltd. All rights reserved.</span>
+  <div id="bsFooterSocial">
+    <a id="sf-fb" href="#" target="_blank" style="display:none"><i class="fab fa-facebook-f"></i></a>
+    <a id="sf-ig" href="#" target="_blank" style="display:none"><i class="fab fa-instagram"></i></a>
+    <a id="sf-li" href="#" target="_blank" style="display:none"><i class="fab fa-linkedin-in"></i></a>
+    <a id="sf-tw" href="#" target="_blank" style="display:none"><i class="fab fa-x-twitter"></i></a>
+    <a id="sf-yt" href="#" target="_blank" style="display:none"><i class="fab fa-youtube"></i></a>
+    <a id="sf-wa" href="#" target="_blank" style="display:none"><i class="fab fa-whatsapp"></i></a>
+  </div>
+</footer>
+</div><!-- /main -->
+
+<!-- ── SCRIPTS ── -->
+<script>
+const BASE='/api/v1';
+let TOKEN=localStorage.getItem('lms_token')||'';
+let USER=(()=>{try{const r=localStorage.getItem('lms_user');return(r&&r!=='undefined'&&r!=='null')?JSON.parse(r):{};}catch(e){return{};}})();
+let allStudents=[],allBatches=[];
+let enrollChart,batchPieChart,scoreDistChart,passfailChart,attTrendChart,batchPerfChart;
+
+// ── AUTH GUARD ──
+if(!TOKEN||!USER||USER.role!=='bschool'){window.location.href='bschool-login.html';}
+
+// ── HELPERS ──
+function api(path,opts={}){
+  return fetch(BASE+path,{...opts,headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json',...(opts.headers||{})}});
+}
+function fmt(n){return n===undefined||n===null?'—':n;}
+function fmtDate(d){if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function pct(a,b){if(!b)return'—';return Math.round(a/b*100)+'%';}
+
+// ── SIDEBAR / TOPBAR ──
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sbOverlay').classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('show');
+}
+function toggleDrop(){document.getElementById('tbDrop').classList.toggle('show');}
+document.addEventListener('click',e=>{
+  const d=document.getElementById('tbDrop'),a=document.getElementById('tbAvatar');
+  if(d&&a&&!a.contains(e.target)&&!d.contains(e.target))d.classList.remove('show');
+});
+
+// ── SECTION SWITCH ──
+const SEC_TITLES={
+  overview:'Overview',students:'My Students',batches:'Batches',
+  attendance:'Attendance Reports',exams:'Exam Results',timetable:'Timetable',
+  courses:'All Courses',elearning:'E-Learning',analytics:'Reports & Analytics',notifications:'Notifications',profile:'My Profile'
+};
+function showSec(id){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  document.querySelector(`.nav-item[onclick="showSec('${id}')"]`)?.classList.add('active');
+  document.getElementById('tbTitle').textContent=SEC_TITLES[id]||'Dashboard';
+  closeSidebar();
+  const loaders={
+    overview:loadOverview,students:loadStudents,batches:loadBatches,
+    attendance:loadAttendanceInit,exams:loadExamResultsInit,timetable:loadTimetableInit,
+    courses:loadBschoolCourses,elearning:loadBschoolElearning,analytics:loadAnalytics,notifications:loadNotifications,profile:loadProfile
+  };
+  if(loaders[id])loaders[id]();
+}
+
+// ── COURSES ──
+async function loadBschoolCourses(){
+  const tbody=document.getElementById('bschoolCoursesTbody');
+  tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  try{
+    const resp=await api('/courses');
+    const r=await resp.json();
+    const rows=r.data||[];
+    tbody.innerHTML=rows.length?rows.map((c,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td><strong>${fmt(c.name||c.title)}</strong>${c.description?`<div style="font-size:12px;color:var(--muted);margin-top:2px;">${String(c.description).substring(0,60)}…</div>`:''}</td>
+        <td>${fmt(c.category||'—')}</td>
+        <td>${fmt(c.duration||'—')}</td>
+        <td>${fmt(c.student_count||0)}</td>
+        <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:${(c.status||'').toLowerCase()==='active'?'#e8f5e9':'#fce4ec'};color:${(c.status||'').toLowerCase()==='active'?'#2e7d32':'#c62828'};">${c.status||'Active'}</span></td>
+      </tr>`).join('')
+      :'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No courses available yet.</td></tr>';
+  }catch(e){
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:#e53935;padding:18px;">Error loading courses: ${e.message}</td></tr>`;
+  }
+}
+
+// ── E-LEARNING ──
+async function loadBschoolElearning(){
+  const grid=document.getElementById('bschoolElearningGrid');
+  grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  try{
+    const resp=await api('/scorm/packages');
+    const r=await resp.json();
+    const pkgs=(r.data||[]);
+    if(!pkgs.length){
+      grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;grid-column:1/-1;"><i class="fas fa-cube" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>No E-Learning content available yet.</div>';
+      return;
+    }
+    grid.innerHTML=pkgs.map(p=>{
+      const isVideo=(p.content_type||'scorm')==='video';
+      const iconBg=isVideo?'linear-gradient(135deg,#e91e8c,#f06292)':'linear-gradient(135deg,var(--purple),var(--purple2))';
+      const iconClass=isVideo?'fa-video':'fa-cube';
+      const typeTag=isVideo
+        ?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:1px 6px;font-weight:600;">VIDEO</span>`
+        :`<span style="font-size:10px;background:#7c4dff20;color:var(--purple);border-radius:4px;padding:1px 6px;font-weight:600;">SCORM</span>`;
+      const actionBtn=isVideo
+        ?`<a href="${p.upload_path}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#e91e8c,#f06292);color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;"><i class="fas fa-play"></i> Watch Video</a>`
+        :`<a href="scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'SCORM')}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;"><i class="fas fa-play"></i> Launch SCORM</a>`;
+      return`<div style="background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border:1px solid var(--border);display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:${iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas ${iconClass}" style="color:#fff;font-size:16px;"></i>
+          </div>
+          <div style="flex:1;min-width:0;">
+            ${typeTag}
+            <div style="font-weight:700;font-size:13px;color:#1a237e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${p.package_name||'Module'}</div>
+            <div style="font-size:11px;color:var(--muted);">${p.course_name||'—'}${p.module_name?' • '+p.module_name:''}</div>
+          </div>
+        </div>
+        ${actionBtn}
+      </div>`;
+    }).join('');
+  }catch(e){
+    grid.innerHTML='<div style="text-align:center;color:#e53935;padding:40px;grid-column:1/-1;">Failed to load content. Please try again.</div>';
+  }
+}
+
+// ── LOGOUT ──
+function doLogout(){
+  localStorage.removeItem('lms_token');
+  localStorage.removeItem('lms_refresh');
+  localStorage.removeItem('lms_user');
+  window.location.href='bschool-login.html';
+}
+
+// ── SETTINGS ──
+async function loadSettings(){
+  try{
+    const r=await api('/settings');
+    if(!r.ok)return;
+    const d=(await r.json()).data||{};
+    const logoSrc=d.logo_data||d.logo_path||'';if(logoSrc){const l=document.getElementById('sbLogo');if(l){l.src=logoSrc;l.style.display='block';document.getElementById('sbTxt').style.display='none';}}
+    if(d.footer_text)document.getElementById('bsFooterCopy').textContent=d.footer_text;
+    const sfm={fb_url:'sf-fb',instagram_url:'sf-ig',linkedin_url:'sf-li',twitter_url:'sf-tw',youtube_url:'sf-yt',whatsapp_url:'sf-wa'};
+    Object.entries(sfm).forEach(([k,id])=>{const el=document.getElementById(id);if(el&&d[k]){el.href=d[k];el.style.display='inline-flex';}});
+  }catch(e){}
+}
+
+// ── USER INFO ──
+async function loadMe(){
+  try{
+    const r=await api('/me');if(!r.ok)return;
+    const u=(await r.json()).data||USER;
+    const name=(u.first_name||'')+(u.last_name?' '+u.last_name:'') || u.name || 'B-School User';
+    document.getElementById('tbDropName').textContent=name;
+    document.getElementById('tbAvatar').textContent=name.charAt(0).toUpperCase();
+    if(u.organization_name){document.getElementById('coName').textContent=u.organization_name;}
+    if(u.email){document.getElementById('coSub').textContent=u.email+' • B-School Portal';}
+  }catch(e){}
+}
+
+// ── CHART HELPER ──
+function destroyChart(ref){if(ref)ref.destroy();}
+
+// ── OVERVIEW ──
+async function loadOverview(){
+  try{
+    const [sr,br,ar,er]=await Promise.all([
+      api('/bschool/stats/students'),api('/bschool/stats/batches'),
+      api('/bschool/stats/attendance'),api('/bschool/stats/exams')
+    ]);
+    if(sr.ok){const d=(await sr.json()).data||{};document.getElementById('ov-students').textContent=fmt(d.total);}
+    if(br.ok){const d=(await br.json()).data||{};document.getElementById('ov-batches').textContent=fmt(d.active);}
+    if(ar.ok){const d=(await ar.json()).data||{};document.getElementById('ov-attendance').textContent=(d.percentage||'—')+'%';}
+    if(er.ok){const d=(await er.json()).data||{};document.getElementById('ov-passrate').textContent=(d.pass_rate||'—')+'%';}
+  }catch(e){/* use placeholders */}
+
+  // Enrollment chart
+  destroyChart(enrollChart);
+  enrollChart=new Chart(document.getElementById('enrollChart'),{
+    type:'line',
+    data:{
+      labels:['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+      datasets:[{label:'Students Enrolled',data:[12,19,24,28,35,42,38,45,52],
+        borderColor:'#7c4dff',backgroundColor:'rgba(124,77,255,0.1)',tension:.4,fill:true,
+        pointBackgroundColor:'#7c4dff',pointRadius:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
+  });
+
+  // Batch pie chart
+  destroyChart(batchPieChart);
+  batchPieChart=new Chart(document.getElementById('batchPieChart'),{
+    type:'doughnut',
+    data:{
+      labels:['Active','Completed','Upcoming'],
+      datasets:[{data:[4,6,2],backgroundColor:['#7c4dff','#00897b','#ff6b35'],
+        borderWidth:0,hoverOffset:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},cutout:'65%'}
+  });
+
+  // Top students
+  loadTopStudents();
+}
+
+async function loadTopStudents(){
+  const tbody=document.getElementById('topStudentsTbl');
+  try{
+    const r=await api('/bschool/students/top');
+    if(!r.ok)throw new Error();
+    const list=(await r.json()).data||[];
+    if(!list.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty"><i class="fas fa-star"></i><p>No data yet.</p></div></td></tr>';return;}
+    tbody.innerHTML=list.map((s,i)=>`
+      <tr>
+        <td><b>${i+1}</b></td>
+        <td><div style="display:flex;align-items:center;gap:10px;">
+          <div class="av">${(s.name||'?').charAt(0)}</div>
+          <div class="td-bold">${fmt(s.name)}</div>
+        </div></td>
+        <td>${fmt(s.batch_name)}</td>
+        <td><span class="badge ${s.attendance_pct>=75?'badge-green':'badge-red'}">${fmt(s.attendance_pct)}%</span></td>
+        <td><b>${fmt(s.avg_score)}</b></td>
+        <td><span class="badge badge-purple">Active</span></td>
+      </tr>`).join('');
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="6"><div class="empty"><i class="fas fa-star"></i><p>No top students data available.</p></div></td></tr>';
+  }
+}
+
+// ── STUDENTS ──
+async function loadStudents(){
+  const tbody=document.getElementById('studentsTbl');
+  tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin" style="color:var(--purple)"></i></td></tr>';
+  try{
+    const r=await api('/bschool/students');
+    if(!r.ok)throw new Error();
+    allStudents=(await r.json()).data||[];
+    populateBatchFilter('stuBatchFilter',allStudents);
+    renderStudents(allStudents);
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="7"><div class="empty"><i class="fas fa-users"></i><p>Could not load students.</p></div></td></tr>';
+  }
+}
+
+function renderStudents(list){
+  const tbody=document.getElementById('studentsTbl');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty"><i class="fas fa-users"></i><p>No students found.</p></div></td></tr>';return;}
+  tbody.innerHTML=list.map((s,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><div style="display:flex;align-items:center;gap:10px;">
+        <div class="av">${(s.name||'?').charAt(0)}</div>
+        <div><div class="td-bold">${fmt(s.name)}</div><div style="font-size:11px;color:var(--muted)">${fmt(s.email)}</div></div>
+      </div></td>
+      <td>${fmt(s.email)}</td>
+      <td><span class="badge badge-purple">${fmt(s.batch_name)}</span></td>
+      <td>${fmtDate(s.enrolled_at)}</td>
+      <td><span class="badge ${(s.attendance_pct||0)>=75?'badge-green':'badge-red'}">${fmt(s.attendance_pct)}%</span></td>
+      <td><span class="badge ${s.status==='active'?'badge-green':'badge-gray'}">${s.status||'active'}</span></td>
+    </tr>`).join('');
+}
+
+function filterStudents(){
+  const q=document.getElementById('stuSearch').value.toLowerCase();
+  const batch=document.getElementById('stuBatchFilter').value;
+  const status=document.getElementById('stuStatusFilter').value;
+  renderStudents(allStudents.filter(s=>
+    (!q||(s.name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q))&&
+    (!batch||s.batch_id==batch||s.batch_name==batch)&&
+    (!status||s.status==status)
+  ));
+}
+
+function populateBatchFilter(selId,list){
+  const sel=document.getElementById(selId);
+  const batches=[...new Set(list.map(s=>s.batch_name).filter(Boolean))];
+  const cur=sel.value;
+  while(sel.options.length>1)sel.remove(1);
+  batches.forEach(b=>{const o=new Option(b,b);sel.add(o);});
+  sel.value=cur;
+}
+
+// ── BATCHES ──
+async function loadBatches(){
+  const tbody=document.getElementById('batchesTbl');
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin" style="color:var(--purple)"></i></td></tr>';
+  try{
+    const r=await api('/bschool/batches');
+    if(!r.ok)throw new Error();
+    allBatches=(await r.json()).data||[];
+    // Update batch selects
+    populateBatchSelects(allBatches);
+    // Stats
+    const active=allBatches.filter(b=>b.status==='active').length;
+    const students=allBatches.reduce((a,b)=>a+(b.student_count||0),0);
+    const trainers=[...new Set(allBatches.map(b=>b.trainer_id).filter(Boolean))].length;
+    document.getElementById('bt-active').textContent=active;
+    document.getElementById('bt-students').textContent=students;
+    document.getElementById('bt-trainers').textContent=trainers;
+    if(!allBatches.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><i class="fas fa-layer-group"></i><p>No batches found.</p></div></td></tr>';return;}
+    tbody.innerHTML=allBatches.map((b,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td class="td-bold">${fmt(b.name)}</td>
+        <td>${fmt(b.course_name)}</td>
+        <td>${fmt(b.trainer_name)}</td>
+        <td><span class="badge badge-purple">${b.student_count||0} students</span></td>
+        <td>${fmtDate(b.start_date)}</td>
+        <td>${fmtDate(b.end_date)}</td>
+        <td><span class="badge ${b.status==='active'?'badge-green':b.status==='completed'?'badge-teal':'badge-orange'}">${b.status||'active'}</span></td>
+      </tr>`).join('');
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty"><i class="fas fa-layer-group"></i><p>Could not load batches.</p></div></td></tr>';
+  }
+}
+
+function populateBatchSelects(batches){
+  const ids=['attBatch','examBatch','ttBatch'];
+  ids.forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    while(sel.options.length>1)sel.remove(1);
+    batches.forEach(b=>{const o=new Option(b.name,b.id);sel.add(o);});
+  });
+}
+
+// ── ATTENDANCE ──
+function loadAttendanceInit(){
+  if(!allBatches.length)loadBatches().then(loadAttendance);
+}
+async function loadAttendance(){
+  const batch=document.getElementById('attBatch').value;
+  const from=document.getElementById('attFrom').value;
+  const to=document.getElementById('attTo').value;
+  if(!batch)return;
+  const tbody=document.getElementById('attTbl');
+  tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin" style="color:var(--purple)"></i></td></tr>';
+  try{
+    let url=`/attendance/batch/${batch}`;
+    const params=[];
+    if(from)params.push('from='+from);
+    if(to)params.push('to='+to);
+    if(params.length)url+='?'+params.join('&');
+    const r=await api(url);
+    if(!r.ok)throw new Error();
+    const list=(await r.json()).data||[];
+    // Calculate stats
+    const present=list.filter(a=>a.status==='present').length;
+    const absent=list.filter(a=>a.status==='absent').length;
+    const late=list.filter(a=>a.status==='late').length;
+    const total=list.length;
+    document.getElementById('att-present').textContent=present;
+    document.getElementById('att-absent').textContent=absent;
+    document.getElementById('att-late').textContent=late;
+    document.getElementById('att-pct').textContent=total?Math.round((present+late)/total*100)+'%':'—%';
+    if(!list.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);">No attendance records for this period.</td></tr>';return;}
+    tbody.innerHTML=list.map(a=>`
+      <tr>
+        <td class="td-bold">${fmt(a.student_name)}</td>
+        <td>${fmtDate(a.date)}</td>
+        <td><span class="att-status ${a.status||'present'}">${(a.status||'present').toUpperCase()}</span></td>
+        <td>${fmt(a.remarks)}</td>
+      </tr>`).join('');
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);">Could not load attendance data.</td></tr>';
+  }
+}
+function exportAttendance(){alert('Export feature: Download as CSV from Admin panel or contact administrator.');}
+
+// ── EXAM RESULTS ──
+function loadExamResultsInit(){
+  if(!allBatches.length)loadBatches().then(loadExamResults);
+  else loadExamResults();
+}
+async function loadExamResults(){
+  const batch=document.getElementById('examBatch').value;
+  const exam=document.getElementById('examFilter').value;
+  const tbody=document.getElementById('examTbl');
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin" style="color:var(--purple)"></i></td></tr>';
+  try{
+    let url='/exam/results';
+    const params=[];
+    if(batch)params.push('batch_id='+batch);
+    if(exam)params.push('exam_id='+exam);
+    if(params.length)url+='?'+params.join('&');
+    const r=await api(url);
+    if(!r.ok)throw new Error();
+    const list=(await r.json()).data||[];
+    renderExamCharts(list);
+    if(!list.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><i class="fas fa-file-alt"></i><p>No exam results found.</p></div></td></tr>';return;}
+    tbody.innerHTML=list.map((e,i)=>{
+      const p=e.max_marks?Math.round(e.score/e.max_marks*100):0;
+      const pass=p>=40;
+      return`<tr>
+        <td>${i+1}</td>
+        <td class="td-bold">${fmt(e.student_name)}</td>
+        <td>${fmt(e.batch_name)}</td>
+        <td>${fmt(e.exam_name)}</td>
+        <td><b>${fmt(e.score)}</b></td>
+        <td>${fmt(e.max_marks)}</td>
+        <td>${p}%</td>
+        <td><span class="badge ${pass?'badge-green':'badge-red'}">${pass?'PASS':'FAIL'}</span></td>
+      </tr>`;
+    }).join('');
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty"><i class="fas fa-file-alt"></i><p>Could not load exam results.</p></div></td></tr>';
+    renderExamCharts([]);
+  }
+}
+
+function renderExamCharts(list){
+  destroyChart(scoreDistChart);
+  destroyChart(passfailChart);
+  const passed=list.filter(e=>e.max_marks&&(e.score/e.max_marks*100)>=40).length;
+  const failed=list.length-passed;
+  scoreDistChart=new Chart(document.getElementById('scoreDistChart'),{
+    type:'bar',
+    data:{
+      labels:['0-40','41-60','61-80','81-100'],
+      datasets:[{label:'Students',
+        data:[
+          list.filter(e=>e.max_marks&&(e.score/e.max_marks*100)<40).length,
+          list.filter(e=>e.max_marks&&(e.score/e.max_marks*100)>=40&&(e.score/e.max_marks*100)<60).length,
+          list.filter(e=>e.max_marks&&(e.score/e.max_marks*100)>=60&&(e.score/e.max_marks*100)<80).length,
+          list.filter(e=>e.max_marks&&(e.score/e.max_marks*100)>=80).length,
+        ],
+        backgroundColor:['#ef5350','#ff9800','#66bb6a','#7c4dff'],borderRadius:6,borderWidth:0}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
+  });
+  passfailChart=new Chart(document.getElementById('passfailChart'),{
+    type:'doughnut',
+    data:{labels:['Pass','Fail'],datasets:[{data:[passed,failed],backgroundColor:['#4caf50','#ef5350'],borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},cutout:'65%'}
+  });
+}
+function exportResults(){alert('Export feature: Download as CSV from Admin panel or contact administrator.');}
+
+// ── TIMETABLE ──
+function loadTimetableInit(){
+  if(!allBatches.length)loadBatches().then(loadTimetable);
+  else loadTimetable();
+}
+async function loadTimetable(){
+  const batch=document.getElementById('ttBatch').value;
+  const tbody=document.getElementById('ttTbl');
+  tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin" style="color:var(--purple)"></i></td></tr>';
+  try{
+    let url='/timetable';
+    if(batch)url+='?batch_id='+batch;
+    const r=await api(url);
+    if(!r.ok)throw new Error();
+    const list=(await r.json()).data||[];
+    if(!list.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty"><i class="fas fa-clock"></i><p>No timetable entries found.</p></div></td></tr>';return;}
+    const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const sorted=list.sort((a,b)=>days.indexOf(a.day)-days.indexOf(b.day));
+    tbody.innerHTML=sorted.map(t=>`
+      <tr>
+        <td><span class="badge badge-purple">${fmt(t.day)}</span></td>
+        <td>${fmt(t.start_time)} – ${fmt(t.end_time)}</td>
+        <td class="td-bold">${fmt(t.subject)}</td>
+        <td>${fmt(t.trainer_name)}</td>
+        <td>${fmt(t.batch_name)}</td>
+        <td>${fmt(t.room||t.location)}</td>
+      </tr>`).join('');
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="6"><div class="empty"><i class="fas fa-clock"></i><p>Could not load timetable.</p></div></td></tr>';
+  }
+}
+
+// ── ANALYTICS ──
+async function loadAnalytics(){
+  try{
+    const r=await api('/bschool/analytics');
+    if(r.ok){
+      const d=(await r.json()).data||{};
+      const att=d.attendance_rate||0,pass=d.pass_rate||0,score=d.avg_score||0;
+      document.getElementById('rpt-att').textContent=att+'%';
+      document.getElementById('rpt-att-bar').style.width=att+'%';
+      document.getElementById('rpt-pass').textContent=pass+'%';
+      document.getElementById('rpt-pass-bar').style.width=pass+'%';
+      document.getElementById('rpt-score').textContent=score;
+      document.getElementById('rpt-score-bar').style.width=Math.min(score,100)+'%';
+    }
+  }catch(e){}
+
+  destroyChart(attTrendChart);
+  destroyChart(batchPerfChart);
+
+  attTrendChart=new Chart(document.getElementById('attTrendChart'),{
+    type:'line',
+    data:{
+      labels:['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'],
+      datasets:[{label:'Attendance%',data:[78,82,75,88,84,90,85,87,91],
+        borderColor:'#7c4dff',backgroundColor:'rgba(124,77,255,0.1)',tension:.4,fill:true,
+        pointBackgroundColor:'#7c4dff',pointRadius:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{min:50,max:100,grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
+  });
+
+  // Batch summary
+  loadBatchSummary();
+}
+
+async function loadBatchSummary(){
+  const tbody=document.getElementById('batchSummaryTbl');
+  try{
+    const r=await api('/bschool/batches/summary');
+    if(!r.ok)throw new Error();
+    const list=(await r.json()).data||[];
+    // Batch performance chart
+    destroyChart(batchPerfChart);
+    batchPerfChart=new Chart(document.getElementById('batchPerfChart'),{
+      type:'bar',
+      data:{
+        labels:list.map(b=>b.name||'Batch'),
+        datasets:[
+          {label:'Attendance%',data:list.map(b=>b.attendance_pct||0),backgroundColor:'rgba(124,77,255,0.7)',borderRadius:4},
+          {label:'Pass Rate%',data:list.map(b=>b.pass_rate||0),backgroundColor:'rgba(0,137,123,0.7)',borderRadius:4}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},
+        scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
+    });
+    if(!list.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty"><i class="fas fa-table"></i><p>No summary data.</p></div></td></tr>';return;}
+    tbody.innerHTML=list.map(b=>`
+      <tr>
+        <td class="td-bold">${fmt(b.name)}</td>
+        <td>${fmt(b.student_count)}</td>
+        <td><span class="badge ${(b.attendance_pct||0)>=75?'badge-green':'badge-red'}">${fmt(b.attendance_pct)}%</span></td>
+        <td>${fmt(b.exam_count)}</td>
+        <td><span class="badge ${(b.pass_rate||0)>=50?'badge-green':'badge-orange'}">${fmt(b.pass_rate)}%</span></td>
+        <td>${fmt(b.avg_score)}</td>
+      </tr>`).join('');
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="6"><div class="empty"><i class="fas fa-table"></i><p>Could not load summary.</p></div></td></tr>';
+    destroyChart(batchPerfChart);
+    batchPerfChart=new Chart(document.getElementById('batchPerfChart'),{
+      type:'bar',
+      data:{labels:['Batch A','Batch B','Batch C'],
+        datasets:[
+          {label:'Attendance%',data:[82,75,90],backgroundColor:'rgba(124,77,255,0.7)',borderRadius:4},
+          {label:'Pass Rate%',data:[70,65,88],backgroundColor:'rgba(0,137,123,0.7)',borderRadius:4}
+        ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}}},
+        scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
+    });
+  }
+}
+function exportReport(){alert('Export feature: Download PDF report from Admin panel or contact administrator.');}
+
+// ── NOTIFICATIONS ──
+async function loadNotifications(){
+  const container=document.getElementById('notifList');
+  container.innerHTML='<div style="text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin" style="color:var(--purple)"></i></div>';
+  try{
+    const r=await api('/notifications');
+    if(!r.ok)throw new Error();
+    const list=(await r.json()).data||[];
+    const unread=list.filter(n=>!n.is_read).length;
+    document.getElementById('notifCount').textContent=unread;
+    document.getElementById('notifCount').style.display=unread?'inline-flex':'none';
+    document.getElementById('tbNotifDot').style.display=unread?'block':'none';
+    if(!list.length){container.innerHTML='<div class="empty"><i class="fas fa-bell-slash"></i><p>No notifications yet.</p></div>';return;}
+    const icons={info:'purple',success:'green',warning:'orange',alert:'teal'};
+    const fas={info:'fas fa-info-circle',success:'fas fa-check-circle',warning:'fas fa-exclamation-triangle',alert:'fas fa-bell'};
+    container.innerHTML=list.map(n=>{
+      const t=n.type||'info';
+      return`<div class="notif-item">
+        <div class="notif-dot ${icons[t]||'purple'}"><i class="${fas[t]||'fas fa-bell'}"></i></div>
+        <div>
+          <div class="notif-title">${fmt(n.title)}${!n.is_read?'<span style="width:8px;height:8px;background:var(--orange);border-radius:50%;display:inline-block;margin-left:8px;vertical-align:middle;"></span>':''}</div>
+          <div class="notif-msg">${fmt(n.message)}</div>
+          <div class="notif-time"><i class="fas fa-clock"></i> ${fmtDate(n.created_at)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    container.innerHTML='<div class="empty"><i class="fas fa-bell-slash"></i><p>Could not load notifications.</p></div>';
+  }
+}
+
+async function markAllRead(){
+  try{
+    await api('/notifications/mark-all-read',{method:'POST'});
+    document.getElementById('notifCount').style.display='none';
+    document.getElementById('tbNotifDot').style.display='none';
+    loadNotifications();
+  }catch(e){}
+}
+
+// ── PROFILE ──
+async function loadProfile(){
+  try{
+    const r=await api('/me');if(!r.ok)return;
+    const u=(await r.json()).data||{};
+    const name=(u.first_name||'')+(u.last_name?' '+u.last_name:'');
+    document.getElementById('profAv').textContent=(name||u.email||'B').charAt(0).toUpperCase();
+    document.getElementById('profName').textContent=name||u.email||'B-School User';
+    document.getElementById('profEmail').textContent=u.email||'—';
+    document.getElementById('profPhone').textContent=u.phone||'—';
+    document.getElementById('profOrg').textContent=u.organization_name||'—';
+    document.getElementById('profFirst').value=u.first_name||'';
+    document.getElementById('profLast').value=u.last_name||'';
+    document.getElementById('profEmailEdit').value=u.email||'';
+    document.getElementById('profPhoneEdit').value=u.phone||'';
+    document.getElementById('profOrgEdit').value=u.organization_name||'';
+  }catch(e){}
+}
+
+async function saveProfile(){
+  const al=document.getElementById('profAlert');
+  al.style.display='none';
+  const body={
+    first_name:document.getElementById('profFirst').value.trim(),
+    last_name:document.getElementById('profLast').value.trim(),
+    email:document.getElementById('profEmailEdit').value.trim(),
+    phone:document.getElementById('profPhoneEdit').value.trim(),
+    organization_name:document.getElementById('profOrgEdit').value.trim()
+  };
+  try{
+    const r=await api('/me',{method:'PUT',body:JSON.stringify(body)});
+    const d=await r.json();
+    if(r.ok&&d.success){
+      al.className='alert success';al.textContent='Profile updated successfully!';al.style.display='block';
+      loadProfile();loadMe();
+    }else{
+      al.className='alert error';al.textContent=d.error||'Failed to update profile.';al.style.display='block';
+    }
+  }catch(e){al.className='alert error';al.textContent='Network error. Please try again.';al.style.display='block';}
+}
+
+async function changePassword(){
+  const al=document.getElementById('pwAlert');
+  al.style.display='none';
+  const cur=document.getElementById('curPw').value;
+  const np=document.getElementById('newPw').value;
+  const cp=document.getElementById('conPw').value;
+  if(!cur||!np||!cp){al.className='alert error';al.textContent='Please fill all fields.';al.style.display='block';return;}
+  if(np.length<8){al.className='alert error';al.textContent='New password must be at least 8 characters.';al.style.display='block';return;}
+  if(np!==cp){al.className='alert error';al.textContent='Passwords do not match.';al.style.display='block';return;}
+  try{
+    const r=await api('/auth/change-password',{method:'POST',body:JSON.stringify({current_password:cur,new_password:np})});
+    const d=await r.json();
+    if(r.ok&&d.success){
+      al.className='alert success';al.textContent='Password changed successfully!';al.style.display='block';
+      document.getElementById('curPw').value='';document.getElementById('newPw').value='';document.getElementById('conPw').value='';
+    }else{
+      al.className='alert error';al.textContent=d.error||'Failed to change password.';al.style.display='block';
+    }
+  }catch(e){al.className='alert error';al.textContent='Network error. Please try again.';al.style.display='block';}
+}
+
+// ── INIT ──
+(async()=>{
+  await Promise.all([loadSettings(),loadMe()]);
+  loadOverview();
+  // Set today for attendance date range
+  const today=new Date().toISOString().split('T')[0];
+  const monthAgo=new Date(Date.now()-30*24*60*60*1000).toISOString().split('T')[0];
+  document.getElementById('attFrom').value=monthAgo;
+  document.getElementById('attTo').value=today;
+})();
+</script>
+</body>
+</html>
