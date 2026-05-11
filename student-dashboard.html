@@ -1734,7 +1734,7 @@ async function loadScorm(){
       <td style="padding:12px 14px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <a href="${playerUrl}" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--pink);color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;"><i class="fas ${actionIcon}"></i>${actionLabel}</a>
-          <button onclick="showStudentScormAnalytics(${p.id})" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:none;border:1.5px solid var(--brd);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-chart-bar"></i>Analytics</button>
+          <button onclick="showStudentScormAnalytics('${p.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:none;border:1.5px solid var(--brd);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-chart-bar"></i>Analytics</button>
         </div>
       </td>
     </tr>`;
@@ -1742,13 +1742,13 @@ async function loadScorm(){
 }
 
 function loadStudentScormData(){
-  const pkgId=parseInt(document.getElementById('studentScormSel').value);
+  const pkgId=document.getElementById('studentScormSel').value;
   if(!pkgId) return;
   showStudentScormAnalytics(pkgId);
 }
 
 function showStudentScormAnalytics(pkgId){
-  const pkg=_studentScormPkgs.find(p=>p.id===pkgId)||{};
+  const pkg=_studentScormPkgs.find(p=>String(p.id)===String(pkgId))||{};
   const name=encodeURIComponent(pkg.package_name||'Module');
   window.open(`scorm-analytics.html?pkg=${pkgId}&name=${name}`,'_blank');
 }

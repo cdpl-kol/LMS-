@@ -3364,7 +3364,24 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
 // List SCORM packages
 app.get('/api/v1/scorm/packages', auth, async (req, res) => {
   try {
-    const r = await pool.query(`SELECT sp.*,m.name AS module_name,m.course_id,c.name AS course_name FROM scorm_packages sp LEFT JOIN modules m ON sp.module_id=m.id LEFT JOIN courses c ON m.course_id=c.id ORDER BY sp.created_at DESC`);
+    const r = await pool.query(`
+      SELECT sp.id::text AS id, sp.package_name, sp.content_type, sp.upload_path, sp.manifest_path,
+             sp.scorm_version, sp.total_slides, sp.slide_order, sp.slide_durations, sp.created_at,
+             m.name AS module_name, m.course_id, c.name AS course_name
+      FROM scorm_packages sp
+      LEFT JOIN modules m ON sp.module_id=m.id
+      LEFT JOIN courses c ON m.course_id=c.id
+      UNION ALL
+      SELECT ('cc-'||cc.id) AS id, COALESCE(cc.file_name,'Content') AS package_name,
+             cc.content_type, cc.file_path AS upload_path, NULL AS manifest_path,
+             '1.2' AS scorm_version, 0 AS total_slides, ARRAY[]::TEXT[] AS slide_order,
+             '{}'::jsonb AS slide_durations, cc.created_at,
+             NULL AS module_name, cc.course_id, c2.name AS course_name
+      FROM course_content cc
+      LEFT JOIN courses c2 ON cc.course_id=c2.id
+      WHERE cc.content_type='scorm'
+      ORDER BY created_at DESC
+    `);
     ok(res, r.rows);
   } catch(e) { err(res, e.message); }
 });
