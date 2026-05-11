@@ -272,8 +272,9 @@ function updateStatusBar() {
     if (st === 'completed' || st === 'passed') {
       pct = 100;
     } else {
-      // Resolve position from lesson_location first, then currentSlide
-      const loc = CMI['cmi.core.lesson_location'] || currentSlide || '';
+      // Prefer currentSlide (hash-based, always up-to-date) over lesson_location which
+      // iSpring sets to '0' at init then never updates per-slide — causing 0% progress.
+      const loc = currentSlide || CMI['cmi.core.lesson_location'] || '';
       let currentPos = 0;
       if (loc && loc !== 'video_seconds' && loc !== 'video_duration') {
         // 1. Pure float/int: "8" or "8.0"
