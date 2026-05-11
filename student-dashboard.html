@@ -1705,10 +1705,11 @@ async function loadScorm(){
     const _posKeyRe=/^[a-zA-Z_]*(\d+)$/;
     const _visitedSet=new Set();
     let _maxSlidePos=0;
-    [...Object.keys(slides),...Object.keys(slideVisitsObj)]
+    Object.keys(slides)
       .filter(k=>k!=='video_seconds'&&k!=='video_duration')
       .forEach(k=>{
-        if((parseInt(slides[k]||0)>0||parseInt(slideVisitsObj[k]||0)>0)){
+        // Threshold > 1: exclude old Math.max(1,...) artifacts (instantly-cached slides = exactly 1s)
+        if(parseInt(slides[k]||0)>1){
           if(_slOrdHasGuids&&!_slOrd.includes(k)){const m=k.match(_posKeyRe);if(m){const idx=parseInt(m[1])-1;if(idx>=0&&idx<_slOrd.length){_visitedSet.add(_slOrd[idx]);if(idx+1>_maxSlidePos)_maxSlidePos=idx+1;return;}}}
           _visitedSet.add(k);
           const _n=parseInt(k);if(!isNaN(_n)&&_n>_maxSlidePos)_maxSlidePos=_n;
@@ -1716,7 +1717,7 @@ async function loadScorm(){
       });
     // Show max slide position reached (not cumulative unique count) so PREV nav doesn't inflate it
     const visitedSlides=_maxSlidePos||_visitedSet.size;
-    let totalSecs=Object.entries(slides).filter(([k])=>k!=='video_seconds'&&k!=='video_duration').reduce((a,[,v])=>a+parseInt(v),0);
+    let totalSecs=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).reduce((a,[,v])=>a+parseInt(v),0);
     if(totalSecs===0&&t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalSecs=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
     const score=parseInt(t.score_raw)||0;
     const scoreMax=parseInt(t.score_max)||100;

@@ -732,6 +732,8 @@ async function loadContent() {
               }
               // Save immediately so the new slide visit isn't lost if user exits
               saveTracking(false);
+              // Refresh the progress bar — LMSSetValue may not fire on hash-only nav
+              updateStatusBar();
             }
           } catch(e) {} // cross-origin guard (same-origin should always pass)
         }, 500);

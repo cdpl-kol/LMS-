@@ -3632,10 +3632,11 @@ if (!courseMap[cid]) courseMap[cid] = { slides_visited: 0, total_slides: 0, scor
         const slOrdHasGuids = slOrd && slOrd.some(id => !/^\d+$/.test(id));
         const posKeyRe = /^[a-zA-Z_]*(\d+)$/;
         const visitedSet = new Set();
-        [...Object.keys(st), ...Object.keys(sv)]
+        Object.keys(st)
           .filter(k => k !== 'video_seconds' && k !== 'video_duration')
           .forEach(k => {
-            if ((st[k] || 0) > 0 || (sv[k] || 0) > 0) {
+            // Threshold > 1: exclude old Math.max(1,...) artifacts (instant-cached slides = exactly 1s)
+            if ((st[k] || 0) > 1) {
               if (slOrdHasGuids && !slOrd.includes(k)) {
                 const m = k.match(posKeyRe);
                 if (m) { const idx = parseInt(m[1]) - 1; if (idx >= 0 && idx < slOrd.length) { visitedSet.add(slOrd[idx]); return; } }
@@ -4151,12 +4152,14 @@ app.get('/api/v1/scorm/analytics', auth, async (req, res) => {
       const visits = Math.round(slideVisits[id] || 0);
       const actualMs = slideDurations ? (slideDurations[id] || null) : null;
       const actualSec = actualMs ? Math.round(actualMs / 1000) : null;
-      const viewed = visits > 0 || spent > 0;
+      // Threshold > 1: filters old Math.max(1,...) artifacts (instantly-cached slides got exactly 1s)
+      const viewed = spent > 1;
       let diff = null;
-      if (actualSec !== null && spent > 0) {
+      if (viewed && actualSec !== null) {
         diff = spent - actualSec; // positive = over, negative = under
       }
-      return { index: idx + 1, id, spent, visits, actual_seconds: actualSec, diff, viewed };
+      // Zero out artifact slides so footer totals stay accurate
+      return { index: idx + 1, id, spent: viewed ? spent : 0, visits: viewed ? visits : 0, actual_seconds: actualSec, diff, viewed };
     });
 
     // total audio duration from package
