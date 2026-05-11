@@ -3388,8 +3388,36 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
 // List SCORM packages
 app.get('/api/v1/scorm/packages', auth, async (req, res) => {
   try {
-    // COALESCE: use sp.course_id directly if set, else fall back to module→course link
-    const baseQuery = `
+    if (req.user.role === 'student') {
+      // Get student's enrolled course
+      const stRow = await pool.query('SELECT course_id FROM students WHERE id=$1', [req.user.id]);
+      const cId = stRow.rows[0]?.course_id;
+      if (!cId) return ok(res, []);
+
+      // Show packages that belong to this course via ANY of these paths:
+      //  1. sp.course_id = cId  (new direct link)
+      //  2. module→course link (m.course_id = cId)
+      //  3. scorm_tracking for THIS student has course_id = cId
+      //     (handles old packages where the link was stored on the tracking row)
+      const r = await pool.query(`
+        SELECT DISTINCT ON (sp.id) sp.*,
+          m.name AS module_name,
+          COALESCE(sp.course_id, m.course_id, st2.course_id) AS course_id,
+          c.name AS course_name
+        FROM scorm_packages sp
+        LEFT JOIN modules m ON sp.module_id = m.id
+        LEFT JOIN scorm_tracking st2 ON st2.package_id = sp.id AND st2.student_id = $2
+        LEFT JOIN courses c ON c.id = COALESCE(sp.course_id, m.course_id, st2.course_id)
+        WHERE
+          sp.course_id = $1
+          OR m.course_id = $1
+          OR st2.course_id = $1
+        ORDER BY sp.id, sp.created_at DESC
+      `, [cId, req.user.id]);
+      return ok(res, r.rows);
+    }
+    // Admin / trainer / others see all
+    const r = await pool.query(`
       SELECT sp.*,
         m.name AS module_name,
         COALESCE(sp.course_id, m.course_id) AS course_id,
@@ -3397,20 +3425,8 @@ app.get('/api/v1/scorm/packages', auth, async (req, res) => {
       FROM scorm_packages sp
       LEFT JOIN modules m ON sp.module_id = m.id
       LEFT JOIN courses c ON c.id = COALESCE(sp.course_id, m.course_id)
-    `;
-    if (req.user.role === 'student') {
-      // Students see only packages linked to their enrolled course
-      const st = await pool.query('SELECT course_id FROM students WHERE id=$1', [req.user.id]);
-      const cId = st.rows[0]?.course_id;
-      if (!cId) return ok(res, []);
-      const r = await pool.query(
-        baseQuery + ` WHERE COALESCE(sp.course_id, m.course_id) = $1 ORDER BY sp.created_at DESC`,
-        [cId]
-      );
-      return ok(res, r.rows);
-    }
-    // Admin / trainer / others see all
-    const r = await pool.query(baseQuery + ` ORDER BY sp.created_at DESC`);
+      ORDER BY sp.created_at DESC
+    `);
     ok(res, r.rows);
   } catch(e) { err(res, e.message); }
 });
