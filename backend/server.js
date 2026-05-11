@@ -608,6 +608,8 @@ async function initDB() {
     // Store logo as base64 in DB so it persists across server restarts (ephemeral filesystem fix)
     await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS logo_data TEXT DEFAULT NULL`).catch(()=>{});
     await client.query(`ALTER TABLE corporate_clients ADD COLUMN IF NOT EXISTS logo_data TEXT DEFAULT NULL`).catch(()=>{});
+    // Direct course_id on scorm_packages so packages link to courses without needing a module
+    await client.query(`ALTER TABLE scorm_packages ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL`).catch(()=>{});
 
     // Corporate course payments table
     await client.query(`CREATE TABLE IF NOT EXISTS corporate_course_payments (
@@ -3245,7 +3247,7 @@ const scormUpload = multer({
 app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUpload.single('scorm'), async (req, res) => {
   try {
     if (!req.file) return err(res, 'No file uploaded', 400);
-    const { module_id, package_name, scorm_version, content_type } = req.body;
+    const { module_id, course_id, package_name, scorm_version, content_type } = req.body;
     const ext = path.extname(req.file.originalname).toLowerCase();
     const isVideo = ['.mp4', '.webm', '.mov'].includes(ext);
     const cType = isVideo ? 'video' : (content_type || 'scorm');
@@ -3255,8 +3257,8 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
     if (isVideo) {
       // ── VIDEO UPLOAD: save file directly ──────────────────────────────────
       const r = await pool.query(
-        'INSERT INTO scorm_packages(module_id,package_name,scorm_version,upload_path,content_type) VALUES($1,$2,$3,$4,$5) RETURNING id',
-        [module_id || null, pkgName, version, '', cType]
+        'INSERT INTO scorm_packages(module_id,course_id,package_name,scorm_version,upload_path,content_type) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',
+        [module_id || null, course_id || null, pkgName, version, '', cType]
       );
       const pkgId = r.rows[0].id;
       const videoDir = path.join(scormDir, String(pkgId));
@@ -3270,8 +3272,8 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
     } else {
       // ── SCORM ZIP UPLOAD: extract and find manifest ────────────────────────
       const r = await pool.query(
-        'INSERT INTO scorm_packages(module_id,package_name,scorm_version,upload_path,content_type) VALUES($1,$2,$3,$4,$5) RETURNING id',
-        [module_id || null, pkgName, version, '', cType]
+        'INSERT INTO scorm_packages(module_id,course_id,package_name,scorm_version,upload_path,content_type) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',
+        [module_id || null, course_id || null, pkgName, version, '', cType]
       );
       const pkgId = r.rows[0].id;
       const extractPath = path.join(scormDir, String(pkgId));
@@ -3376,7 +3378,29 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
 // List SCORM packages
 app.get('/api/v1/scorm/packages', auth, async (req, res) => {
   try {
-    const r = await pool.query(`SELECT sp.*,m.name AS module_name,m.course_id,c.name AS course_name FROM scorm_packages sp LEFT JOIN modules m ON sp.module_id=m.id LEFT JOIN courses c ON m.course_id=c.id ORDER BY sp.created_at DESC`);
+    // COALESCE: use sp.course_id directly if set, else fall back to module→course link
+    const baseQuery = `
+      SELECT sp.*,
+        m.name AS module_name,
+        COALESCE(sp.course_id, m.course_id) AS course_id,
+        c.name AS course_name
+      FROM scorm_packages sp
+      LEFT JOIN modules m ON sp.module_id = m.id
+      LEFT JOIN courses c ON c.id = COALESCE(sp.course_id, m.course_id)
+    `;
+    if (req.user.role === 'student') {
+      // Students see only packages linked to their enrolled course
+      const st = await pool.query('SELECT course_id FROM students WHERE id=$1', [req.user.id]);
+      const cId = st.rows[0]?.course_id;
+      if (!cId) return ok(res, []);
+      const r = await pool.query(
+        baseQuery + ` WHERE COALESCE(sp.course_id, m.course_id) = $1 ORDER BY sp.created_at DESC`,
+        [cId]
+      );
+      return ok(res, r.rows);
+    }
+    // Admin / trainer / others see all
+    const r = await pool.query(baseQuery + ` ORDER BY sp.created_at DESC`);
     ok(res, r.rows);
   } catch(e) { err(res, e.message); }
 });

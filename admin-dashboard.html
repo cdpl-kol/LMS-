@@ -1273,7 +1273,7 @@ tr:hover td{background:#f8f9ff;}
 
       <div class="form-row">
         <div class="form-group" id="su-version-group"><label>SCORM Version</label><select id="su-version"><option value="1.2">SCORM 1.2</option><option value="2004">SCORM 2004</option></select></div>
-        <div class="form-group"><label>Assign to Module (optional)</label><select id="su-module"><option value="">— None —</option></select></div>
+        <div class="form-group"><label>Assign to Course <span style="color:var(--muted);font-weight:400;">(optional)</span></label><select id="su-module"><option value="">— Select Course —</option></select></div>
       </div>
 
       <div id="scormUploadProgress" style="display:none;margin-bottom:12px;">
@@ -4041,7 +4041,7 @@ async function uploadScorm(){
   const name=document.getElementById('su-name').value.trim();
   const file=document.getElementById('su-file').files[0];
   const version=document.getElementById('su-version').value;
-  const moduleId=document.getElementById('su-module').value;
+  const courseId=document.getElementById('su-module').value;
   const ctype=document.querySelector('input[name="su-ctype"]:checked')?.value||'scorm';
   const isVideo=ctype==='video';
   if(!name||!file){showFormAlert('scormUploadAlert',`Please enter a name and select a ${isVideo?'video':'ZIP'} file.`);return;}
@@ -4057,7 +4057,7 @@ async function uploadScorm(){
     fd.append('package_name',name);
     fd.append('content_type',ctype);
     if(!isVideo)fd.append('scorm_version',version);
-    if(moduleId)fd.append('module_id',moduleId);
+    if(courseId)fd.append('course_id',courseId);  // direct course link (no module needed)
     const h={'Authorization':'Bearer '+TOKEN()};
     document.getElementById('scormProgressBar').style.width='60%';
     document.getElementById('scormProgressText').textContent=isVideo?'Processing video…':'Extracting package…';
@@ -4099,12 +4099,13 @@ async function uploadScorm(){
     const tsel=document.getElementById('ab-trainer');
     if(tsel)tsel.innerHTML='<option value="">Select Trainer</option>'+trainers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
 
-    // populate module select for SCORM upload
+    // populate course select for SCORM upload (all active courses)
     const mods=await api('GET','/courses');
     const modSel=document.getElementById('su-module');
     if(modSel){
       const courses=Array.isArray(mods.data)?mods.data:[];
-      modSel.innerHTML='<option value="">— None —</option>'+courses.map(c=>`<option value="${c.id}">${c.name||c.title}</option>`).join('');
+      modSel.innerHTML='<option value="">— Select Course —</option>'+
+        courses.map(c=>`<option value="${c.id}">${c.name||c.title||'Course '+c.id}</option>`).join('');
     }
 
     loadOverview();
