@@ -588,7 +588,10 @@ async function loadScorm(){
     const isVideo=(p.content_type||'scorm')==='video';
     const typeTag=isVideo?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:2px 8px;font-weight:700;">VIDEO</span>`:`<span style="font-size:10px;background:#00897b20;color:#00695c;border-radius:4px;padding:2px 8px;font-weight:700;">SCORM</span>`;
     const slides=t.slide_times&&typeof t.slide_times==='object'?t.slide_times:{};
-    const visitedSlides=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>0).length;
+    let _maxSlidePos=0;
+    Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>0).forEach(([k])=>{const _n=parseInt(k);if(!isNaN(_n)&&_n>_maxSlidePos)_maxSlidePos=_n;});
+    const _fallbackCount=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>0).length;
+    const visitedSlides=_maxSlidePos||_fallbackCount;
     const totalSecs=Object.entries(slides).filter(([k])=>k!=='video_seconds'&&k!=='video_duration').reduce((a,[,v])=>a+parseInt(v),0);
     const score=parseInt(t.score_raw)||0;
     const scoreMax=parseInt(t.score_max)||100;

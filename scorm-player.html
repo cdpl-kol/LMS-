@@ -231,7 +231,7 @@ function recordSlideTime(slideId) {
   // First real slide visit after restart — clear the restart guard
   justRestarted = false;
   if (currentSlide && slideStartTime !== null) {
-    const spent = Math.max(1, Math.floor((Date.now() - slideStartTime) / 1000));
+    const spent = Math.floor((Date.now() - slideStartTime) / 1000);
     slideTimings[currentSlide] = (slideTimings[currentSlide] || 0) + spent;
   }
   // Increment visit count when moving to a new slide
@@ -263,43 +263,44 @@ function updateStatusBar() {
     'browsed':'badge-blue','not attempted':'badge-gray'
   }[status] || 'badge-gray');
 
-  // Progress % — based on CURRENT slide position (not cumulative visited count)
-  // This way PREV slide decreases progress and NEXT increases it correctly.
-  const raw = parseInt(CMI['cmi.core.score.raw']) || 0;
+  // Progress % — based on CURRENT slide position (PREV decreases, NEXT increases)
+  // Uses lesson_location (the authoritative "where am I now") with multiple
+  // fallback parsers. score_raw is NEVER used — iSpring increases it even on PREV.
   let pct = 0;
   if (!justRestarted) {
     const st = CMI['cmi.core.lesson_status'] || 'not attempted';
     if (st === 'completed' || st === 'passed') {
       pct = 100;
-    } else if (currentSlide && currentSlide !== 'video_seconds' && currentSlide !== 'video_duration') {
-      // Resolve current slide to a 1-based position number
+    } else {
+      // Resolve position from lesson_location first, then currentSlide
+      const loc = CMI['cmi.core.lesson_location'] || currentSlide || '';
       let currentPos = 0;
-      const exactNum = /^(\d+)$/.exec(currentSlide);
-      if (exactNum) {
-        currentPos = parseInt(exactNum[1]);
-      } else {
-        // GUID-based (Articulate) — look up index in slide_order
-        const idx = pkgSlideOrder.indexOf(currentSlide);
-        if (idx >= 0) {
-          currentPos = idx + 1;
+      if (loc && loc !== 'video_seconds' && loc !== 'video_duration') {
+        // 1. Pure float/int: "8" or "8.0"
+        const fv = parseFloat(loc);
+        if (!isNaN(fv) && fv > 0 && fv < 10000) {
+          currentPos = Math.floor(fv);
         } else {
-          // pg_N or other fallback keys — extract trailing number
-          const trail = /(\d+)$/.exec(currentSlide);
-          if (trail) currentPos = parseInt(trail[1]);
+          // 2. GUID — look up in slide_order
+          const idx = pkgSlideOrder.indexOf(loc);
+          if (idx >= 0) {
+            currentPos = idx + 1;
+          } else {
+            // 3. Strings like "pg_7", "slide_7", "Slide7Layer0" — leading number
+            const lead = /^(\d+)/.exec(loc);
+            if (lead) currentPos = parseInt(lead[1]);
+          }
         }
       }
       if (totalSlidesInPkg > 0 && currentPos > 0) {
         pct = Math.min(100, Math.round((currentPos / totalSlidesInPkg) * 100));
       } else if (currentPos > 0) {
-        // total_slides unknown — show slide number instead of %
-        document.getElementById('progressDisplay').textContent = currentPos + ' slide' + (currentPos !== 1 ? 's' : '');
+        // total_slides unknown — show slide number
+        document.getElementById('progressDisplay').textContent = currentPos + ' slides';
         document.getElementById('progressBar').style.width = Math.min(100, currentPos * 5) + '%';
         return;
-      } else if (raw > 0) {
-        pct = Math.min(100, raw);
       }
-    } else if (raw > 0) {
-      pct = Math.min(100, raw);
+      // If position still unknown (no lesson_location yet), show 0%
     }
   }
   document.getElementById('progressDisplay').textContent = pct + '%';
@@ -493,7 +494,7 @@ async function saveTracking(final) {
   } else {
     // ── SCORM: flush current slide time ──
     if (currentSlide && slideStartTime !== null) {
-      const spent = Math.max(1, Math.floor((Date.now() - slideStartTime) / 1000));
+      const spent = Math.floor((Date.now() - slideStartTime) / 1000);
       slideTimings[currentSlide] = (slideTimings[currentSlide] || 0) + spent;
       slideStartTime = Date.now();
     }
@@ -502,16 +503,25 @@ async function saveTracking(final) {
   document.getElementById('syncStatus').textContent = '⟳ Saving…';
   document.getElementById('syncStatus').style.color = '#ffcc80';
 
-  // If SCORM content hasn't reported a score, use slide-based progress as score_raw
-  // This ensures dashboards show real progress instead of 0%
-  let effectiveScoreRaw = parseInt(CMI['cmi.core.score.raw']) || 0;
-  if (effectiveScoreRaw === 0 && videoDuration === 0) {
-    const visitedCount = Object.entries(slideTimings)
-      .filter(([k, v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0).length;
-    if (totalSlidesInPkg > 0 && visitedCount > 0) {
-      effectiveScoreRaw = Math.min(99, Math.round((visitedCount / totalSlidesInPkg) * 100));
-    } else if (visitedCount > 0) {
-      // total_slides unknown but slides visited — use 10% as minimum signal
+  // Derive score_raw from MAX slide position reached (not visited count or SCORM score.raw).
+  // Using max position means PREV navigation doesn't inflate the score, and the
+  // dashboard/report reflects how far the student has actually progressed.
+  let effectiveScoreRaw = 0;
+  if (videoDuration === 0) {
+    // Find highest numeric slide key with time > 0
+    let maxSlidePos = 0;
+    Object.entries(slideTimings)
+      .filter(([k, v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0)
+      .forEach(([k]) => {
+        const n = parseInt(k);
+        if (!isNaN(n) && n > maxSlidePos) maxSlidePos = n;
+      });
+    // Also check current lesson_location as the authoritative current position
+    const locFloat = parseFloat(CMI['cmi.core.lesson_location'] || '');
+    if (!isNaN(locFloat) && locFloat > maxSlidePos) maxSlidePos = Math.floor(locFloat);
+    if (totalSlidesInPkg > 0 && maxSlidePos > 0) {
+      effectiveScoreRaw = Math.min(99, Math.round((maxSlidePos / totalSlidesInPkg) * 100));
+    } else if (maxSlidePos > 0) {
       effectiveScoreRaw = 10;
     }
   }

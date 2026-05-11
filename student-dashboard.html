@@ -1704,15 +1704,18 @@ async function loadScorm(){
     const _slOrdHasGuids=_slOrd&&_slOrd.some(id=>!/^\d+$/.test(id));
     const _posKeyRe=/^[a-zA-Z_]*(\d+)$/;
     const _visitedSet=new Set();
+    let _maxSlidePos=0;
     [...Object.keys(slides),...Object.keys(slideVisitsObj)]
       .filter(k=>k!=='video_seconds'&&k!=='video_duration')
       .forEach(k=>{
         if((parseInt(slides[k]||0)>0||parseInt(slideVisitsObj[k]||0)>0)){
-          if(_slOrdHasGuids&&!_slOrd.includes(k)){const m=k.match(_posKeyRe);if(m){const idx=parseInt(m[1])-1;if(idx>=0&&idx<_slOrd.length){_visitedSet.add(_slOrd[idx]);return;}}}
+          if(_slOrdHasGuids&&!_slOrd.includes(k)){const m=k.match(_posKeyRe);if(m){const idx=parseInt(m[1])-1;if(idx>=0&&idx<_slOrd.length){_visitedSet.add(_slOrd[idx]);if(idx+1>_maxSlidePos)_maxSlidePos=idx+1;return;}}}
           _visitedSet.add(k);
+          const _n=parseInt(k);if(!isNaN(_n)&&_n>_maxSlidePos)_maxSlidePos=_n;
         }
       });
-    const visitedSlides=_visitedSet.size;
+    // Show max slide position reached (not cumulative unique count) so PREV nav doesn't inflate it
+    const visitedSlides=_maxSlidePos||_visitedSet.size;
     let totalSecs=Object.entries(slides).filter(([k])=>k!=='video_seconds'&&k!=='video_duration').reduce((a,[,v])=>a+parseInt(v),0);
     if(totalSecs===0&&t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalSecs=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
     const score=parseInt(t.score_raw)||0;
