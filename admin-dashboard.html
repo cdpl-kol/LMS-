@@ -1273,7 +1273,7 @@ tr:hover td{background:#f8f9ff;}
 
       <div class="form-row">
         <div class="form-group" id="su-version-group"><label>SCORM Version</label><select id="su-version"><option value="1.2">SCORM 1.2</option><option value="2004">SCORM 2004</option></select></div>
-        <div class="form-group"><label>Assign to Module (optional)</label><select id="su-module"><option value="">— None —</option></select></div>
+        <div class="form-group"><label>Assign to Course <span style="color:var(--muted);font-weight:400;">(optional)</span></label><select id="su-module"><option value="">— Select Course —</option></select></div>
       </div>
 
       <div id="scormUploadProgress" style="display:none;margin-bottom:12px;">
@@ -3431,6 +3431,8 @@ function filterCertTable(){
 // Convert image path to base64 data URL — works inside about:blank certificate window
 async function imgToDataUrl(rawPath){
   if(!rawPath) return '';
+  // Already a base64 data URL — return directly (no fetch needed)
+  if(rawPath.startsWith('data:')) return rawPath;
   try{
     const origin = window.location.origin;
     const url = rawPath.startsWith('http') ? rawPath : origin + (rawPath.startsWith('/') ? rawPath : '/' + rawPath);
@@ -3796,7 +3798,8 @@ async function loadSettings(){
   document.getElementById('set-tw').value=d.twitter_url||'';
   document.getElementById('set-yt').value=d.youtube_url||'';
   document.getElementById('set-wa').value=d.whatsapp_url||'';
-  if(d.logo_path){document.getElementById('logoPreview').src=d.logo_path;document.getElementById('logoPreview').style.display='block';}
+  const logoSrc=d.logo_data||d.logo_path||'';
+  if(logoSrc){document.getElementById('logoPreview').src=logoSrc;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=logoSrc;document.getElementById('sbLogo').style.display='block';}
   // Update footer copyright & social
   if(d.copyright_text)document.getElementById('adminFooterCopy').textContent=d.copyright_text;
   const sfm={facebook:'adf-fb',instagram:'adf-ig',linkedin:'adf-li',twitter:'adf-tw',youtube:'adf-yt',whatsapp:'adf-wa'};
@@ -3813,7 +3816,7 @@ async function uploadLogo(){
   const fd=new FormData();fd.append('logo',file);
   const r=await fetch(API('/settings/logo'),{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
   const d=await r.json();
-  if(d.success){document.getElementById('logoPreview').src=d.data.logo_path;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=d.data.logo_path;showFormAlert('settingsAlert','Logo updated!','success');}
+  if(d.success){const ls=d.data.logo_data||d.data.logo_path;document.getElementById('logoPreview').src=ls;document.getElementById('logoPreview').style.display='block';document.getElementById('sbLogo').src=ls;document.getElementById('sbLogo').style.display='block';showFormAlert('settingsAlert','Logo updated!','success');}
   else showFormAlert('settingsAlert',d.error||'Upload failed.');
 }
 
@@ -3877,12 +3880,43 @@ async function loadScormPackages(){
       <td>${dateFmt(p.created_at)}</td>
       <td>
         ${previewBtn}
+        <button class="btn btn-sm" style="background:#7c3aed;color:#fff;" onclick="reassignScormCourse(${p.id},'${fmt(p.package_name).replace(/'/g,"\\'")}',${p.course_id||'null'})" title="Change Course Assignment"><i class="fas fa-link"></i></button>
         ${!isVideo?`<button class="btn btn-sm btn-secondary" onclick="rescanScorm(${p.id})" title="Re-scan launch URL"><i class="fas fa-sync-alt"></i></button>`:''}
         <button class="btn btn-sm btn-danger" onclick="deleteScorm(${p.id})" title="Delete"><i class="fas fa-trash"></i></button>
       </td>
     </tr>`;
   }).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">No content uploaded yet.</td></tr>';
 }
+
+/* Reassign a SCORM package to a different course */
+async function reassignScormCourse(pkgId, pkgName, currentCourseId){
+  const cr=await api('GET','/courses');
+  const courses=Array.isArray(cr.data)?cr.data:[];
+  const opts=courses.map(c=>`<option value="${c.id}"${c.id==currentCourseId?' selected':''}>${c.name||c.title}</option>`).join('');
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <h3 style="margin:0 0 6px;color:#1a237e;font-size:16px;"><i class="fas fa-link" style="color:#7c3aed;margin-right:8px;"></i>Course Assign Karo</h3>
+    <p style="margin:0 0 18px;color:#78909c;font-size:13px;">${pkgName}</p>
+    <label style="font-size:12px;font-weight:600;color:#546e7a;display:block;margin-bottom:6px;">Course Select Karo</label>
+    <select id="_rcSel" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;margin-bottom:18px;outline:none;">
+      <option value="">— Koi nahi —</option>${opts}
+    </select>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">Cancel</button>
+      <button id="_rcSaveBtn" style="padding:8px 18px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">Save</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#_rcSaveBtn').onclick=async()=>{
+    const newCourseId=modal.querySelector('#_rcSel').value;
+    const r=await api('PATCH',`/scorm/packages/${pkgId}/course`,{course_id:newCourseId||null});
+    modal.remove();
+    if(r.success){showToast('Course updated!','success');loadScormPackages();}
+    else showToast(r.error||'Failed','error');
+  };
+}
+
 let _adminScormRows=[];
 function _adminFmtSec(s){s=parseInt(s)||0;if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m '+Math.floor(s%60)+'s';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m';}
 
@@ -4038,7 +4072,7 @@ async function uploadScorm(){
   const name=document.getElementById('su-name').value.trim();
   const file=document.getElementById('su-file').files[0];
   const version=document.getElementById('su-version').value;
-  const moduleId=document.getElementById('su-module').value;
+  const courseId=document.getElementById('su-module').value;
   const ctype=document.querySelector('input[name="su-ctype"]:checked')?.value||'scorm';
   const isVideo=ctype==='video';
   if(!name||!file){showFormAlert('scormUploadAlert',`Please enter a name and select a ${isVideo?'video':'ZIP'} file.`);return;}
@@ -4054,7 +4088,7 @@ async function uploadScorm(){
     fd.append('package_name',name);
     fd.append('content_type',ctype);
     if(!isVideo)fd.append('scorm_version',version);
-    if(moduleId)fd.append('module_id',moduleId);
+    if(courseId)fd.append('course_id',courseId);  // direct course link (no module needed)
     const h={'Authorization':'Bearer '+TOKEN()};
     document.getElementById('scormProgressBar').style.width='60%';
     document.getElementById('scormProgressText').textContent=isVideo?'Processing video…':'Extracting package…';
@@ -4076,6 +4110,9 @@ async function uploadScorm(){
 // ─ Init ─
 (async()=>{
   try{
+    // Load sidebar logo from DB on startup (prefer base64 which persists across server restarts)
+    try{const ss=await fetch('/api/v1/settings');if(ss.ok){const sd=await ss.json();const sdd=sd.data||sd;const lp=sdd.logo_data||sdd.logo_path||'';if(lp){document.getElementById('sbLogo').src=lp;document.getElementById('sbLogo').style.display='block';}}}catch{}
+
     // Load courses and batches first
     await loadCourses();
     await loadBatches();
@@ -4093,12 +4130,13 @@ async function uploadScorm(){
     const tsel=document.getElementById('ab-trainer');
     if(tsel)tsel.innerHTML='<option value="">Select Trainer</option>'+trainers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
 
-    // populate module select for SCORM upload
+    // populate course select for SCORM upload (all active courses)
     const mods=await api('GET','/courses');
     const modSel=document.getElementById('su-module');
     if(modSel){
       const courses=Array.isArray(mods.data)?mods.data:[];
-      modSel.innerHTML='<option value="">— None —</option>'+courses.map(c=>`<option value="${c.id}">${c.name||c.title}</option>`).join('');
+      modSel.innerHTML='<option value="">— Select Course —</option>'+
+        courses.map(c=>`<option value="${c.id}">${c.name||c.title||'Course '+c.id}</option>`).join('');
     }
 
     loadOverview();

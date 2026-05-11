@@ -605,6 +605,21 @@ async function initDB() {
 
     await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS org_name VARCHAR(255) DEFAULT 'Connecting Dot Consultancy Pvt. Ltd.'`).catch(()=>{});
     await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS site_subtitle VARCHAR(500) DEFAULT ''`).catch(()=>{});
+    // Store logo as base64 in DB so it persists across server restarts (ephemeral filesystem fix)
+    await client.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS logo_data TEXT DEFAULT NULL`).catch(()=>{});
+    await client.query(`ALTER TABLE corporate_clients ADD COLUMN IF NOT EXISTS logo_data TEXT DEFAULT NULL`).catch(()=>{});
+    // Direct course_id on scorm_packages so packages link to courses without needing a module
+    await client.query(`ALTER TABLE scorm_packages ADD COLUMN IF NOT EXISTS course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL`).catch(()=>{});
+    // Fix old packages: module_id was incorrectly set to a course_id (before the fix).
+    // Detect those rows (no real module exists with that id, but a course does) and move to course_id.
+    await client.query(`
+      UPDATE scorm_packages sp
+      SET course_id = sp.module_id, module_id = NULL
+      WHERE sp.course_id IS NULL
+        AND sp.module_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM modules WHERE id = sp.module_id)
+        AND EXISTS    (SELECT 1 FROM courses  WHERE id = sp.module_id)
+    `).catch(()=>{});
 
     // Corporate course payments table
     await client.query(`CREATE TABLE IF NOT EXISTS corporate_course_payments (
@@ -845,8 +860,12 @@ app.post('/api/v1/settings/logo', auth, adminOnly, (req, res) => {
     if (uploadErr) return err(res, uploadErr.message, 400);
     if (!req.file) return err(res,'No file uploaded',400);
     const logoPath = '/uploads/logos/' + req.file.filename;
-    await pool.query('UPDATE site_settings SET logo_path=$1 WHERE id=1',[logoPath]);
-    ok(res, { logo_path: logoPath });
+    // Convert to base64 and store in DB so logo persists across server restarts
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const base64 = fileBuffer.toString('base64');
+    const logoData = `data:${req.file.mimetype};base64,${base64}`;
+    await pool.query('UPDATE site_settings SET logo_path=$1, logo_data=$2 WHERE id=1',[logoPath, logoData]);
+    ok(res, { logo_path: logoPath, logo_data: logoData });
   });
 });
 
@@ -857,27 +876,32 @@ app.post('/api/v1/corporate/settings/logo', auth, requireRole('corporate','admin
     if (uploadErr) return err(res, uploadErr.message, 400);
     if (!req.file) return err(res,'No file uploaded',400);
     const logoPath = '/uploads/logos/' + req.file.filename;
+    // Convert to base64 and store in DB so logo persists across server restarts
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const base64 = fileBuffer.toString('base64');
+    const logoData = `data:${req.file.mimetype};base64,${base64}`;
     const corpId = req.user.role === 'corporate' ? req.user.id : req.body.corporate_id;
-    await pool.query('UPDATE corporate_clients SET logo_path=$1 WHERE id=$2',[logoPath, corpId]);
-    ok(res, { logo_path: logoPath });
+    await pool.query('UPDATE corporate_clients SET logo_path=$1, logo_data=$2 WHERE id=$3',[logoPath, logoData, corpId]);
+    ok(res, { logo_path: logoPath, logo_data: logoData });
   });
 });
 
 // ── BRANDING (logos for certificate rendering) ─────────────────────────────────
 app.get('/api/v1/branding', auth, async (req, res) => {
   try {
-    const ss = await pool.query('SELECT logo_path FROM site_settings WHERE id=1');
-    const superLogo = ss.rows[0]?.logo_path || '';
+    const ss = await pool.query('SELECT logo_path, logo_data FROM site_settings WHERE id=1');
+    // Prefer base64 data (persists across restarts), fallback to file path
+    const superLogo = ss.rows[0]?.logo_data || ss.rows[0]?.logo_path || '';
     let corpLogo = '';
     if (req.user.role === 'participant') {
       const r = await pool.query(
-        'SELECT cc.logo_path FROM corporate_participants cp JOIN corporate_clients cc ON cp.corporate_id=cc.id WHERE cp.id=$1',
+        'SELECT cc.logo_path, cc.logo_data FROM corporate_participants cp JOIN corporate_clients cc ON cp.corporate_id=cc.id WHERE cp.id=$1',
         [req.user.id]
       );
-      corpLogo = r.rows[0]?.logo_path || '';
+      corpLogo = r.rows[0]?.logo_data || r.rows[0]?.logo_path || '';
     } else if (req.user.role === 'corporate') {
-      const r = await pool.query('SELECT logo_path FROM corporate_clients WHERE id=$1',[req.user.id]);
-      corpLogo = r.rows[0]?.logo_path || '';
+      const r = await pool.query('SELECT logo_path, logo_data FROM corporate_clients WHERE id=$1',[req.user.id]);
+      corpLogo = r.rows[0]?.logo_data || r.rows[0]?.logo_path || '';
     }
     ok(res, { super_logo: superLogo, corp_logo: corpLogo });
   } catch(e){ err(res, e.message); }
@@ -3233,7 +3257,7 @@ const scormUpload = multer({
 app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUpload.single('scorm'), async (req, res) => {
   try {
     if (!req.file) return err(res, 'No file uploaded', 400);
-    const { module_id, package_name, scorm_version, content_type } = req.body;
+    const { module_id, course_id, package_name, scorm_version, content_type } = req.body;
     const ext = path.extname(req.file.originalname).toLowerCase();
     const isVideo = ['.mp4', '.webm', '.mov'].includes(ext);
     const cType = isVideo ? 'video' : (content_type || 'scorm');
@@ -3243,8 +3267,8 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
     if (isVideo) {
       // ── VIDEO UPLOAD: save file directly ──────────────────────────────────
       const r = await pool.query(
-        'INSERT INTO scorm_packages(module_id,package_name,scorm_version,upload_path,content_type) VALUES($1,$2,$3,$4,$5) RETURNING id',
-        [module_id || null, pkgName, version, '', cType]
+        'INSERT INTO scorm_packages(module_id,course_id,package_name,scorm_version,upload_path,content_type) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',
+        [module_id || null, course_id || null, pkgName, version, '', cType]
       );
       const pkgId = r.rows[0].id;
       const videoDir = path.join(scormDir, String(pkgId));
@@ -3258,8 +3282,8 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
     } else {
       // ── SCORM ZIP UPLOAD: extract and find manifest ────────────────────────
       const r = await pool.query(
-        'INSERT INTO scorm_packages(module_id,package_name,scorm_version,upload_path,content_type) VALUES($1,$2,$3,$4,$5) RETURNING id',
-        [module_id || null, pkgName, version, '', cType]
+        'INSERT INTO scorm_packages(module_id,course_id,package_name,scorm_version,upload_path,content_type) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',
+        [module_id || null, course_id || null, pkgName, version, '', cType]
       );
       const pkgId = r.rows[0].id;
       const extractPath = path.join(scormDir, String(pkgId));
@@ -3383,6 +3407,18 @@ app.get('/api/v1/scorm/packages', auth, async (req, res) => {
       ORDER BY created_at DESC
     `);
     ok(res, r.rows);
+  } catch(e) { err(res, e.message); }
+});
+
+// Reassign SCORM package to a different course (admin only)
+app.patch('/api/v1/scorm/packages/:id/course', auth, adminOnly, async (req, res) => {
+  try {
+    const { course_id } = req.body;
+    await pool.query(
+      'UPDATE scorm_packages SET course_id=$1 WHERE id=$2',
+      [course_id || null, req.params.id]
+    );
+    ok(res, { id: req.params.id, course_id: course_id || null });
   } catch(e) { err(res, e.message); }
 });
 
