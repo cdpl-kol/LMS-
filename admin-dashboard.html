@@ -1584,6 +1584,15 @@ function openModal(id){
     const hasCb=document.getElementById('ac-has-assignments');
     if(hasCb){hasCb.checked=false;toggleAssignmentsSection(false);}
   }
+  // Refresh course list in Upload SCORM modal so newly-added courses appear
+  if(id==='uploadScormModal'){
+    api('GET','/courses').then(mods=>{
+      const courses=Array.isArray(mods.data)?mods.data:[];
+      const modSel=document.getElementById('su-module');
+      if(modSel)modSel.innerHTML='<option value="">— Select Course —</option>'+
+        courses.map(c=>`<option value="${c.id}">${c.name||c.title||'Course '+c.id}</option>`).join('');
+    });
+  }
   // Load courses & batches when Add Student modal opens
   if(id==='addStudentModal'){
     loadCourses(); // populates as-course dropdown
