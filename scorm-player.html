@@ -275,17 +275,23 @@ function updateStatusBar() {
       // ── Resolve current slide position from multiple sources ──────────────
       let currentPos = 0;
 
-      // 1. Read iframe hash DIRECTLY (most real-time; beats any cached value)
-      try {
-        const frame = document.getElementById('scormFrame');
-        if (frame && frame.contentWindow) {
-          const h = frame.contentWindow.location.hash;
-          const nums = (h.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 5000);
-          if (nums.length) currentPos = nums[0];
-        }
-      } catch(e) {}
+      // 1. Read iframe hash DIRECTLY — only when SCORM API is NOT managing
+      //    lesson_location.  For iSpring and similar packages that call
+      //    LMSSetValue('cmi.core.lesson_location', N) per slide,
+      //    scormApiSetLocation=true and the URL hash is stale (e.g. always
+      //    "#/1"), so it would incorrectly show 5% even on slide 10.
+      if (!scormApiSetLocation) {
+        try {
+          const frame = document.getElementById('scormFrame');
+          if (frame && frame.contentWindow) {
+            const h = frame.contentWindow.location.hash;
+            const nums = (h.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 5000);
+            if (nums.length) currentPos = nums[0];
+          }
+        } catch(e) {}
+      }
 
-      // 2. currentSlide — set by hash-polling recordSlideTime()
+      // 2. currentSlide — set by LMSSetValue or hash-polling recordSlideTime()
       if (!currentPos && currentSlide) {
         const fv = parseFloat(currentSlide);
         if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
@@ -723,19 +729,24 @@ async function loadContent() {
       currentPkgPath = pkg.upload_path;
       frame.onload = () => {
         document.getElementById('loadingOverlay').classList.add('hidden');
-        // Capture the initial slide immediately on load so Progress isn't stuck at 0%
-        try {
-          const initHash = frame.contentWindow.location.hash;
-          const initNums = (initHash.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 5000);
-          recordSlideTime(initNums.length ? String(initNums[0]) : '1');
-        } catch(e) { recordSlideTime('1'); }
+        // Don't record the initial iframe hash as the current slide — the hash
+        // often contains the package's total slide count (e.g. iSpring puts "21"
+        // in the hash) which would create a spurious slideTimings["21"] entry and
+        // inflate _maxSlidePos to 21 in the dashboard.  The first LMSSetValue for
+        // lesson_location (fired by the SCORM content within ~1 s of load) will
+        // establish the correct starting slide via recordSlideTime().
+        slideStartTime = Date.now();
         // ── Hash-based slide tracking fallback ──────────────────────────────
-        // Many SCORM packages (Articulate, iSpring, Lectora…) navigate via URL
-        // hash without calling LMSSetValue('cmi.core.lesson_location',...).
-        // We poll the iframe hash every 500 ms and call recordSlideTime() when
-        // a new numeric slide ID appears, so timing is captured automatically.
+        // Used for SCORM packages that navigate via URL hash without calling
+        // LMSSetValue('cmi.core.lesson_location',...) — e.g. Articulate Storyline.
+        // When the SCORM content IS using LMSSetValue (e.g. iSpring), we skip
+        // hash polling entirely so the stale/wrong hash values don't overwrite
+        // the authoritative lesson_location.
         let _lastHash = '';
         setInterval(() => {
+          // iSpring and similar packages manage lesson_location via LMSSetValue;
+          // once that flag is set, the URL hash is unreliable for slide tracking.
+          if (scormApiSetLocation) return;
           try {
             const hash = frame.contentWindow.location.hash;
             if (hash === _lastHash) return;
@@ -749,15 +760,11 @@ async function loadContent() {
             const sid = String(nums[0]);
             if (sid !== currentSlide) {
               recordSlideTime(sid);
-              // Update lesson_location from hash only when SCORM content
-              // hasn't called LMSSetValue for lesson_location itself
-              if (!scormApiSetLocation) {
-                CMI['cmi.core.lesson_location'] = sid;
-                dirty = true;
-              }
+              CMI['cmi.core.lesson_location'] = sid;
+              dirty = true;
               // Save immediately so the new slide visit isn't lost if user exits
               saveTracking(false);
-              // Refresh the progress bar — LMSSetValue may not fire on hash-only nav
+              // Refresh the progress bar
               updateStatusBar();
             }
           } catch(e) {} // cross-origin guard (same-origin should always pass)

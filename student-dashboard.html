@@ -1715,8 +1715,13 @@ async function loadScorm(){
           const _n=parseInt(k);if(!isNaN(_n)&&_n>_maxSlidePos)_maxSlidePos=_n;
         }
       });
-    // Show max slide position reached (not cumulative unique count) so PREV nav doesn't inflate it
-    const visitedSlides=_maxSlidePos||_visitedSet.size;
+    // Prefer lesson_location as the authoritative current slide position.
+    // slide_times keys can be inflated by a spurious initial hash entry (e.g.
+    // iSpring's URL briefly shows the total slide count like "#/21" at load,
+    // recording slideTimings["21"] before the real slide-1 initialisation fires).
+    const _lessonLocNum=parseInt(t.lesson_location||'');
+    const _lessonLocValid=!isNaN(_lessonLocNum)&&_lessonLocNum>0&&(p.total_slides<=0||_lessonLocNum<=p.total_slides);
+    const visitedSlides=_lessonLocValid?_lessonLocNum:(_maxSlidePos||_visitedSet.size);
     let totalSecs=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).reduce((a,[,v])=>a+parseInt(v),0);
     if(totalSecs===0&&t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalSecs=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
     const score=parseInt(t.score_raw)||0;

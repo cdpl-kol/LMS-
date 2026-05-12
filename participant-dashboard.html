@@ -592,7 +592,12 @@ async function loadScorm(){
     // Threshold > 1: exclude old Math.max(1,...) artifacts (instantly-cached slides = exactly 1s)
     Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).forEach(([k])=>{const _n=parseInt(k);if(!isNaN(_n)&&_n>_maxSlidePos)_maxSlidePos=_n;});
     const _fallbackCount=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).length;
-    const visitedSlides=_maxSlidePos||_fallbackCount;
+    // Prefer lesson_location as the authoritative current slide position.
+    // _maxSlidePos can be inflated by a spurious initial hash entry (iSpring's
+    // URL briefly shows the total slide count like "#/21" at load).
+    const _partLessonLocNum=parseInt(t.lesson_location||'');
+    const _partLessonLocValid=!isNaN(_partLessonLocNum)&&_partLessonLocNum>0&&(p.total_slides<=0||_partLessonLocNum<=p.total_slides);
+    const visitedSlides=_partLessonLocValid?_partLessonLocNum:(_maxSlidePos||_fallbackCount);
     const totalSecs=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).reduce((a,[,v])=>a+parseInt(v),0);
     const score=parseInt(t.score_raw)||0;
     const scoreMax=parseInt(t.score_max)||100;
@@ -608,7 +613,7 @@ async function loadScorm(){
       <td style="padding:12px 14px;">${typeTag}</td>
       <td style="padding:12px 14px;">${_partStatusBadge(st)}</td>
       <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${score>0?score+'/'+scoreMax:'—'}</td>
-      <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${visitedSlides||'—'}</td>
+      <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${visitedSlides>0?(p.total_slides>0?visitedSlides+'/'+p.total_slides:visitedSlides):'—'}</td>
       <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${totalSecs>0?_partFmtSec(totalSecs):'—'}</td>
       <td style="padding:12px 14px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
