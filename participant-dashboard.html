@@ -589,9 +589,17 @@ async function loadScorm(){
     const typeTag=isVideo?`<span style="font-size:10px;background:#e91e8c20;color:#e91e8c;border-radius:4px;padding:2px 8px;font-weight:700;">VIDEO</span>`:`<span style="font-size:10px;background:#00897b20;color:#00695c;border-radius:4px;padding:2px 8px;font-weight:700;">SCORM</span>`;
     const slides=t.slide_times&&typeof t.slide_times==='object'?t.slide_times:{};
     let _maxSlidePos=0;
-    // Threshold > 1: exclude old Math.max(1,...) artifacts (instantly-cached slides = exactly 1s)
-    Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).forEach(([k])=>{const _n=parseInt(k);if(!isNaN(_n)&&_n>_maxSlidePos)_maxSlidePos=_n;});
-    const _fallbackCount=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).length;
+    // Handle both numeric keys and pg_X LMSCommit-based synthetic keys
+    Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration').forEach(([k,v])=>{
+      const _pgM=k.match(/^pg_(\d+)$/);
+      if(_pgM){if(parseInt(v||0)>0){const pgN=parseInt(_pgM[1]);if(pgN>_maxSlidePos)_maxSlidePos=pgN;}return;}
+      if(parseInt(v||0)>1){const _n=parseInt(k);if(!isNaN(_n)&&_n>0&&_n>_maxSlidePos)_maxSlidePos=_n;}
+    });
+    const _fallbackCount=Object.entries(slides).filter(([k,v])=>{
+      if(k==='video_seconds'||k==='video_duration') return false;
+      if(k.match(/^pg_(\d+)$/)) return parseInt(v||0)>0;
+      return parseInt(v||0)>1;
+    }).length;
     // Use highest numeric slide with time>1 (or fallback count).
     // Don't trust lesson_location — it's last-saved bookmark, not slides completed.
     // If _maxSlidePos exceeds total_slides it's an old spurious hash artifact;

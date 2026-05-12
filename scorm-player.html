@@ -298,7 +298,12 @@ function updateStatusBar() {
         else {
           const idx = pkgSlideOrder.indexOf(currentSlide);
           if (idx >= 0) { currentPos = idx + 1; }
-          else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
+          else {
+            // pg_X = LMSCommit-based synthetic key: extract the commit index as position
+            const pgM = /^pg_(\d+)$/.exec(currentSlide);
+            if (pgM) { currentPos = parseInt(pgM[1]); }
+            else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
+          }
         }
       }
 
@@ -320,7 +325,15 @@ function updateStatusBar() {
       if (!currentPos) {
         const visited = Object.keys(slideTimings)
           .filter(k => k !== 'video_seconds' && k !== 'video_duration' && slideTimings[k] > 0);
-        if (visited.length) currentPos = Math.max(...visited.map(k => parseInt(k) || 0).filter(n => n > 0)) || visited.length;
+        if (visited.length) {
+          const nums = visited.map(k => {
+            const n = parseInt(k);
+            if (!isNaN(n) && n > 0) return n;
+            const pg = /^pg_(\d+)$/.exec(k); // LMSCommit-based pg_X synthetic key
+            return pg ? parseInt(pg[1]) : 0;
+          }).filter(n => n > 0);
+          currentPos = (nums.length ? Math.max(...nums) : 0) || visited.length;
+        }
       }
 
       if (currentPos > 0) {
@@ -423,8 +436,10 @@ window.API = {
     }
     CMI[element] = value;
     dirty = true;
-    // Track per-slide time when lesson_location changes
-    if (element === 'cmi.core.lesson_location' && value) {
+    // Track per-slide time when lesson_location changes.
+    // Skip '0' — iSpring sends this as an init/reset sentinel, not a real slide.
+    // Treating '0' as a slide would lock scormApiSetLocation=true and report 0% forever.
+    if (element === 'cmi.core.lesson_location' && value && value !== '0') {
       recordSlideTime(value);
       scormApiSetLocation = true;
     }
@@ -539,13 +554,16 @@ async function saveTracking(final) {
   // dashboard/report reflects how far the student has actually progressed.
   let effectiveScoreRaw = 0;
   if (videoDuration === 0) {
-    // Find highest numeric slide key with time > 0
+    // Find highest slide position with time > 0 — handles both numeric keys and
+    // pg_X synthetic keys created by the LMSCommit-based fallback tracker.
     let maxSlidePos = 0;
     Object.entries(slideTimings)
       .filter(([k, v]) => k !== 'video_seconds' && k !== 'video_duration' && v > 0)
       .forEach(([k]) => {
         const n = parseInt(k);
-        if (!isNaN(n) && n > maxSlidePos) maxSlidePos = n;
+        if (!isNaN(n) && n > 0 && n > maxSlidePos) { maxSlidePos = n; return; }
+        const pg = /^pg_(\d+)$/.exec(k);
+        if (pg) { const pgN = parseInt(pg[1]); if (pgN > maxSlidePos) maxSlidePos = pgN; }
       });
     // Also check current lesson_location as the authoritative current position
     const locFloat = parseFloat(CMI['cmi.core.lesson_location'] || '');
@@ -577,7 +595,7 @@ async function saveTracking(final) {
         score_max:         parseInt(CMI['cmi.core.score.max']) || 100,
         total_time:        _totalTimeStr,
         suspend_data:      CMI['cmi.suspend_data'] || '',
-        lesson_location:   CMI['cmi.core.lesson_location'] || '',
+        lesson_location:   (CMI['cmi.core.lesson_location'] && CMI['cmi.core.lesson_location'] !== '0') ? CMI['cmi.core.lesson_location'] : '',
         slide_times:       slideTimings,
         slide_visits:      slideVisits,
         force_zero:        justRestarted,
