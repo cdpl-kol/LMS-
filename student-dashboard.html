@@ -1715,13 +1715,13 @@ async function loadScorm(){
           const _n=parseInt(k);if(!isNaN(_n)&&_n>_maxSlidePos)_maxSlidePos=_n;
         }
       });
-    // Prefer lesson_location as the authoritative current slide position.
-    // slide_times keys can be inflated by a spurious initial hash entry (e.g.
-    // iSpring's URL briefly shows the total slide count like "#/21" at load,
-    // recording slideTimings["21"] before the real slide-1 initialisation fires).
-    const _lessonLocNum=parseInt(t.lesson_location||'');
-    const _lessonLocValid=!isNaN(_lessonLocNum)&&_lessonLocNum>0&&(p.total_slides<=0||_lessonLocNum<=p.total_slides);
-    const visitedSlides=_lessonLocValid?_lessonLocNum:(_maxSlidePos||_visitedSet.size);
+    // Use highest numeric slide with time>1 (or visitedSet size as fallback).
+    // Don't trust lesson_location here — it's the last-saved bookmark position
+    // (e.g. slide 13 from an old session), not slides genuinely completed.
+    // If _maxSlidePos exceeds total_slides it's an old spurious hash artifact;
+    // in that case fall back to visitedSet size (capped at total_slides).
+    const _rawMax=_maxSlidePos||_visitedSet.size;
+    const visitedSlides=(p.total_slides>0&&_rawMax>p.total_slides)?Math.min(_visitedSet.size,p.total_slides):_rawMax;
     let totalSecs=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).reduce((a,[,v])=>a+parseInt(v),0);
     if(totalSecs===0&&t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalSecs=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
     const score=parseInt(t.score_raw)||0;

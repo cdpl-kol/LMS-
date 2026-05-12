@@ -592,12 +592,12 @@ async function loadScorm(){
     // Threshold > 1: exclude old Math.max(1,...) artifacts (instantly-cached slides = exactly 1s)
     Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).forEach(([k])=>{const _n=parseInt(k);if(!isNaN(_n)&&_n>_maxSlidePos)_maxSlidePos=_n;});
     const _fallbackCount=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).length;
-    // Prefer lesson_location as the authoritative current slide position.
-    // _maxSlidePos can be inflated by a spurious initial hash entry (iSpring's
-    // URL briefly shows the total slide count like "#/21" at load).
-    const _partLessonLocNum=parseInt(t.lesson_location||'');
-    const _partLessonLocValid=!isNaN(_partLessonLocNum)&&_partLessonLocNum>0&&(p.total_slides<=0||_partLessonLocNum<=p.total_slides);
-    const visitedSlides=_partLessonLocValid?_partLessonLocNum:(_maxSlidePos||_fallbackCount);
+    // Use highest numeric slide with time>1 (or fallback count).
+    // Don't trust lesson_location — it's last-saved bookmark, not slides completed.
+    // If _maxSlidePos exceeds total_slides it's an old spurious hash artifact;
+    // fall back to _fallbackCount (capped at total_slides) in that case.
+    const _rawPartMax=_maxSlidePos||_fallbackCount;
+    const visitedSlides=(p.total_slides>0&&_rawPartMax>p.total_slides)?Math.min(_fallbackCount,p.total_slides):_rawPartMax;
     const totalSecs=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).reduce((a,[,v])=>a+parseInt(v),0);
     const score=parseInt(t.score_raw)||0;
     const scoreMax=parseInt(t.score_max)||100;

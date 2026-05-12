@@ -776,6 +776,30 @@ async function loadContent() {
       setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 8000);
       // Heartbeat: save every 60s even if no LMSCommit fires
       setInterval(() => { if (initialized && dirty) saveTracking(false); }, 60000);
+
+      // Best-effort: catch postMessage events that some SCORM packages emit on
+      // slide change (including PREV). If iSpring or another tool broadcasts
+      // slide info via postMessage we can update the progress bar without
+      // relying solely on LMSSetValue (which some tools skip on PREV).
+      window.addEventListener('message', function(ev) {
+        if (!initialized || !scormApiSetLocation) return;
+        try {
+          const d = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data;
+          if (!d || typeof d !== 'object') return;
+          // Try common property names used by various authoring tools
+          const raw = d.slide ?? d.currentSlide ?? d.slideIndex ?? d.page ?? d.slideNumber;
+          if (raw == null) return;
+          const n = parseInt(raw);
+          if (isNaN(n) || n <= 0 || n >= 10000) return;
+          const sid = String(n);
+          if (sid === currentSlide) return;
+          CMI['cmi.core.lesson_location'] = sid;
+          recordSlideTime(sid);
+          dirty = true;
+          saveTracking(false);
+          updateStatusBar();
+        } catch(_) {}
+      }, false);
     }
   } catch(e) {
     showError('Error loading content: ' + e.message);
