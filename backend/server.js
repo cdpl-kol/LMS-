@@ -11,6 +11,44 @@ const multer = require('multer');
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const zlib = require('zlib');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+
+// ── CLOUDFLARE R2 CLIENT ──────────────────────────────────────────────────────
+const r2Enabled = !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_BUCKET_NAME);
+const r2 = r2Enabled ? new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY },
+}) : null;
+
+function r2Mime(fp) {
+  const m = { '.html':'text/html','.htm':'text/html','.js':'application/javascript','.mjs':'application/javascript','.css':'text/css','.json':'application/json','.xml':'application/xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.ico':'image/x-icon','.mp4':'video/mp4','.webm':'video/webm','.mp3':'audio/mpeg','.ogg':'audio/ogg','.woff':'font/woff','.woff2':'font/woff2','.ttf':'font/ttf','.eot':'application/vnd.ms-fontobject','.pdf':'application/pdf','.swf':'application/x-shockwave-flash','.txt':'text/plain' };
+  return m[path.extname(fp).toLowerCase()] || 'application/octet-stream';
+}
+async function r2Put(key, buffer, ct) {
+  await r2.send(new PutObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key, Body: buffer, ContentType: ct }));
+}
+async function r2UploadDir(localDir, prefix) {
+  const files = [];
+  (function walk(d) {
+    for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+      const full = path.join(d, f.name);
+      f.isDirectory() ? walk(full) : files.push(full);
+    }
+  })(localDir);
+  for (let i = 0; i < files.length; i += 20) {
+    await Promise.all(files.slice(i, i + 20).map(fp =>
+      r2Put(prefix + '/' + path.relative(localDir, fp).replace(/\\/g, '/'), fs.readFileSync(fp), r2Mime(fp))
+    ));
+  }
+}
+async function r2DeletePrefix(prefix) {
+  try {
+    const listed = await r2.send(new ListObjectsV2Command({ Bucket: process.env.R2_BUCKET_NAME, Prefix: prefix }));
+    if (!listed.Contents?.length) return;
+    await r2.send(new DeleteObjectsCommand({ Bucket: process.env.R2_BUCKET_NAME, Delete: { Objects: listed.Contents.map(o => ({ Key: o.Key })) } }));
+  } catch(e) { console.error('R2 delete error:', e.message); }
+}
 
 // ── PURE NODE.JS ZIP EXTRACTOR (no external deps) ────────────────────────────
 function extractZip(zipBuffer, destDir) {
@@ -1867,11 +1905,15 @@ app.post('/api/v1/courses/:id/upload-content', auth, adminOnly, courseContentUpl
         [moduleId, pkgName, '1.2', '', 'video']
       );
       const pkgId = pkgR.rows[0].id;
-      const videoDir = path.join(uploadsDir, 'scorm', String(pkgId));
-      fs.mkdirSync(videoDir, { recursive: true });
       const filename = 'video' + ext;
-      fs.writeFileSync(path.join(videoDir, filename), req.file.buffer);
       const videoPath = '/uploads/scorm/' + pkgId + '/' + filename;
+      if (r2Enabled) {
+        await r2Put('scorm/' + pkgId + '/' + filename, req.file.buffer, r2Mime(filename));
+      } else {
+        const videoDir = path.join(uploadsDir, 'scorm', String(pkgId));
+        fs.mkdirSync(videoDir, { recursive: true });
+        fs.writeFileSync(path.join(videoDir, filename), req.file.buffer);
+      }
       await pool.query('UPDATE scorm_packages SET upload_path=$1 WHERE id=$2', [videoPath, pkgId]);
       await logAudit(req.user.id, req.user.role, 'COURSE_VIDEO_UPLOAD', 'scorm_packages', pkgId, 'Uploaded course video: '+pkgName, req.ip);
       ok(res, { id: pkgId, launch_url: videoPath, type: 'video', module_id: moduleId }, 'Video uploaded successfully');
@@ -1900,6 +1942,7 @@ app.post('/api/v1/courses/:id/upload-content', auth, adminOnly, courseContentUpl
       }
       findManifest(extractPath, extractPath);
       const launchUrl = findLaunch(extractPath, manifestPath) || relManifest;
+      if (r2Enabled) await r2UploadDir(extractPath, 'scorm/' + pkgId);
       await pool.query('UPDATE scorm_packages SET manifest_path=$1,upload_path=$2 WHERE id=$3',
         [relManifest, '/uploads/scorm/'+pkgId+'/'+launchUrl, pkgId]);
       await logAudit(req.user.id, req.user.role, 'SCORM_UPLOAD', 'scorm_packages', pkgId, 'Uploaded SCORM: '+pkgName, req.ip);
@@ -3242,6 +3285,22 @@ function countSlidesFromManifest(manifestFilePath) {
 
 const scormDir = path.join(uploadsDir, 'scorm');
 if (!fs.existsSync(scormDir)) fs.mkdirSync(scormDir, { recursive: true });
+
+// R2 proxy: serve SCORM files from R2 through the LMS server (keeps same-origin for SCORM API)
+if (r2Enabled) {
+  app.get('/uploads/scorm/:pkgId/*', async (req, res, next) => {
+    const key = 'scorm/' + req.params.pkgId + '/' + req.params[0];
+    try {
+      const obj = await r2.send(new GetObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }));
+      res.setHeader('Content-Type', obj.ContentType || r2Mime(req.params[0]));
+      if (obj.ContentLength) res.setHeader('Content-Length', obj.ContentLength);
+      obj.Body.pipe(res);
+    } catch(e) {
+      if (e.$metadata?.httpStatusCode === 404 || e.name === 'NoSuchKey') return next();
+      console.error('R2 proxy error:', e.message); next(e);
+    }
+  });
+}
 app.use('/uploads/scorm', express.static(scormDir));
 
 const scormUpload = multer({
@@ -3271,11 +3330,15 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
         [module_id || null, course_id || null, pkgName, version, '', cType]
       );
       const pkgId = r.rows[0].id;
-      const videoDir = path.join(scormDir, String(pkgId));
-      if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true });
       const filename = 'video' + ext;
-      fs.writeFileSync(path.join(videoDir, filename), req.file.buffer);
       const videoPath = '/uploads/scorm/' + pkgId + '/' + filename;
+      if (r2Enabled) {
+        await r2Put('scorm/' + pkgId + '/' + filename, req.file.buffer, r2Mime(filename));
+      } else {
+        const videoDir = path.join(scormDir, String(pkgId));
+        if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true });
+        fs.writeFileSync(path.join(videoDir, filename), req.file.buffer);
+      }
       await pool.query('UPDATE scorm_packages SET upload_path=$1 WHERE id=$2', [videoPath, pkgId]);
       await logAudit(req.user.id, req.user.role, 'VIDEO_UPLOAD', 'scorm_packages', pkgId, 'Uploaded video: '+pkgName, req.ip);
       ok(res, { id:pkgId, package_name:pkgName, launch_url:videoPath, content_type:cType }, 'Video uploaded successfully');
@@ -3375,6 +3438,7 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
         }
       }
       console.log(`[SCORM] Package ${pkgId} launch URL: ${launchUrl}, slides: ${totalSlides}, articulate: ${slideOrder.length}, durations: ${Object.keys(slideDurations).length}`);
+      if (r2Enabled) await r2UploadDir(extractPath, 'scorm/' + pkgId);
       await pool.query(
         'UPDATE scorm_packages SET manifest_path=$1, upload_path=$2, total_slides=$3, slide_order=$4, slide_durations=$5 WHERE id=$6',
         [relManifest, '/uploads/scorm/'+pkgId+'/'+launchUrl, totalSlides||0, slideOrder, JSON.stringify(slideDurations), pkgId]
@@ -3447,9 +3511,11 @@ app.delete('/api/v1/scorm/packages/:id', auth, adminOnly, async (req, res) => {
   try {
     const r = await pool.query('SELECT id FROM scorm_packages WHERE id=$1',[req.params.id]);
     if (!r.rows[0]) return err(res,'Package not found',404);
-    // Remove extracted files
+    // Remove local extracted files
     const extractPath = path.join(scormDir, req.params.id);
     if (fs.existsSync(extractPath)) fs.rmSync(extractPath, { recursive: true, force: true });
+    // Remove from R2
+    if (r2Enabled) await r2DeletePrefix('scorm/' + req.params.id);
     await pool.query('DELETE FROM scorm_packages WHERE id=$1',[req.params.id]);
     ok(res, {}, 'Package deleted');
   } catch(e) { err(res, e.message); }
