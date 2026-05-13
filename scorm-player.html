@@ -406,54 +406,105 @@ setInterval(() => {
 let iframeSlidePos = 0;
 
 function readSlideFromIframe() {
-  if (scormApiSetLocation) return;   // lesson_location packages handle themselves
+  if (scormApiSetLocation) return;
   if (!initialized) return;
   try {
     const frame = document.getElementById('scormFrame');
-    if (!frame || !frame.contentDocument || !frame.contentDocument.body) return;
+    if (!frame) return;
+    const w = frame.contentWindow;
+    const doc = (frame.contentDocument || (w && w.document));
+    if (!doc || !doc.body) return;
 
-    // Strategy 1: look for "X / Y" or "X of Y" text in the page
-    const allText = (frame.contentDocument.body.innerText || '');
-    const m = allText.match(/\b(\d{1,3})\s*[\/]\s*(\d{1,3})\b/);
-    if (m) {
-      const cur = parseInt(m[1]), tot = parseInt(m[2]);
-      if (tot > 1 && cur > 0 && cur <= tot) {
-        if (totalSlidesInPkg <= 0 || tot > totalSlidesInPkg) totalSlidesInPkg = tot;
-        if (cur !== iframeSlidePos) {
-          iframeSlidePos = cur;
-          updateStatusBar();
+    let pos = 0;
+
+    // Strategy A: iSpring global objects that expose current slide index
+    const globalNames = ['Presentation','player','App','iSpringPlayer','PresentationController'];
+    const methodNames = ['getCurrentSlideIndex','getCurrentSlide','getSlide','getPageIndex','getPage'];
+    const propNames   = ['currentSlideIndex','slideIndex','currentSlide','pageIndex'];
+    for (const g of globalNames) {
+      if (pos || !w[g]) continue;
+      for (const fn of methodNames) {
+        if (typeof w[g][fn] === 'function') {
+          try { const r = w[g][fn](); if (typeof r === 'number' && r >= 0) { pos = r + 1; break; } } catch(e) {}
         }
-        return;
+      }
+      if (!pos) for (const p of propNames) {
+        if (typeof w[g][p] === 'number' && w[g][p] >= 0) { pos = w[g][p] + 1; break; }
+      }
+    }
+    // also check window-level props
+    if (!pos) for (const p of propNames) {
+      if (typeof w[p] === 'number' && w[p] >= 0) { pos = w[p] + 1; break; }
+    }
+
+    // Strategy B: CSS selectors for slide counter elements
+    if (!pos) {
+      const sels = [
+        '.slide-number','.slide-count','.current-slide','.current-page',
+        '#fr-slide-num','#slideNum','#pageNum',
+        '[class*="slide_num"]','[class*="slide-num"]','[class*="slideNum"]',
+        '[class*="page_num"]','[class*="page-num"]','[class*="pageNum"]',
+        '[class*="slide_count"]','[class*="page_count"]'
+      ];
+      for (const sel of sels) {
+        try {
+          const el = doc.querySelector(sel);
+          if (el) {
+            const t = (el.innerText || el.textContent || '').trim();
+            const m2 = t.match(/^(\d+)\s*(?:\/|of)\s*(\d+)$/);
+            if (m2) {
+              const c = parseInt(m2[1]), tot = parseInt(m2[2]);
+              if (tot > 1 && c > 0 && c <= tot) { if (totalSlidesInPkg <= 0) totalSlidesInPkg = tot; pos = c; break; }
+            }
+            const n = parseInt(t);
+            if (!isNaN(n) && n > 0 && n < 500) { pos = n; break; }
+          }
+        } catch(e2) {}
       }
     }
 
-    // Strategy 2: aria progress bar (aria-valuenow / aria-valuemax)
-    const progressEl = frame.contentDocument.querySelector('[aria-valuenow][aria-valuemax]');
-    if (progressEl) {
-      const now = parseInt(progressEl.getAttribute('aria-valuenow') || '0');
-      const max = parseInt(progressEl.getAttribute('aria-valuemax') || '0');
-      if (max > 1 && now > 0 && now <= max) {
-        if (totalSlidesInPkg <= 0 || max > totalSlidesInPkg) totalSlidesInPkg = max;
-        if (now !== iframeSlidePos) {
-          iframeSlidePos = now;
-          updateStatusBar();
+    // Strategy C: body innerText scan for "X / Y" (avoid timestamps: require both < 500)
+    if (!pos) {
+      const allText = doc.body.innerText || doc.body.textContent || '';
+      const m3 = allText.match(/\b([1-9]\d?)\s*\/\s*([1-9]\d{0,2})\b/);
+      if (m3) {
+        const c = parseInt(m3[1]), tot = parseInt(m3[2]);
+        if (tot > 1 && c > 0 && c <= tot && tot < 500) {
+          if (totalSlidesInPkg <= 0) totalSlidesInPkg = tot;
+          pos = c;
         }
-        return;
       }
     }
 
-    // Strategy 3: data-slide-index or data-index attribute on active element
-    const active = frame.contentDocument.querySelector('[data-slide-index],[data-index],[data-slide]');
-    if (active) {
-      const idx = parseInt(active.getAttribute('data-slide-index') || active.getAttribute('data-index') || active.getAttribute('data-slide') || '0');
-      if (idx > 0) {
-        if (idx !== iframeSlidePos) { iframeSlidePos = idx; updateStatusBar(); }
-        return;
+    // Strategy D: aria-valuenow on progress bars
+    if (!pos) {
+      const pel = doc.querySelector('[aria-valuenow][aria-valuemax]');
+      if (pel) {
+        const now = parseInt(pel.getAttribute('aria-valuenow') || '0');
+        const max = parseInt(pel.getAttribute('aria-valuemax') || '0');
+        if (max > 1 && now > 0 && now <= max) { if (totalSlidesInPkg <= 0) totalSlidesInPkg = max; pos = now; }
       }
     }
-  } catch(e) {
-    // Cross-origin or DOM not ready — silently skip
-  }
+
+    // Update debug with what we found (or show snippet of body text for diagnosis)
+    try {
+      const di = document.getElementById('scormDebugIframe');
+      if (di) {
+        if (pos) {
+          di.textContent = pos;
+        } else {
+          // Show first 60 chars of body text so we can see what format is there
+          const snip = (doc.body.innerText || '').replace(/\s+/g,' ').trim().slice(0, 60);
+          di.textContent = '? [' + snip + ']';
+        }
+      }
+    } catch(e) {}
+
+    if (pos && pos !== iframeSlidePos) {
+      iframeSlidePos = pos;
+      updateStatusBar();
+    }
+  } catch(e) {}
 }
 setInterval(readSlideFromIframe, 800);
 
