@@ -149,6 +149,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
   <button class="btn" style="background:rgba(255,255,255,0.2);color:#fff;padding:4px 10px;" onclick="document.getElementById('completionBanner').classList.remove('show')">✕</button>
 </div>
 
+<!-- DEBUG OVERLAY — remove after diagnosis -->
+<div id="scormDebug" style="position:fixed;bottom:8px;left:8px;background:rgba(0,0,0,0.82);color:#0f0;font:11px monospace;padding:8px 10px;border-radius:6px;z-index:99999;max-width:420px;word-break:break-all;pointer-events:none;display:none;">
+  <div style="color:#ff0;margin-bottom:4px;">SCORM Debug (last 5 calls)</div>
+  <div id="scormDebugLog"></div>
+</div>
+
 <script>
 // ════════════════════════════════════════════════════════════════════
 //  SCORM PLAYER — Smart LMS
@@ -367,6 +373,14 @@ function updateStatusBar() {
   document.getElementById('progressBar').style.width = pct + '%';
 }
 
+// Toggle debug overlay with D key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'd' || e.key === 'D') {
+    const el = document.getElementById('scormDebug');
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+});
+
 // Live timer
 setInterval(() => {
   const secs = Math.floor((Date.now() - sessionStart) / 1000);
@@ -446,8 +460,17 @@ window.API = {
   LMSSetValue: function(element, value) {
     if (!initialized) return 'false';
     if (CMI_READONLY.has(element)) return 'false';
-    // Diagnostic logging — helps trace PREV navigation issues
-    console.log(`[SCORM] SetValue: ${element} = "${value}" | loc="${CMI['cmi.core.lesson_location']}" scormApiSet=${scormApiSetLocation} currentSlide=${currentSlide}`);
+    // Visual debug log (press D to toggle overlay)
+    try {
+      const dbg = document.getElementById('scormDebugLog');
+      if (dbg && document.getElementById('scormDebug').style.display !== 'none') {
+        const line = document.createElement('div');
+        line.textContent = element + ' = "' + value + '"';
+        if (element === 'cmi.core.lesson_location') line.style.color = '#0ff';
+        dbg.insertBefore(line, dbg.firstChild);
+        while (dbg.childElementCount > 5) dbg.removeChild(dbg.lastChild);
+      }
+    } catch(e) {}
     // While justRestarted: SCORM content re-syncs its own cached state.
     // Ignore score and status so they don't overwrite our clean reset.
     // lesson_location updates are still allowed (content navigating to slide 1).
