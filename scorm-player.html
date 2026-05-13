@@ -234,16 +234,16 @@ let slideVisits  = {};       // { slideId: visitCount }
 let currentSlide = null;
 let slideStartTime = null;
 let _lastDisplayedPct = 0;  // last valid % shown; keeps display stable when lesson_location='0'
+let suspendBitCount = 0;    // count of '1' bits in iSpring bitmask — monotonically non-decreasing
 
-// Returns a stable pg_X key for the given suspend_data.
-// Same suspend_data (revisiting a slide via PREV) → same key → currentSlide goes back → progress decreases.
-function getPgKey(suspendData) {
-  if (suspendDataKeyMap.has(suspendData)) {
-    return 'pg_' + suspendDataKeyMap.get(suspendData);
-  }
-  commitSlideCount++;
-  suspendDataKeyMap.set(suspendData, commitSlideCount);
-  return 'pg_' + commitSlideCount;
+// Count '1' bits in binary sequences (4+ chars of 0/1) inside suspend_data.
+// iSpring encodes a visited-slide bitmask there. Going PREV doesn't unset bits
+// (already-visited slides stay '1'), so this count never decreases on PREV.
+function countVisitedBits(sd) {
+  var total = 0;
+  var seqs = sd.match(/[01]{4,}/g) || [];
+  seqs.forEach(function(s) { total += (s.match(/1/g) || []).length; });
+  return total;
 }
 
 function recordSlideTime(slideId) {
@@ -337,15 +337,12 @@ function updateStatusBar() {
         }
       }
 
-      // 4. pg_X fallback (commit-only packages with no lesson_location/hash).
-      //    Use count of UNIQUE sections visited — never the monotonic pg_X
-      //    index which always increases even on PREV.
-      //    IMPORTANT: only use this if checks 1-3 gave nothing. For iSpring
-      //    and similar packages, lesson_location (check 1) is authoritative.
-      if (!currentPos) {
-        const pgVisited = Object.keys(slideTimings)
-          .filter(k => /^pg_/.test(k) && slideTimings[k] > 0).length;
-        if (pgVisited > 0) currentPos = pgVisited;
+      // 4. pg_X fallback (suspend_data-only packages with no lesson_location).
+      //    Use commitSlideCount which is only incremented when the visited-slide
+      //    bitmask in suspend_data grows (i.e. a genuinely new slide was reached).
+      //    PREV never increments it because revisited slides keep their '1' bit.
+      if (!currentPos && commitSlideCount > 0) {
+        currentPos = commitSlideCount;
       }
 
       // NOTE: We intentionally do NOT use Math.max(slideTimings numeric keys)
@@ -416,6 +413,7 @@ window.API = {
       scormApiSetLocation = false;
       lastSuspendData     = '';
       commitSlideCount    = 0;
+      suspendBitCount     = 0;
       suspendDataKeyMap.clear();
       _lastDisplayedPct   = 0;
       justRestarted       = true;
@@ -487,13 +485,21 @@ window.API = {
       recordSlideTime(value);
       scormApiSetLocation = true;
     }
-    // Fallback: detect slide changes via suspend_data fingerprint
+    // Fallback: detect FORWARD slide changes via suspend_data bitmask for packages
+    // that never call lesson_location. Count '1' bits in iSpring's visited-slide
+    // bitmask — this count only grows on NEXT (new slide), never on PREV (already
+    // visited slides keep their '1' bit), so progress never increases on PREV.
     if (element === 'cmi.suspend_data' && value && value !== lastSuspendData) {
       lastSuspendData = value;
       if (!scormApiSetLocation) {
-        recordSlideTime(getPgKey(value));
-        // Save immediately on slide change so new slide visit isn't lost if user exits
-        saveTracking(false);
+        const newBits = countVisitedBits(value);
+        if (newBits > suspendBitCount) {
+          suspendBitCount = newBits;
+          commitSlideCount++;
+          recordSlideTime('pg_' + commitSlideCount);
+          saveTracking(false);
+        }
+        // PREV detected (bit count didn't increase) — hold current progress, no new pg_X
       }
     }
     // Also trigger auto-save after 3s of inactivity
@@ -510,18 +516,12 @@ window.API = {
 
   LMSCommit: function(s) {
     CMI['cmi.core.session_time'] = getSessionTime();
-    // Fallback: if SCORM doesn't use lesson_location or suspend_data per slide,
-    // treat each unique commit (with elapsed time) as a slide boundary
-    if (!scormApiSetLocation) {
-      const suspendNow = CMI['cmi.suspend_data'] || '';
-      if (suspendNow !== lastSuspendData) {
-        lastSuspendData = suspendNow;
-        recordSlideTime(getPgKey(suspendNow));
-      } else if (currentSlide === null) {
-        // First commit with no slide detected yet — count as slide 1
-        commitSlideCount++;
-        recordSlideTime('pg_' + commitSlideCount);
-      }
+    // For packages with no lesson_location: slide tracking is handled in LMSSetValue
+    // via the suspend_data bitmask. Only handle the edge case where no suspend_data
+    // was ever set (rare commit-only packages).
+    if (!scormApiSetLocation && currentSlide === null && commitSlideCount === 0) {
+      commitSlideCount++;
+      recordSlideTime('pg_' + commitSlideCount);
     }
     saveTracking(false);
     return 'true';
