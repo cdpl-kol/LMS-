@@ -151,8 +151,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
 </div>
 
 <!-- DEBUG OVERLAY — remove after diagnosis -->
-<div id="scormDebug" style="position:fixed;bottom:8px;left:8px;background:rgba(0,0,0,0.82);color:#0f0;font:11px monospace;padding:8px 10px;border-radius:6px;z-index:99999;max-width:420px;word-break:break-all;pointer-events:none;display:none;">
-  <div style="color:#ff0;margin-bottom:4px;">SCORM Debug (last 5 calls)</div>
+<div id="scormDebug" style="position:fixed;bottom:8px;left:8px;background:rgba(0,0,0,0.9);color:#0f0;font:11px monospace;padding:10px 12px;border-radius:6px;z-index:99999;width:480px;max-height:260px;overflow-y:auto;word-break:break-all;pointer-events:none;display:none;">
+  <div style="color:#ff0;margin-bottom:4px;">SCORM Debug — <span id="scormDebugPct" style="color:#fff;">pct=0%</span> | commitSlides=<span id="scormDebugCsc">0</span> | bits=<span id="scormDebugBits">0</span></div>
   <div id="scormDebugLog"></div>
 </div>
 
@@ -369,6 +369,10 @@ function updateStatusBar() {
   _lastDisplayedPct = pct;
   document.getElementById('progressDisplay').textContent = pct + '%';
   document.getElementById('progressBar').style.width = pct + '%';
+  try {
+    const dp = document.getElementById('scormDebugPct');
+    if (dp) dp.textContent = 'pct=' + pct + '%';
+  } catch(e) {}
 }
 
 // Toggle debug overlay with D key
@@ -459,15 +463,22 @@ window.API = {
   LMSSetValue: function(element, value) {
     if (!initialized) return 'false';
     if (CMI_READONLY.has(element)) return 'false';
-    // Visual debug log (press D to toggle overlay)
+    // Visual debug log (click DBG button to toggle overlay)
     try {
-      const dbg = document.getElementById('scormDebugLog');
-      if (dbg && document.getElementById('scormDebug').style.display !== 'none') {
+      const dbgBox = document.getElementById('scormDebug');
+      if (dbgBox && dbgBox.style.display !== 'none') {
+        const dbg = document.getElementById('scormDebugLog');
         const line = document.createElement('div');
-        line.textContent = element + ' = "' + value + '"';
+        const disp = element === 'cmi.suspend_data'
+          ? element + ' = "' + value.substring(0, 40) + (value.length > 40 ? '…"' : '"')
+          : element + ' = "' + value + '"';
+        line.textContent = disp;
         if (element === 'cmi.core.lesson_location') line.style.color = '#0ff';
+        else if (element === 'cmi.suspend_data') line.style.color = '#fa0';
         dbg.insertBefore(line, dbg.firstChild);
-        while (dbg.childElementCount > 5) dbg.removeChild(dbg.lastChild);
+        while (dbg.childElementCount > 12) dbg.removeChild(dbg.lastChild);
+        document.getElementById('scormDebugCsc').textContent = commitSlideCount;
+        document.getElementById('scormDebugBits').textContent = suspendBitCount;
       }
     } catch(e) {}
     // While justRestarted: SCORM content re-syncs its own cached state.
