@@ -287,12 +287,25 @@ function updateStatusBar() {
       // ── Resolve current slide position from multiple sources ──────────────
       let currentPos = 0;
 
-      // 1. Read iframe hash DIRECTLY — only when SCORM API is NOT managing
-      //    lesson_location.  For iSpring and similar packages that call
-      //    LMSSetValue('cmi.core.lesson_location', N) per slide,
-      //    scormApiSetLocation=true and the URL hash is stale (e.g. always
-      //    "#/1"), so it would incorrectly show 5% even on slide 10.
-      if (!scormApiSetLocation) {
+      // 1. lesson_location — most authoritative: SCORM content sets this on
+      //    EVERY navigation (NEXT and PREV), so it always reflects the CURRENT
+      //    slide. Moved to Check 1 so PREV correctly decreases the bar.
+      //    Skip '0' (iSpring init sentinel) and non-slide keys.
+      const _loc = CMI['cmi.core.lesson_location'] || '';
+      if (_loc && _loc !== '0' && _loc !== 'video_seconds' && _loc !== 'video_duration') {
+        const fv = parseFloat(_loc);
+        if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
+        else {
+          const idx = pkgSlideOrder.indexOf(_loc);
+          if (idx >= 0) { currentPos = idx + 1; }
+          else { const m = /^(\d+)/.exec(_loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
+        }
+      }
+
+      // 2. iframe hash — for packages that navigate via URL fragment without
+      //    calling LMSSetValue('lesson_location',...).  Skip when the SCORM
+      //    API is managing lesson_location (hash is stale in that case).
+      if (!currentPos && !scormApiSetLocation) {
         try {
           const frame = document.getElementById('scormFrame');
           if (frame && frame.contentWindow) {
@@ -303,49 +316,35 @@ function updateStatusBar() {
         } catch(e) {}
       }
 
-      // 2. currentSlide — set by LMSSetValue or hash-polling recordSlideTime()
-      if (!currentPos && currentSlide) {
+      // 3. currentSlide (numeric / GUID keys only, NOT pg_X synthetic keys).
+      //    pg_X keys are excluded here because their index always increases
+      //    even on PREV — they are counted separately in Check 4 instead.
+      if (!currentPos && currentSlide && !/^pg_/.test(currentSlide)) {
         const fv = parseFloat(currentSlide);
         if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
         else {
           const idx = pkgSlideOrder.indexOf(currentSlide);
           if (idx >= 0) { currentPos = idx + 1; }
-          else {
-            // pg_X = LMSCommit-based synthetic key: extract the commit index as position
-            const pgM = /^pg_(\d+)$/.exec(currentSlide);
-            if (pgM) { currentPos = parseInt(pgM[1]); }
-            else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
-          }
+          else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
         }
       }
 
-      // 3. lesson_location — but skip '0' (iSpring init value, never meaningful)
+      // 4. pg_X fallback: count of UNIQUE slide-sections visited (not the
+      //    monotonic pg_X index).  Combined with suspendDataKeyMap, revisiting
+      //    a section reuses the same key, so PREV doesn't inflate this count.
       if (!currentPos) {
-        const loc = CMI['cmi.core.lesson_location'] || '';
-        if (loc && loc !== 'video_seconds' && loc !== 'video_duration') {
-          const fv = parseFloat(loc);
-          if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
-          else {
-            const idx = pkgSlideOrder.indexOf(loc);
-            if (idx >= 0) { currentPos = idx + 1; }
-            else { const m = /^(\d+)/.exec(loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
-          }
-        }
+        const pgVisited = Object.keys(slideTimings)
+          .filter(k => /^pg_/.test(k) && slideTimings[k] > 0).length;
+        if (pgVisited > 0) currentPos = pgVisited;
       }
 
-      // 4. Count slides with genuine time (last resort)
+      // 5. Numeric slideTimings keys — last resort for packages that set numeric
+      //    lesson_location via the hash or suspend_data with no other signal.
       if (!currentPos) {
-        const visited = Object.keys(slideTimings)
-          .filter(k => k !== 'video_seconds' && k !== 'video_duration' && slideTimings[k] > 0);
-        if (visited.length) {
-          const nums = visited.map(k => {
-            const n = parseInt(k);
-            if (!isNaN(n) && n > 0) return n;
-            const pg = /^pg_(\d+)$/.exec(k); // LMSCommit-based pg_X synthetic key
-            return pg ? parseInt(pg[1]) : 0;
-          }).filter(n => n > 0);
-          currentPos = (nums.length ? Math.max(...nums) : 0) || visited.length;
-        }
+        const numKeys = Object.keys(slideTimings)
+          .filter(k => k !== 'video_seconds' && k !== 'video_duration' && !/^pg_/.test(k) && slideTimings[k] > 0)
+          .map(k => parseInt(k)).filter(n => !isNaN(n) && n > 0);
+        if (numKeys.length) currentPos = Math.max(...numKeys);
       }
 
       if (currentPos > 0) {
