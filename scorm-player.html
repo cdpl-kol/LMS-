@@ -805,12 +805,14 @@ async function loadContent() {
       // Heartbeat: save every 60s even if no LMSCommit fires
       setInterval(() => { if (initialized && dirty) saveTracking(false); }, 60000);
 
-      // Best-effort: catch postMessage events that some SCORM packages emit on
-      // slide change (including PREV). If iSpring or another tool broadcasts
-      // slide info via postMessage we can update the progress bar without
-      // relying solely on LMSSetValue (which some tools skip on PREV).
+      // postMessage fallback: only for packages that do NOT use LMSSetValue for
+      // lesson_location (scormApiSetLocation=false). When lesson_location IS
+      // managed by the SCORM API (scormApiSetLocation=true), postMessages are
+      // unreliable — iSpring sends completion events (e.g. {slide:5}) even after
+      // pressing PREV to slide 4, which would override the correct lesson_location
+      // and push progress back up. So we ignore postMessages in that case.
       window.addEventListener('message', function(ev) {
-        if (!initialized || !scormApiSetLocation) return;
+        if (!initialized || scormApiSetLocation) return;
         try {
           const d = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data;
           if (!d || typeof d !== 'object') return;
