@@ -446,6 +446,8 @@ window.API = {
   LMSSetValue: function(element, value) {
     if (!initialized) return 'false';
     if (CMI_READONLY.has(element)) return 'false';
+    // Diagnostic logging — helps trace PREV navigation issues
+    console.log(`[SCORM] SetValue: ${element} = "${value}" | loc="${CMI['cmi.core.lesson_location']}" scormApiSet=${scormApiSetLocation} currentSlide=${currentSlide}`);
     // While justRestarted: SCORM content re-syncs its own cached state.
     // Ignore score and status so they don't overwrite our clean reset.
     // lesson_location updates are still allowed (content navigating to slide 1).
