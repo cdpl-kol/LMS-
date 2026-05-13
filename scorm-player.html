@@ -107,6 +107,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
   <div class="status-item"><i class="fas fa-chart-line"></i>Progress: <span class="status-val" id="progressDisplay">0%</span></div>
   <div class="status-item"><i class="fas fa-clock"></i>Time: <span class="status-val" id="timeDisplay">00:00</span></div>
   <div class="status-item" style="margin-left:auto;"><i class="fas fa-wifi"></i><span id="syncStatus" style="color:#81c784;">Saved</span></div>
+  <div class="status-item"><button onclick="(function(){var el=document.getElementById('scormDebug');el.style.display=el.style.display==='none'?'block':'none';})()" style="background:#333;color:#0f0;border:1px solid #0f0;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:monospace;">DBG</button></div>
 </div>
 <!-- PROGRESS BAR (thin line below status bar) -->
 <div style="height:3px;background:#1a237e;width:100%;">
