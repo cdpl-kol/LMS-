@@ -209,6 +209,7 @@ let pkgSlideOrder = [];   // slide_order array from package (for GUID-based SCOR
 let scormApiSetLocation = false; // true when SCORM content sets lesson_location via LMSSetValue
 let lastSuspendData = '';        // fingerprint: detect slide changes via suspend_data
 let commitSlideCount = 0;        // synthetic slide counter for LMSCommit-based tracking
+const suspendDataKeyMap = new Map(); // suspend_data → pg_index: reuse same key on PREV so progress decreases
 let currentPkgPath = '';  // stored so Restart can reload the iframe
 // After restart, SCORM content re-initializes from its own internal cache and
 // immediately calls LMSSetValue with old score/status. We ignore those updates
@@ -225,6 +226,17 @@ let slideTimings = {};       // { slideId: totalSecondsSpent }
 let slideVisits  = {};       // { slideId: visitCount }
 let currentSlide = null;
 let slideStartTime = null;
+
+// Returns a stable pg_X key for the given suspend_data.
+// Same suspend_data (revisiting a slide via PREV) → same key → currentSlide goes back → progress decreases.
+function getPgKey(suspendData) {
+  if (suspendDataKeyMap.has(suspendData)) {
+    return 'pg_' + suspendDataKeyMap.get(suspendData);
+  }
+  commitSlideCount++;
+  suspendDataKeyMap.set(suspendData, commitSlideCount);
+  return 'pg_' + commitSlideCount;
+}
 
 function recordSlideTime(slideId) {
   if (!slideId) return;
@@ -385,6 +397,7 @@ window.API = {
       scormApiSetLocation = false;
       lastSuspendData     = '';
       commitSlideCount    = 0;
+      suspendDataKeyMap.clear();
       justRestarted       = true;
       dirty               = false;
       sessionStart        = Date.now();
@@ -447,8 +460,7 @@ window.API = {
     if (element === 'cmi.suspend_data' && value && value !== lastSuspendData) {
       lastSuspendData = value;
       if (!scormApiSetLocation) {
-        commitSlideCount++;
-        recordSlideTime('pg_' + commitSlideCount);
+        recordSlideTime(getPgKey(value));
         // Save immediately on slide change so new slide visit isn't lost if user exits
         saveTracking(false);
       }
@@ -473,8 +485,7 @@ window.API = {
       const suspendNow = CMI['cmi.suspend_data'] || '';
       if (suspendNow !== lastSuspendData) {
         lastSuspendData = suspendNow;
-        commitSlideCount++;
-        recordSlideTime('pg_' + commitSlideCount);
+        recordSlideTime(getPgKey(suspendNow));
       } else if (currentSlide === null) {
         // First commit with no slide detected yet — count as slide 1
         commitSlideCount++;
@@ -933,6 +944,7 @@ async function restartSCORM() {
   scormApiSetLocation = false;
   lastSuspendData     = '';
   commitSlideCount    = 0;
+  suspendDataKeyMap.clear();
   justRestarted       = true;
   initialized         = false;
   dirty               = false;
