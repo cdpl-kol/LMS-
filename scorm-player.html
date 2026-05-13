@@ -289,89 +289,73 @@ function updateStatusBar() {
   let pct = 0;
   if (!justRestarted) {
     const st = CMI['cmi.core.lesson_status'] || 'not attempted';
-    if (st === 'completed' || st === 'passed') {
-      pct = 100;
-    } else {
-      // ── Resolve current slide position from multiple sources ──────────────
-      let currentPos = 0;
+    const isCompleted = (st === 'completed' || st === 'passed');
 
-      // 1. lesson_location — most authoritative: SCORM content sets this on
-      //    EVERY navigation (NEXT and PREV), so it always reflects the CURRENT
-      //    slide. Moved to Check 1 so PREV correctly decreases the bar.
-      //    Skip '0' (iSpring init sentinel) and non-slide keys.
-      const _loc = CMI['cmi.core.lesson_location'] || '';
-      if (_loc && _loc !== '0' && _loc !== 'video_seconds' && _loc !== 'video_duration') {
-        const fv = parseFloat(_loc);
-        if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
-        else {
-          const idx = pkgSlideOrder.indexOf(_loc);
-          if (idx >= 0) { currentPos = idx + 1; }
-          else { const m = /^(\d+)/.exec(_loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
-        }
-      }
+    // ── Resolve current slide position from multiple sources ──────────────
+    // NOTE: We do this even when completed/passed so that PREV decreases the bar.
+    // Completed status only forces 100% if no current position is available.
+    let currentPos = 0;
 
-      // 2. iframe hash — for packages that navigate via URL fragment without
-      //    calling LMSSetValue('lesson_location',...).  Skip when the SCORM
-      //    API is managing lesson_location (hash is stale in that case).
-      if (!currentPos && !scormApiSetLocation) {
-        try {
-          const frame = document.getElementById('scormFrame');
-          if (frame && frame.contentWindow) {
-            const h = frame.contentWindow.location.hash;
-            const nums = (h.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 5000);
-            if (nums.length) currentPos = nums[0];
-          }
-        } catch(e) {}
-      }
-
-      // 3. currentSlide (numeric / GUID keys only, NOT pg_X synthetic keys).
-      //    pg_X keys are excluded here because their index always increases
-      //    even on PREV — they are counted separately in Check 4 instead.
-      if (!currentPos && currentSlide && !/^pg_/.test(currentSlide)) {
-        const fv = parseFloat(currentSlide);
-        if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
-        else {
-          const idx = pkgSlideOrder.indexOf(currentSlide);
-          if (idx >= 0) { currentPos = idx + 1; }
-          else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
-        }
-      }
-
-      // 4. iframe DOM reader — for iSpring packages that never send lesson_location.
-      //    readSlideFromIframe() polls the iframe's visible slide counter ("X / Y")
-      //    every 800ms and writes to iframeSlidePos. This is the actual current
-      //    slide, so it DECREASES on PREV — exactly what we need.
-      if (!currentPos && iframeSlidePos > 0) {
-        currentPos = iframeSlidePos;
-      }
-
-      // 5. pg_X fallback (last resort: suspend_data bitmask count).
-      //    commitSlideCount only increments when bitmask '1' bits grow (new slide).
-      //    Progress holds on PREV here, but never increases incorrectly.
-      if (!currentPos && commitSlideCount > 0) {
-        currentPos = commitSlideCount;
-      }
-
-      // NOTE: We intentionally do NOT use Math.max(slideTimings numeric keys)
-      // as a fallback here. That approach always returns the highest slide ever
-      // visited, so whenever lesson_location is temporarily '0' (iSpring
-      // reset sentinel) between slide navigations, the bar would jump to the
-      // max-visited position — which looks like an increase on PREV.
-
-      if (currentPos > 0) {
-        if (totalSlidesInPkg > 0) {
-          pct = Math.min(100, Math.round((currentPos / totalSlidesInPkg) * 100));
-        } else {
-          pct = Math.min(99, currentPos * 5);
-        }
-      }
-
-      // If no position found at all (e.g. lesson_location just got reset to '0'
-      // mid-navigation), keep the last displayed % rather than flickering to 0.
-      if (pct === 0 && _lastDisplayedPct > 0) {
-        pct = _lastDisplayedPct;
+    // 1. lesson_location — authoritative for packages that use it.
+    //    Skip '0' (iSpring init sentinel) and non-slide keys.
+    const _loc = CMI['cmi.core.lesson_location'] || '';
+    if (_loc && _loc !== '0' && _loc !== 'video_seconds' && _loc !== 'video_duration') {
+      const fv = parseFloat(_loc);
+      if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
+      else {
+        const idx = pkgSlideOrder.indexOf(_loc);
+        if (idx >= 0) { currentPos = idx + 1; }
+        else { const m = /^(\d+)/.exec(_loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
       }
     }
+
+    // 2. iframe hash — for packages that navigate via URL fragment.
+    if (!currentPos && !scormApiSetLocation) {
+      try {
+        const frame = document.getElementById('scormFrame');
+        if (frame && frame.contentWindow) {
+          const h = frame.contentWindow.location.hash;
+          const nums = (h.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 5000);
+          if (nums.length) currentPos = nums[0];
+        }
+      } catch(e) {}
+    }
+
+    // 3. currentSlide (numeric / GUID keys only, NOT pg_X synthetic keys).
+    if (!currentPos && currentSlide && !/^pg_/.test(currentSlide)) {
+      const fv = parseFloat(currentSlide);
+      if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
+      else {
+        const idx = pkgSlideOrder.indexOf(currentSlide);
+        if (idx >= 0) { currentPos = idx + 1; }
+        else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
+      }
+    }
+
+    // 4. iframe DOM reader — for suspend_data-only packages (no lesson_location).
+    //    Decreases on PREV since it reads the ACTUAL current slide from iSpring UI.
+    if (!currentPos && iframeSlidePos > 0 && iframeSlidePos < 1000) {
+      currentPos = iframeSlidePos;
+    }
+
+    // 5. pg_X fallback — commit-based bitmask count. Holds on PREV (never increases).
+    if (!currentPos && commitSlideCount > 0) {
+      currentPos = commitSlideCount;
+    }
+
+    if (currentPos > 0) {
+      if (totalSlidesInPkg > 0) {
+        pct = Math.min(100, Math.round((currentPos / totalSlidesInPkg) * 100));
+      } else {
+        pct = Math.min(99, currentPos * 5);
+      }
+    }
+
+    // Completed with no position info → default to 100%
+    if (isCompleted && pct === 0) pct = 100;
+
+    // Hold last displayed % during lesson_location='0' sentinel window
+    if (pct === 0 && _lastDisplayedPct > 0) pct = _lastDisplayedPct;
   }
   _lastDisplayedPct = pct;
   document.getElementById('progressDisplay').textContent = pct + '%';
@@ -499,6 +483,9 @@ function readSlideFromIframe() {
         }
       }
     } catch(e) {}
+
+    // Reject obviously wrong values (animation timers, pixel sizes, etc.)
+    if (pos >= 1000) pos = 0;
 
     if (pos && pos !== iframeSlidePos) {
       iframeSlidePos = pos;
