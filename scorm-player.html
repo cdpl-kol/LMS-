@@ -152,7 +152,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
 
 <!-- DEBUG OVERLAY — remove after diagnosis -->
 <div id="scormDebug" style="position:fixed;bottom:8px;left:8px;background:rgba(0,0,0,0.9);color:#0f0;font:11px monospace;padding:10px 12px;border-radius:6px;z-index:99999;width:480px;max-height:260px;overflow-y:auto;word-break:break-all;pointer-events:none;display:none;">
-  <div style="color:#ff0;margin-bottom:4px;">SCORM Debug — <span id="scormDebugPct" style="color:#fff;">pct=0%</span> | commitSlides=<span id="scormDebugCsc">0</span> | bits=<span id="scormDebugBits">0</span></div>
+  <div style="color:#ff0;margin-bottom:4px;">SCORM Debug — <span id="scormDebugPct" style="color:#fff;">pct=0%</span> | slides=<span id="scormDebugCsc">0</span> | bits=<span id="scormDebugBits">0</span> | iframePos=<span id="scormDebugIframe" style="color:#0ff;">?</span></div>
   <div id="scormDebugLog"></div>
 </div>
 
@@ -337,10 +337,17 @@ function updateStatusBar() {
         }
       }
 
-      // 4. pg_X fallback (suspend_data-only packages with no lesson_location).
-      //    Use commitSlideCount which is only incremented when the visited-slide
-      //    bitmask in suspend_data grows (i.e. a genuinely new slide was reached).
-      //    PREV never increments it because revisited slides keep their '1' bit.
+      // 4. iframe DOM reader — for iSpring packages that never send lesson_location.
+      //    readSlideFromIframe() polls the iframe's visible slide counter ("X / Y")
+      //    every 800ms and writes to iframeSlidePos. This is the actual current
+      //    slide, so it DECREASES on PREV — exactly what we need.
+      if (!currentPos && iframeSlidePos > 0) {
+        currentPos = iframeSlidePos;
+      }
+
+      // 5. pg_X fallback (last resort: suspend_data bitmask count).
+      //    commitSlideCount only increments when bitmask '1' bits grow (new slide).
+      //    Progress holds on PREV here, but never increases incorrectly.
       if (!currentPos && commitSlideCount > 0) {
         currentPos = commitSlideCount;
       }
@@ -372,6 +379,8 @@ function updateStatusBar() {
   try {
     const dp = document.getElementById('scormDebugPct');
     if (dp) dp.textContent = 'pct=' + pct + '%';
+    const di = document.getElementById('scormDebugIframe');
+    if (di) di.textContent = iframeSlidePos || '?';
   } catch(e) {}
 }
 
@@ -389,6 +398,64 @@ setInterval(() => {
   const m = Math.floor(secs / 60), s = secs % 60;
   document.getElementById('timeDisplay').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }, 1000);
+
+// ── IFRAME SLIDE POSITION READER ─────────────────────────────────────────
+// For suspend_data-only packages (no lesson_location), read iSpring's visible
+// slide counter from the iframe DOM directly. Since the iframe is same-origin
+// we can access its document. This gives the REAL current slide (decreases on PREV).
+let iframeSlidePos = 0;
+
+function readSlideFromIframe() {
+  if (scormApiSetLocation) return;   // lesson_location packages handle themselves
+  if (!initialized) return;
+  try {
+    const frame = document.getElementById('scormFrame');
+    if (!frame || !frame.contentDocument || !frame.contentDocument.body) return;
+
+    // Strategy 1: look for "X / Y" or "X of Y" text in the page
+    const allText = (frame.contentDocument.body.innerText || '');
+    const m = allText.match(/\b(\d{1,3})\s*[\/]\s*(\d{1,3})\b/);
+    if (m) {
+      const cur = parseInt(m[1]), tot = parseInt(m[2]);
+      if (tot > 1 && cur > 0 && cur <= tot) {
+        if (totalSlidesInPkg <= 0 || tot > totalSlidesInPkg) totalSlidesInPkg = tot;
+        if (cur !== iframeSlidePos) {
+          iframeSlidePos = cur;
+          updateStatusBar();
+        }
+        return;
+      }
+    }
+
+    // Strategy 2: aria progress bar (aria-valuenow / aria-valuemax)
+    const progressEl = frame.contentDocument.querySelector('[aria-valuenow][aria-valuemax]');
+    if (progressEl) {
+      const now = parseInt(progressEl.getAttribute('aria-valuenow') || '0');
+      const max = parseInt(progressEl.getAttribute('aria-valuemax') || '0');
+      if (max > 1 && now > 0 && now <= max) {
+        if (totalSlidesInPkg <= 0 || max > totalSlidesInPkg) totalSlidesInPkg = max;
+        if (now !== iframeSlidePos) {
+          iframeSlidePos = now;
+          updateStatusBar();
+        }
+        return;
+      }
+    }
+
+    // Strategy 3: data-slide-index or data-index attribute on active element
+    const active = frame.contentDocument.querySelector('[data-slide-index],[data-index],[data-slide]');
+    if (active) {
+      const idx = parseInt(active.getAttribute('data-slide-index') || active.getAttribute('data-index') || active.getAttribute('data-slide') || '0');
+      if (idx > 0) {
+        if (idx !== iframeSlidePos) { iframeSlidePos = idx; updateStatusBar(); }
+        return;
+      }
+    }
+  } catch(e) {
+    // Cross-origin or DOM not ready — silently skip
+  }
+}
+setInterval(readSlideFromIframe, 800);
 
 // ── SCORM 1.2 API ─────────────────────────────────────────────────
 window.API = {
@@ -418,6 +485,7 @@ window.API = {
       lastSuspendData     = '';
       commitSlideCount    = 0;
       suspendBitCount     = 0;
+      iframeSlidePos      = 0;
       suspendDataKeyMap.clear();
       _lastDisplayedPct   = 0;
       justRestarted       = true;
