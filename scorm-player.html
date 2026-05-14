@@ -246,6 +246,31 @@ function countVisitedBits(sd) {
   return total;
 }
 
+// Try to extract the CURRENT slide position from suspend_data.
+// iSpring SCORM 1.2 suspend_data typically encodes current slide as:
+//   "N|bitmask"  or  "N,bitmask"  (N = 0-based slide index)
+//   or JSON: {"cs":N, ...} / {"curSlide":N, ...}
+// Returns 1-based slide number, or 0 if not found.
+function parseCurrentSlideFromSuspendData(sd) {
+  if (!sd || typeof sd !== 'string') return 0;
+  // Pattern: leading integer followed by | or ,
+  var m = sd.match(/^(\d+)[|,]/);
+  if (m) {
+    var n = parseInt(m[1]);
+    if (n >= 0 && n < 5000) return n + 1; // 0-based → 1-based
+  }
+  // JSON format
+  try {
+    var obj = JSON.parse(sd);
+    var keys = ['cs', 'curSlide', 'currentSlide', 'cur', 'slide', 'page', 'currentPage'];
+    for (var i = 0; i < keys.length; i++) {
+      var v = obj[keys[i]];
+      if (typeof v === 'number' && v >= 0 && v < 5000) return Math.floor(v) + 1;
+    }
+  } catch(e) {}
+  return 0;
+}
+
 function recordSlideTime(slideId) {
   if (!slideId) return;
   // First real slide visit after restart — clear the restart guard
@@ -616,6 +641,14 @@ window.API = {
     // visited slides keep their '1' bit), so progress never increases on PREV.
     if (element === 'cmi.suspend_data' && value && value !== lastSuspendData) {
       lastSuspendData = value;
+
+      // Try to read current slide from suspend_data encoding (works for BOTH NEXT and
+      // PREV). iSpring encodes the active slide index in suspend_data even when it does
+      // not update lesson_location on PREV. The min() guard in updateStatusBar() ensures
+      // this can only DECREASE progress below lesson_location, never inflate it.
+      const sdSlide = parseCurrentSlideFromSuspendData(value);
+      if (sdSlide > 0) iframeSlidePos = sdSlide;
+
       if (!scormApiSetLocation) {
         const newBits = countVisitedBits(value);
         if (newBits > suspendBitCount) {
