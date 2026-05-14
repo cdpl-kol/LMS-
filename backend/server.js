@@ -3701,18 +3701,20 @@ if (!courseMap[cid]) courseMap[cid] = { slides_visited: 0, total_slides: 0, scor
         const slOrdHasGuids = slOrd && slOrd.some(id => !/^\d+$/.test(id));
         const posKeyRe = /^[a-zA-Z_]*(\d+)$/;
         const visitedSet = new Set();
-        Object.keys(st)
-          .filter(k => k !== 'video_seconds' && k !== 'video_duration')
-          .forEach(k => {
-            // Threshold > 1: exclude old Math.max(1,...) artifacts (instant-cached slides = exactly 1s)
-            if ((st[k] || 0) > 1) {
-              if (slOrdHasGuids && !slOrd.includes(k)) {
-                const m = k.match(posKeyRe);
-                if (m) { const idx = parseInt(m[1]) - 1; if (idx >= 0 && idx < slOrd.length) { visitedSet.add(slOrd[idx]); return; } }
-              }
-              visitedSet.add(k);
-            }
-          });
+        // Merge both slide_times and slide_visits keys — a slide counts as visited
+        // if it appears in either map. slide_times key may have 0 seconds (e.g. the
+        // last slide when LMSFinish fires immediately after lesson_location changes).
+        const allVisitedKeys = new Set([
+          ...Object.keys(st).filter(k => k !== 'video_seconds' && k !== 'video_duration'),
+          ...Object.keys(sv).filter(k => (sv[k] || 0) >= 1)
+        ]);
+        allVisitedKeys.forEach(k => {
+          if (slOrdHasGuids && !slOrd.includes(k)) {
+            const m = k.match(posKeyRe);
+            if (m) { const idx = parseInt(m[1]) - 1; if (idx >= 0 && idx < slOrd.length) { visitedSet.add(slOrd[idx]); return; } }
+          }
+          visitedSet.add(k);
+        });
         courseMap[cid].slides_visited += visitedSet.size;
         // Use slide_order length as authoritative total when total_slides is missing/wrong
         const effectiveTotal = Math.max(row.total_slides || 0, row.slide_order?.length || 0);
