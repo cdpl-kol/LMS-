@@ -215,7 +215,8 @@ let totalSlidesInPkg = 0;  // set after package loads
 let pkgSlideOrder = [];   // slide_order array from package (for GUID-based SCORM)
 let scormApiSetLocation = false; // true when SCORM content sets lesson_location via LMSSetValue
 let lastSuspendData = '';        // fingerprint: detect slide changes via suspend_data
-let commitSlideCount = 0;        // synthetic slide counter for LMSCommit-based tracking
+let commitSlideCount = 0;        // max slide reached (monotonic, used for scoring)
+let currentCommitPos = 0;       // current displayed position (decreases on PREV)
 const suspendDataKeyMap = new Map(); // suspend_data → pg_index: reuse same key on PREV so progress decreases
 let currentPkgPath = '';  // stored so Restart can reload the iframe
 // After restart, SCORM content re-initializes from its own internal cache and
@@ -350,9 +351,9 @@ function updateStatusBar() {
       }
     }
 
-    // 5. pg_X fallback — commit-based bitmask count. Holds on PREV (never increases).
-    if (!currentPos && commitSlideCount > 0) {
-      currentPos = commitSlideCount;
+    // 5. pg_X fallback — bitmask-based position (decreases on PREV via currentCommitPos).
+    if (!currentPos && currentCommitPos > 0) {
+      currentPos = currentCommitPos;
     }
 
     if (currentPos > 0) {
@@ -534,6 +535,7 @@ window.API = {
       scormApiSetLocation = false;
       lastSuspendData     = '';
       commitSlideCount    = 0;
+      currentCommitPos    = 0;
       suspendBitCount     = 0;
       iframeSlidePos      = 0;
       suspendDataKeyMap.clear();
@@ -662,12 +664,16 @@ window.API = {
       if (!scormApiSetLocation) {
         const newBits = countVisitedBits(value);
         if (newBits > suspendBitCount) {
+          // NEXT to new slide: both counters advance
           suspendBitCount = newBits;
           commitSlideCount++;
+          currentCommitPos = commitSlideCount;
           recordSlideTime('pg_' + commitSlideCount);
           saveTracking(false);
+        } else {
+          // PREV (or NEXT to already-visited slide): bit count unchanged → go back
+          currentCommitPos = Math.max(1, currentCommitPos - 1);
         }
-        // PREV detected (bit count didn't increase) — hold current progress, no new pg_X
       }
     }
     // Also trigger auto-save after 3s of inactivity
@@ -1191,6 +1197,7 @@ async function restartSCORM() {
   scormApiSetLocation = false;
   lastSuspendData     = '';
   commitSlideCount    = 0;
+  currentCommitPos    = 0;
   suspendDataKeyMap.clear();
   _lastDisplayedPct   = 0;
   justRestarted       = true;
