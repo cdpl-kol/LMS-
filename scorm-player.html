@@ -611,6 +611,12 @@ window.API = {
     if (element === 'cmi.core.lesson_location' && value && value !== '0') {
       recordSlideTime(value);
       scormApiSetLocation = true;
+      // Keep iframeSlidePos in sync when lesson_location advances (NEXT navigation).
+      // This gives the PREV button hook a correct starting point to decrement from.
+      const _newLoc = Math.floor(parseFloat(value));
+      if (!isNaN(_newLoc) && _newLoc > 0 && _newLoc > iframeSlidePos) {
+        iframeSlidePos = _newLoc;
+      }
     }
     // Fallback: detect FORWARD slide changes via suspend_data bitmask for packages
     // that never call lesson_location. Count '1' bits in iSpring's visited-slide
@@ -957,6 +963,52 @@ async function loadContent() {
             }
           } catch(e) {} // cross-origin guard (same-origin should always pass)
         }, 500);
+
+        // ── PREV/NEXT button hook (iSpring lesson_location packages) ────────────
+        // iSpring does not update lesson_location on PREV. We hook the PREV/NEXT
+        // buttons inside the (same-origin) iframe directly. PREV decrements
+        // iframeSlidePos; NEXT increments it. The min() guard in updateStatusBar
+        // means iframeSlidePos can only lower progress — it never inflates it above
+        // lesson_location (which tracks the max slide reached via NEXT).
+        let _prevTs = 0, _nextTs = 0;
+        function hookNavButtons() {
+          if (!scormApiSetLocation) return; // only needed for lesson_location packages
+          try {
+            const fdoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+            if (!fdoc || !fdoc.body) return;
+            const candidates = fdoc.querySelectorAll('button,a,div,span,li,td,[role="button"]');
+            candidates.forEach(el => {
+              if (el._lmsNav) return;
+              // Strip arrow chars + whitespace, uppercase — must equal PREV or NEXT exactly
+              const txt = (el.innerText || el.textContent || '')
+                .replace(/[←→▸◂←→\s]/g, '').toUpperCase();
+              const isPrev = txt === 'PREV' || txt === 'PREVIOUS';
+              const isNext = txt === 'NEXT';
+              if (!isPrev && !isNext) return;
+              el._lmsNav = true;
+              el.addEventListener('click', function() {
+                const now = Date.now();
+                if (isPrev) {
+                  if (now - _prevTs < 600) return;
+                  _prevTs = now;
+                  const base = iframeSlidePos > 0
+                    ? iframeSlidePos
+                    : (Math.floor(parseFloat(CMI['cmi.core.lesson_location'] || '')) || commitSlideCount || 1);
+                  iframeSlidePos = Math.max(1, base - 1);
+                  updateStatusBar();
+                } else {
+                  if (now - _nextTs < 600) return;
+                  _nextTs = now;
+                  iframeSlidePos = (iframeSlidePos || 0) + 1;
+                  // lesson_location LMSSetValue will also fire and clamp upward if needed
+                  updateStatusBar();
+                }
+              }, true);
+            });
+          } catch(e) {}
+        }
+        setTimeout(hookNavButtons, 1200);
+        setInterval(hookNavButtons, 2500); // re-hook after iSpring re-renders nav
       };
       frame.onerror = () => showError('Failed to load SCORM content. The package may be corrupted.');
       frame.src = pkg.upload_path;
