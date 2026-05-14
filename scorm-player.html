@@ -296,25 +296,31 @@ function updateStatusBar() {
     // Completed status only forces 100% if no current position is available.
     let currentPos = 0;
 
-    // 1. iframe DOM reader — PRIMARY source. Always reflects the ACTUAL visible
-    //    slide, so pressing PREV decreases it even when lesson_location only moves
-    //    forward (iSpring bookmark behaviour). Disabled until the iframe loads.
-    if (iframeSlidePos > 0 && iframeSlidePos < 1000) {
-      currentPos = iframeSlidePos;
+    // 1. lesson_location — primary source (updated synchronously inside LMSSetValue,
+    //    no polling delay). Skip '0' (iSpring init sentinel) and non-slide keys.
+    const _loc = CMI['cmi.core.lesson_location'] || '';
+    if (_loc && _loc !== '0' && _loc !== 'video_seconds' && _loc !== 'video_duration') {
+      const fv = parseFloat(_loc);
+      if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
+      else {
+        const idx = pkgSlideOrder.indexOf(_loc);
+        if (idx >= 0) { currentPos = idx + 1; }
+        else { const m = /^(\d+)/.exec(_loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
+      }
     }
 
-    // 2. lesson_location — authoritative fallback when DOM reader can't read.
-    //    Skip '0' (iSpring init sentinel) and non-slide keys.
-    if (!currentPos) {
-      const _loc = CMI['cmi.core.lesson_location'] || '';
-      if (_loc && _loc !== '0' && _loc !== 'video_seconds' && _loc !== 'video_duration') {
-        const fv = parseFloat(_loc);
-        if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
-        else {
-          const idx = pkgSlideOrder.indexOf(_loc);
-          if (idx >= 0) { currentPos = idx + 1; }
-          else { const m = /^(\d+)/.exec(_loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
-        }
+    // 2. iframe DOM reader override — allow PREV to decrease below lesson_location.
+    //    Some packages (e.g. iSpring) only advance lesson_location going forward
+    //    (resume bookmark); the DOM reader reads the ACTUAL visible slide in real
+    //    time, so on PREV it gives a lower value. We accept it only when it is
+    //    strictly lower than what lesson_location reports — this prevents stale
+    //    or wrong DOM readings from inflating progress above lesson_location.
+    //    If lesson_location is absent (0), accept any valid DOM reading directly.
+    if (iframeSlidePos > 0 && iframeSlidePos < 1000) {
+      if (currentPos > 0) {
+        if (iframeSlidePos < currentPos) currentPos = iframeSlidePos; // PREV decrease
+      } else {
+        currentPos = iframeSlidePos; // no lesson_location: use DOM directly
       }
     }
 
