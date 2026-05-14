@@ -635,8 +635,28 @@ window.API = {
       // PREV detection for iSpring packages that use lesson_location:
       // NEXT fires lesson_location THEN suspend_data → _lessonLocUpdated=true → skip
       // PREV fires ONLY suspend_data → _lessonLocUpdated=false → decrement iframeSlidePos
+      try {
+        const dbgBox = document.getElementById('scormDebug');
+        if (dbgBox && dbgBox.style.display !== 'none') {
+          const dbg = document.getElementById('scormDebugLog');
+          const line = document.createElement('div');
+          line.style.color = '#f0f';
+          line.textContent = '[SD] scormApiLoc=' + scormApiSetLocation + ' llUpd=' + _lessonLocUpdated + ' iframePos=' + iframeSlidePos;
+          dbg.insertBefore(line, dbg.firstChild);
+        }
+      } catch(e) {}
       if (scormApiSetLocation && !_lessonLocUpdated && iframeSlidePos > 0) {
         iframeSlidePos = Math.max(1, iframeSlidePos - 1);
+        try {
+          const dbgBox = document.getElementById('scormDebug');
+          if (dbgBox && dbgBox.style.display !== 'none') {
+            const dbg = document.getElementById('scormDebugLog');
+            const line = document.createElement('div');
+            line.style.color = '#f55';
+            line.textContent = '[PREV-DEC] iframePos now=' + iframeSlidePos;
+            dbg.insertBefore(line, dbg.firstChild);
+          }
+        } catch(e) {}
       }
 
       if (!scormApiSetLocation) {
