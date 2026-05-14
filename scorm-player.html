@@ -235,6 +235,8 @@ let currentSlide = null;
 let slideStartTime = null;
 let _lastDisplayedPct = 0;  // last valid % shown; keeps display stable when lesson_location='0'
 let suspendBitCount = 0;    // count of '1' bits in iSpring bitmask — monotonically non-decreasing
+let _lessonLocUpdated = false; // true for 800ms after lesson_location fires via LMSSetValue
+let _llTimer = null;
 
 // Count '1' bits in binary sequences (4+ chars of 0/1) inside suspend_data.
 // iSpring encodes a visited-slide bitmask there. Going PREV doesn't unset bits
@@ -617,6 +619,11 @@ window.API = {
       if (!isNaN(_newLoc) && _newLoc > 0 && _newLoc > iframeSlidePos) {
         iframeSlidePos = _newLoc;
       }
+      // Mark that lesson_location just fired — used by suspend_data handler to
+      // distinguish NEXT (lesson_location + suspend_data) from PREV (suspend_data only)
+      _lessonLocUpdated = true;
+      clearTimeout(_llTimer);
+      _llTimer = setTimeout(() => { _lessonLocUpdated = false; }, 800);
     }
     // Fallback: detect FORWARD slide changes via suspend_data bitmask for packages
     // that never call lesson_location. Count '1' bits in iSpring's visited-slide
@@ -624,6 +631,13 @@ window.API = {
     // visited slides keep their '1' bit), so progress never increases on PREV.
     if (element === 'cmi.suspend_data' && value && value !== lastSuspendData) {
       lastSuspendData = value;
+
+      // PREV detection for iSpring packages that use lesson_location:
+      // NEXT fires lesson_location THEN suspend_data → _lessonLocUpdated=true → skip
+      // PREV fires ONLY suspend_data → _lessonLocUpdated=false → decrement iframeSlidePos
+      if (scormApiSetLocation && !_lessonLocUpdated && iframeSlidePos > 0) {
+        iframeSlidePos = Math.max(1, iframeSlidePos - 1);
+      }
 
       if (!scormApiSetLocation) {
         const newBits = countVisitedBits(value);
