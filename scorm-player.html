@@ -296,20 +296,29 @@ function updateStatusBar() {
     // Completed status only forces 100% if no current position is available.
     let currentPos = 0;
 
-    // 1. lesson_location — authoritative for packages that use it.
+    // 1. iframe DOM reader — PRIMARY source. Always reflects the ACTUAL visible
+    //    slide, so pressing PREV decreases it even when lesson_location only moves
+    //    forward (iSpring bookmark behaviour). Disabled until the iframe loads.
+    if (iframeSlidePos > 0 && iframeSlidePos < 1000) {
+      currentPos = iframeSlidePos;
+    }
+
+    // 2. lesson_location — authoritative fallback when DOM reader can't read.
     //    Skip '0' (iSpring init sentinel) and non-slide keys.
-    const _loc = CMI['cmi.core.lesson_location'] || '';
-    if (_loc && _loc !== '0' && _loc !== 'video_seconds' && _loc !== 'video_duration') {
-      const fv = parseFloat(_loc);
-      if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
-      else {
-        const idx = pkgSlideOrder.indexOf(_loc);
-        if (idx >= 0) { currentPos = idx + 1; }
-        else { const m = /^(\d+)/.exec(_loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
+    if (!currentPos) {
+      const _loc = CMI['cmi.core.lesson_location'] || '';
+      if (_loc && _loc !== '0' && _loc !== 'video_seconds' && _loc !== 'video_duration') {
+        const fv = parseFloat(_loc);
+        if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
+        else {
+          const idx = pkgSlideOrder.indexOf(_loc);
+          if (idx >= 0) { currentPos = idx + 1; }
+          else { const m = /^(\d+)/.exec(_loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
+        }
       }
     }
 
-    // 2. iframe hash — for packages that navigate via URL fragment.
+    // 3. iframe hash — for packages that navigate via URL fragment.
     if (!currentPos && !scormApiSetLocation) {
       try {
         const frame = document.getElementById('scormFrame');
@@ -321,7 +330,7 @@ function updateStatusBar() {
       } catch(e) {}
     }
 
-    // 3. currentSlide (numeric / GUID keys only, NOT pg_X synthetic keys).
+    // 4. currentSlide (numeric / GUID keys only, NOT pg_X synthetic keys).
     if (!currentPos && currentSlide && !/^pg_/.test(currentSlide)) {
       const fv = parseFloat(currentSlide);
       if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
@@ -330,12 +339,6 @@ function updateStatusBar() {
         if (idx >= 0) { currentPos = idx + 1; }
         else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
       }
-    }
-
-    // 4. iframe DOM reader — for suspend_data-only packages (no lesson_location).
-    //    Decreases on PREV since it reads the ACTUAL current slide from iSpring UI.
-    if (!currentPos && iframeSlidePos > 0 && iframeSlidePos < 1000) {
-      currentPos = iframeSlidePos;
     }
 
     // 5. pg_X fallback — commit-based bitmask count. Holds on PREV (never increases).
@@ -390,7 +393,6 @@ setInterval(() => {
 let iframeSlidePos = 0;
 
 function readSlideFromIframe() {
-  if (scormApiSetLocation) return;
   if (!initialized) return;
   try {
     const frame = document.getElementById('scormFrame');
