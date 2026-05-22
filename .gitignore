@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment / secrets
+backend/.env
+.env
+
+# SCORM uploaded packages (large binary files)
+backend/uploads/
+
+# Android build
+android/
+
+# Claude session files
+.claude/
+
+# Local working files
+LMS_unpacked/
+*.docx
+
+# Build output
+www/
+
+# Logs
+*.log
+npm-debug.log*

@@ -134,14 +134,21 @@ app.use((req, res, next) => {
 
 // Static file serving with proper options for video streaming (range requests)
 const staticOptions = {
-  etag: false,
-  lastModified: false,
+  etag: true,
+  lastModified: true,
   setHeaders: (res, filePath) => {
     const ext = path.extname(filePath).toLowerCase();
     // No-cache for HTML files so changes reflect immediately
     if (ext === '.html') {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
+    }
+    // Cache SCORM/presentation JS & CSS for 1 hour.
+    // Prevents a cold-cache timing race on first load after server restart —
+    // Articulate dynamically loads per-slide JS chunks; if they arrive slowly
+    // (uncached) they can miss the video-pool initialization window.
+    else if (ext === '.js' || ext === '.css') {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
     }
     // Allow range requests for video files (needed for seek/scrub)
     if (['.mp4','.webm','.mov','.m4v','.ogg','.ogv'].includes(ext)) {
@@ -154,6 +161,154 @@ app.use(express.static(path.join(__dirname, '..'), staticOptions));
 // Serve uploads with video streaming support
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// ── SCORM HTML GUARD: protect Articulate's loadVideo from browser-extension interference ──
+// Root cause of "this.el.loadVideo is not a function" on slides 2+:
+//   Articulate pools/recycles <video> elements.  On each recycle, putVideoInPen calls
+//   n.insertBefore(el) which triggers browser-extension MutationObservers as microtasks.
+//   Those microtasks fire BEFORE Articulate's Promise.then(setElement+load) callback,
+//   so the extension can corrupt 'loadVideo' before Articulate calls it.
+//   F12/DevTools disconnects extension content-scripts, accidentally fixing the timing.
+//
+// Two-layer fix injected into every SCORM HTML file:
+//   Layer 1 – document.createElement override: makes loadVideo write-once (first fn wins).
+//   Layer 2 – video-pen guard: watches for Articulate's #video-pen container, then
+//             overrides its insertBefore/appendChild to (a) block non-video element
+//             injection by the extension, and (b) queue a microtask that runs AFTER the
+//             extension's MutationObserver but BEFORE Articulate's setElement+load
+//             Promise callback, restoring loadVideo from a saved copy if corrupted.
+app.use('/uploads/scorm', (req, res, next) => {
+  if (!req.path.match(/\.html?$/i)) return next();
+  const filePath = path.join(uploadsDir, 'scorm', decodeURIComponent(req.path.replace(/^\//, '')));
+  fs.readFile(filePath, 'utf8', (readErr, html) => {
+    if (readErr) return next();
+
+    // ── Layer 1: write-once loadVideo via document.createElement override ──────
+    // Articulate's factory C does:  t.loadVideo = function(url){…}
+    // Extension MutationObserver may later do: t.loadVideo = null / undefined
+    // Our accessor property ignores any assignment after the first valid function.
+    //
+    // ── Layer 2: #video-pen guard ────────────────────────────────────────────────
+    // Articulate stores pooled <video> elements inside a hidden div#video-pen.
+    // When putVideoInPen recycles an element it calls n.insertBefore(el,…).
+    // MutationObserver microtasks from the extension fire BEFORE Articulate's
+    // Promise.then(setElement+load) because:
+    //   insertBefore  → MO queued   [slot 1]
+    //   getNextInLine → dfd.resolve → Promise.then queued  [slot 3]
+    //   our guard     → Promise.resolve().then queued  [slot 2]
+    // By overriding pen.insertBefore we slot our restoration microtask at [2],
+    // which runs after the extension [1] but before Articulate uses the element [3].
+    const guard =
+      '<script>' +
+      '(function(){' +
+      'try{' +
+
+        // Diagnostic object – check window._ag in DevTools console
+        'window._ag={v:0,pen:false,blk:0,rst:0,err:[]};' +
+
+        // ── Layer 1: write-once loadVideo via document.createElement override ──
+        // loadVideo setter accepts first function, ignores all later writes.
+        // Also backs up fn to WeakMap for Layer 2 restoration.
+        'var _wm=typeof WeakMap!=="undefined"?new WeakMap():null;' +
+        'var _ce=document.createElement.bind(document);' +
+        'document.createElement=function(tag){' +
+          'var el=_ce(tag);' +
+          'if(typeof tag==="string"&&tag.toLowerCase()==="video"){' +
+            'window._ag.v++;' +
+            'var _lv;' +
+            'try{' +
+              'Object.defineProperty(el,"loadVideo",{' +
+                'get:function(){return _lv;},' +
+                'set:function(fn){' +
+                  'if(typeof fn==="function"){' +
+                    'if(_lv===undefined)_lv=fn;' +
+                    'if(_wm)_wm.set(el,_lv);' +
+                  '}' +
+                '},' +
+                'configurable:false,enumerable:true' +
+              '});' +
+            '}catch(_e2){window._ag.err.push("L1:"+_e2.message);}' +
+          '}' +
+          'return el;' +
+        '};' +
+
+        // ── Layer 2: pen guard via Node.prototype override ──────────────────────
+        // Override Node.prototype.insertBefore/appendChild globally so that even
+        // if the extension uses a cached native reference, we intercept calls going
+        // into #video-pen.  For non-pen nodes we call straight through.
+        //
+        // Key microtask ordering when putVideoInPen calls n.insertBefore(el):
+        //   [1] DOM mutation inside _ib → MO (extension) queued
+        //   [2] _qr() queues Promise.resolve().then → our restore queued
+        //   [3] getNextInLine → dfd.resolve → Articulate Promise.then queued
+        // FIFO: extension fires [1], we restore [2], Articulate uses element [3].
+        'var _origIB=Node.prototype.insertBefore;' +
+        'var _origAC=Node.prototype.appendChild;' +
+        'function _isPen(node){' +
+          'return node&&node.id==="video-pen";' +
+        '}' +
+        'function _qr(el,fn){' +
+          // Runs at microtask [2]: after extension MO [1], before Articulate Promise [3]
+          'Promise.resolve().then(function(){' +
+            'if(typeof el.loadVideo!=="function"){' +
+              'window._ag.rst++;' +
+              'try{' +
+                'var d=Object.getOwnPropertyDescriptor(el,"loadVideo");' +
+                'if(!d||d.configurable!==false){' +
+                  'Object.defineProperty(el,"loadVideo",{' +
+                    'value:fn,writable:false,configurable:false,enumerable:true' +
+                  '});' +
+                '}' +
+              '}catch(_e3){window._ag.err.push("L2r:"+_e3.message);}' +
+            '}' +
+          '});' +
+        '}' +
+        'function _penInsert(pen,n,r,origFn){' +
+          // Block non-video elements the extension might insert into pen
+          'if(n&&n.nodeType===1&&n.tagName!=="VIDEO"){window._ag.blk++;return n;}' +
+          // Save loadVideo fn BEFORE DOM mutation (guaranteed uncorrupted at this point)
+          'var fn=(n&&n.tagName==="VIDEO")?' +
+            '(typeof n.loadVideo==="function"?n.loadVideo:(_wm&&_wm.has(n)?_wm.get(n):null))' +
+            ':null;' +
+          'var res=origFn.call(pen,n,r);' + // DOM mutation → MO queued [1]
+          'if(fn)_qr(n,fn);' +              // queue restore [2] after MO [1]
+          'return res;' +
+        '}' +
+        'Node.prototype.insertBefore=function(n,r){' +
+          'if(_isPen(this))return _penInsert(this,n,r,_origIB);' +
+          'return _origIB.call(this,n,r);' +
+        '};' +
+        'Node.prototype.appendChild=function(n){' +
+          'if(_isPen(this)){' +
+            'if(n&&n.nodeType===1&&n.tagName!=="VIDEO"){window._ag.blk++;return n;}' +
+            'var fn=(n&&n.tagName==="VIDEO")?' +
+              '(typeof n.loadVideo==="function"?n.loadVideo:(_wm&&_wm.has(n)?_wm.get(n):null))' +
+              ':null;' +
+            'var res=_origAC.call(this,n);' +
+            'if(fn)_qr(n,fn);' +
+            'return res;' +
+          '}' +
+          'return _origAC.call(this,n);' +
+        '};' +
+        // Mark pen when created so _isPen is fast
+        'var _po=new MutationObserver(function(){' +
+          'var p=document.getElementById("video-pen");' +
+          'if(p){window._ag.pen=true;_po.disconnect();}' +
+        '});' +
+        '_po.observe(document.documentElement||document,{childList:true,subtree:true});' +
+        '(function(){var p=document.getElementById("video-pen");if(p){window._ag.pen=true;_po.disconnect();}})();' +
+
+      '}catch(e){if(window._ag)window._ag.err.push("top:"+e.message);}' +
+      '})();' +
+      '</script>';
+
+    const modified = html.replace(/<head>/i, '<head>' + guard);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.send(modified);
+  });
+});
+
 app.use('/uploads', express.static(uploadsDir, staticOptions));
 
 // ── RATE LIMITING ─────────────────────────────────────────────────────────────
@@ -4223,10 +4378,13 @@ app.get('/api/v1/scorm/analytics', auth, async (req, res) => {
       const visits = Math.round(slideVisits[id] || 0);
       const actualMs = slideDurations ? (slideDurations[id] || null) : null;
       const actualSec = actualMs ? Math.round(actualMs / 1000) : null;
-      // Threshold > 1: filters old Math.max(1,...) artifacts (instantly-cached slides got exactly 1s)
-      const viewed = spent > 1;
+      // Threshold > 1: filters old Math.max(1,...) artifacts (instantly-cached slides got exactly 1s).
+      // Also treat as viewed if visits > 0 — covers synthesized pg_N entries that have spent=0/1
+      // but were genuinely visited (slide_visits has the authoritative count from Articulate sidebar).
+      const viewed = spent > 1 || visits > 0;
       let diff = null;
-      if (viewed && actualSec !== null) {
+      // Only show diff when we have real time data (spent > 1); skip for synthesized 0-time entries
+      if (spent > 1 && actualSec !== null) {
         diff = spent - actualSec; // positive = over, negative = under
       }
       // Zero out artifact slides so footer totals stay accurate

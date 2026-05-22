@@ -105,6 +105,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
 <div class="statusbar">
   <div class="status-item"><i class="fas fa-circle-check"></i>Status: <span class="status-badge badge-gray status-val" id="statusBadge">Not Started</span></div>
   <div class="status-item"><i class="fas fa-chart-line"></i>Progress: <span class="status-val" id="progressDisplay">0%</span></div>
+  <div class="status-item" id="slidesTrackerItem" style="display:none"><i class="fas fa-layer-group"></i>Slides: <span class="status-val" id="slidesDisplay">0/0</span></div>
   <div class="status-item"><i class="fas fa-clock"></i>Time: <span class="status-val" id="timeDisplay">00:00</span></div>
   <div class="status-item" style="margin-left:auto;"><i class="fas fa-wifi"></i><span id="syncStatus" style="color:#81c784;">Saved</span></div>
   <div class="status-item"><button onclick="(function(){var el=document.getElementById('scormDebug');el.style.display=el.style.display==='none'?'block':'none';})()" style="background:#333;color:#0f0;border:1px solid #0f0;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;font-family:monospace;">DBG</button></div>
@@ -152,7 +153,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0f1117;color:#fff;heig
 
 <!-- DEBUG OVERLAY — remove after diagnosis -->
 <div id="scormDebug" style="position:fixed;bottom:8px;left:8px;background:rgba(0,0,0,0.9);color:#0f0;font:11px monospace;padding:10px 12px;border-radius:6px;z-index:99999;width:480px;max-height:260px;overflow-y:auto;word-break:break-all;pointer-events:none;display:none;">
-  <div style="color:#ff0;margin-bottom:4px;">SCORM Debug — <span id="scormDebugPct" style="color:#fff;">pct=0%</span> | slides=<span id="scormDebugCsc">0</span> | bits=<span id="scormDebugBits">0</span> | iframePos=<span id="scormDebugIframe" style="color:#0ff;">?</span></div>
+  <div style="color:#ff0;margin-bottom:4px;">SCORM Debug — <span id="scormDebugPct" style="color:#fff;">pct=0%</span> | slides=<span id="scormDebugCsc">0</span> | bits=<span id="scormDebugBits">0</span> | checked=<span id="scormDebugChecked" style="color:#0ff;">-1</span> | iframePos=<span id="scormDebugIframe" style="color:#0ff;">?</span></div>
   <div id="scormDebugLog"></div>
 </div>
 
@@ -238,15 +239,28 @@ let _lastDisplayedPct = 0;  // last valid % shown; keeps display stable when les
 let suspendBitCount = 0;    // count of '1' bits in iSpring bitmask — monotonically non-decreasing
 let _lessonLocUpdated = false; // true for 800ms after lesson_location fires via LMSSetValue
 let _llTimer = null;
+let _lastLocFiredAt = 0;    // timestamp of last lesson_location — used to guard iframe DOM access
 
-// Count '1' bits in binary sequences (4+ chars of 0/1) inside suspend_data.
-// iSpring encodes a visited-slide bitmask there. Going PREV doesn't unset bits
-// (already-visited slides stay '1'), so this count never decreases on PREV.
-function countVisitedBits(sd) {
-  var total = 0;
+// Count '1' bits in the visited-slide bitmask inside iSpring's suspend_data.
+// iSpring stores multiple binary sequences for different purposes (visited slides,
+// question answers, nav state etc.). We identify the slide-visit bitmask by
+// finding the sequence whose length is closest to totalSlidesInPkg.
+function countVisitedBits(sd, totalSlides) {
   var seqs = sd.match(/[01]{4,}/g) || [];
-  seqs.forEach(function(s) { total += (s.match(/1/g) || []).length; });
-  return total;
+  if (seqs.length === 0) return 0;
+  if (totalSlides > 0) {
+    // Pick the sequence with length closest to totalSlides
+    var best = seqs.reduce(function(a, b) {
+      return Math.abs(a.length - totalSlides) <= Math.abs(b.length - totalSlides) ? a : b;
+    });
+    // Only trust it if within ±5 of totalSlides
+    if (best.length >= totalSlides - 5 && best.length <= totalSlides + 5) {
+      return (best.match(/1/g) || []).length;
+    }
+  }
+  // Fallback: use the longest sequence
+  seqs.sort(function(a, b) { return b.length - a.length; });
+  return (seqs[0].match(/1/g) || []).length;
 }
 
 
@@ -287,85 +301,33 @@ function updateStatusBar() {
     'browsed':'badge-blue','not attempted':'badge-gray'
   }[status] || 'badge-gray');
 
-  // Progress % — based on CURRENT slide position (PREV decreases, NEXT increases)
-  // Uses lesson_location (the authoritative "where am I now") with multiple
-  // fallback parsers. score_raw is NEVER used — iSpring increases it even on PREV.
+  // Progress % — based on unique slides VISITED (not current position).
+  // 100% is only reached when every slide has been opened at least once.
   let pct = 0;
   if (!justRestarted) {
     const st = CMI['cmi.core.lesson_status'] || 'not attempted';
     const isCompleted = (st === 'completed' || st === 'passed');
 
-    // ── Resolve current slide position from multiple sources ──────────────
-    // NOTE: We do this even when completed/passed so that PREV decreases the bar.
-    // Completed status only forces 100% if no current position is available.
-    let currentPos = 0;
+    // Primary: iframe checkmark count — reads exactly what the student sees in the menu.
+    // Fallback: suspendBitCount (iSpring bitmask), then slideTimings (time-based).
+    const visitedCount = iframeCheckedCount >= 0
+      ? iframeCheckedCount
+      : (suspendBitCount > 0
+          ? suspendBitCount
+          : Object.keys(slideTimings).filter(id => (slideTimings[id] || 0) >= 1).length);
 
-    // 1. lesson_location — primary source (updated synchronously inside LMSSetValue,
-    //    no polling delay). Skip '0' (iSpring init sentinel) and non-slide keys.
-    const _loc = CMI['cmi.core.lesson_location'] || '';
-    if (_loc && _loc !== '0' && _loc !== 'video_seconds' && _loc !== 'video_duration') {
-      const fv = parseFloat(_loc);
-      if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
-      else {
-        const idx = pkgSlideOrder.indexOf(_loc);
-        if (idx >= 0) { currentPos = idx + 1; }
-        else { const m = /^(\d+)/.exec(_loc); if (m && parseInt(m[1]) > 0) currentPos = parseInt(m[1]); }
-      }
-    }
-
-    // 2. iframe DOM reader override — allow PREV to decrease below lesson_location.
-    //    Some packages (e.g. iSpring) only advance lesson_location going forward
-    //    (resume bookmark); the DOM reader reads the ACTUAL visible slide in real
-    //    time, so on PREV it gives a lower value. We accept it only when it is
-    //    strictly lower than what lesson_location reports — this prevents stale
-    //    or wrong DOM readings from inflating progress above lesson_location.
-    //    If lesson_location is absent (0), accept any valid DOM reading directly.
-    if (iframeSlidePos > 0 && iframeSlidePos < 1000) {
-      if (currentPos > 0) {
-        if (iframeSlidePos < currentPos) currentPos = iframeSlidePos; // PREV decrease
+    if (totalSlidesInPkg > 0 && visitedCount > 0) {
+      if (visitedCount >= totalSlidesInPkg) {
+        pct = 100;
       } else {
-        currentPos = iframeSlidePos; // no lesson_location: use DOM directly
+        pct = Math.min(99, Math.round((visitedCount / totalSlidesInPkg) * 100));
       }
+    } else if (visitedCount > 0) {
+      pct = Math.min(99, visitedCount * 5);
     }
 
-    // 3. iframe hash — for packages that navigate via URL fragment.
-    if (!currentPos && !scormApiSetLocation) {
-      try {
-        const frame = document.getElementById('scormFrame');
-        if (frame && frame.contentWindow) {
-          const h = frame.contentWindow.location.hash;
-          const nums = (h.match(/\d+/g) || []).map(Number).filter(n => n > 0 && n < 5000);
-          if (nums.length) currentPos = nums[0];
-        }
-      } catch(e) {}
-    }
-
-    // 4. currentSlide (numeric / GUID keys only, NOT pg_X synthetic keys).
-    if (!currentPos && currentSlide && !/^pg_/.test(currentSlide)) {
-      const fv = parseFloat(currentSlide);
-      if (!isNaN(fv) && fv > 0 && fv < 10000) { currentPos = Math.floor(fv); }
-      else {
-        const idx = pkgSlideOrder.indexOf(currentSlide);
-        if (idx >= 0) { currentPos = idx + 1; }
-        else { const m = /^(\d+)/.exec(currentSlide); if (m) currentPos = parseInt(m[1]); }
-      }
-    }
-
-    // 5. pg_X fallback — bitmask-based position (decreases on PREV via currentCommitPos).
-    if (!currentPos && currentCommitPos > 0) {
-      currentPos = currentCommitPos;
-    }
-
-    if (currentPos > 0) {
-      if (totalSlidesInPkg > 0) {
-        pct = Math.min(100, Math.round((currentPos / totalSlidesInPkg) * 100));
-      } else {
-        pct = Math.min(99, currentPos * 5);
-      }
-    }
-
-    // Completed with no position info → default to 100%
-    if (isCompleted && pct === 0) pct = 100;
+    // Progress is purely slide-visit based — SCORM completion status does not force 100%
+    // (PASSED badge still shows correctly via status badge above)
 
     // Hold last displayed % during lesson_location='0' sentinel window
     if (pct === 0 && _lastDisplayedPct > 0) pct = _lastDisplayedPct;
@@ -373,9 +335,28 @@ function updateStatusBar() {
   _lastDisplayedPct = pct;
   document.getElementById('progressDisplay').textContent = pct + '%';
   document.getElementById('progressBar').style.width = pct + '%';
+
+  // Update Slides: X / Y counter — same priority as visitedCount above
+  const visitedCount2 = iframeCheckedCount >= 0
+    ? iframeCheckedCount
+    : (suspendBitCount > 0
+        ? suspendBitCount
+        : Object.keys(slideTimings).filter(id => (slideTimings[id] || 0) >= 1).length);
+  if (totalSlidesInPkg > 0) {
+    const displayVisited = Math.min(visitedCount2, totalSlidesInPkg);
+    document.getElementById('slidesDisplay').textContent = displayVisited + ' / ' + totalSlidesInPkg;
+    document.getElementById('slidesTrackerItem').style.display = '';
+    // Show congratulations only when all slides visited
+    if (displayVisited >= totalSlidesInPkg && !document.getElementById('completionBanner').classList.contains('shown')) {
+      document.getElementById('completionBanner').classList.add('show', 'shown');
+      setTimeout(() => document.getElementById('completionBanner').classList.remove('show'), 5000);
+    }
+  }
   try {
     const dp = document.getElementById('scormDebugPct');
     if (dp) dp.textContent = 'pct=' + pct + '%';
+    const dc = document.getElementById('scormDebugChecked');
+    if (dc) dc.textContent = iframeCheckedCount;
     const di = document.getElementById('scormDebugIframe');
     if (di) di.textContent = iframeSlidePos || '?';
   } catch(e) {}
@@ -389,7 +370,7 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// Live timer
+// Live timer + iframe checkmark polling
 setInterval(() => {
   const secs = Math.floor((Date.now() - sessionStart) / 1000);
   const m = Math.floor(secs / 60), s = secs % 60;
@@ -401,6 +382,45 @@ setInterval(() => {
 // slide counter from the iframe DOM directly. Since the iframe is same-origin
 // we can access its document. This gives the REAL current slide (decreases on PREV).
 let iframeSlidePos = 0;
+let iframeCheckedCount = -1; // checkmarked (visited) items in SCORM menu, -1 = unknown
+
+// Count visited slides by reading iSpring's cs-viewed class from the SCORM iframe menu.
+// iSpring adds 'cs-viewed' to each TOC item when the student visits that slide.
+function countIframeCheckmarks() {
+  try {
+    const frame = document.getElementById('scormFrame');
+    if (!frame) return;
+    const doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+    if (!doc || !doc.body) return;
+
+    // Count visited LEAF slides in the TOC sidebar.
+    //
+    // Articulate Storyline's DOM structure separates role from class:
+    //   <div role="treeitem">          ← container (role here, never gets cs-viewed)
+    //     <div class="cs-viewed">      ← inner content gets cs-viewed when visited
+    //       <button class="cs-viewed"> ← button ALSO gets cs-viewed → naive count = 2×
+    //
+    // So a direct '.cs-viewed' count gives 2× per visited slide, and
+    // '[role="treeitem"].cs-viewed' gives 0 (no element has both on the same node).
+    //
+    // Correct approach: count leaf [role="treeitem"] elements that CONTAIN a .cs-viewed
+    // descendant — one per slide entry, exactly matching what the student sees as ✓.
+    //
+    // :not([aria-expanded]) excludes chapter/scene headings, which have aria-expanded
+    // so they can be toggled open/closed in the sidebar.
+    const allLeafItems = doc.querySelectorAll('[role="treeitem"]:not([aria-expanded])');
+    let visitedLeafs = 0;
+    allLeafItems.forEach(function(item) {
+      if (item.querySelector('.cs-viewed')) visitedLeafs++;
+    });
+    iframeCheckedCount = visitedLeafs;
+
+    // Update totalSlidesInPkg from leaf treeitem count (no aria-expanded = not a chapter)
+    if (totalSlidesInPkg <= 0 && allLeafItems.length > 0) {
+      totalSlidesInPkg = allLeafItems.length;
+    }
+  } catch(e) {}
+}
 
 function readSlideFromIframe() {
   if (scormApiSetLocation) return;
@@ -538,6 +558,7 @@ window.API = {
       currentCommitPos    = 0;
       suspendBitCount     = 0;
       iframeSlidePos      = 0;
+      iframeCheckedCount  = -1;
       suspendDataKeyMap.clear();
       _lastDisplayedPct   = 0;
       justRestarted       = true;
@@ -614,6 +635,9 @@ window.API = {
     // Treating '0' as a slide would lock scormApiSetLocation=true and report 0% forever.
     if (element === 'cmi.core.lesson_location' && value && value !== '0') {
       recordSlideTime(value);
+      // Record slide navigation time — MutationObserver will pick up cs-viewed changes
+      // WITHOUT a setTimeout here, so we never touch iframe DOM during video init.
+      _lastLocFiredAt = Date.now();
       scormApiSetLocation = true;
       // Keep iframeSlidePos in sync when lesson_location advances (NEXT navigation).
       // This gives the PREV button hook a correct starting point to decrement from.
@@ -662,7 +686,7 @@ window.API = {
       }
 
       if (!scormApiSetLocation) {
-        const newBits = countVisitedBits(value);
+        const newBits = countVisitedBits(value, totalSlidesInPkg);
         if (newBits > suspendBitCount) {
           // NEXT to new slide: both counters advance
           suspendBitCount = newBits;
@@ -680,11 +704,7 @@ window.API = {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveTracking(false), 3000);
     updateStatusBar();
-    // Show completion banner
-    if (element === 'cmi.core.lesson_status' && (value === 'passed' || value === 'completed')) {
-      document.getElementById('completionBanner').classList.add('show');
-      setTimeout(() => document.getElementById('completionBanner').classList.remove('show'), 5000);
-    }
+    // Completion banner is shown only when all slides visited (see updateStatusBar)
     return 'true';
   },
 
@@ -759,6 +779,27 @@ async function saveTracking(final) {
       const spent = Math.floor((Date.now() - slideStartTime) / 1000);
       slideTimings[currentSlide] = (slideTimings[currentSlide] || 0) + spent;
       slideStartTime = Date.now();
+    }
+
+    // ── Articulate Storyline: sync slide count from iframe sidebar checkmarks ──
+    // For packages that don't use lesson_location (scormApiSetLocation=false),
+    // iframeCheckedCount is the authoritative visited-slide count from the
+    // Articulate sidebar. Synthesize pg_N entries so the courses page shows
+    // the correct X/Y slides count.
+    if (iframeCheckedCount > 0 && !scormApiSetLocation) {
+      for (let _i = 1; _i <= iframeCheckedCount; _i++) {
+        const _k = 'pg_' + _i;
+        // Ensure each visited slide appears in both slide_visits and slide_times
+        if (!slideVisits[_k]) slideVisits[_k] = 1;
+        // Give the highest checked slide at least 1 s so maxSlidePos picks it up
+        // for score_raw; others default to 0 (still counted by the server).
+        if (!(_k in slideTimings)) slideTimings[_k] = (_i === iframeCheckedCount) ? 1 : 0;
+      }
+      // Keep commitSlideCount in sync for future PREV/NEXT detection
+      if (iframeCheckedCount > commitSlideCount) {
+        commitSlideCount = iframeCheckedCount;
+        currentCommitPos = iframeCheckedCount;
+      }
     }
   }
 
@@ -1004,51 +1045,53 @@ async function loadContent() {
           } catch(e) {} // cross-origin guard (same-origin should always pass)
         }, 500);
 
-        // ── PREV/NEXT button hook (iSpring lesson_location packages) ────────────
-        // iSpring does not update lesson_location on PREV. We hook the PREV/NEXT
-        // buttons inside the (same-origin) iframe directly. PREV decrements
-        // iframeSlidePos; NEXT increments it. The min() guard in updateStatusBar
-        // means iframeSlidePos can only lower progress — it never inflates it above
-        // lesson_location (which tracks the max slide reached via NEXT).
-        let _prevTs = 0, _nextTs = 0;
-        function hookNavButtons() {
-          if (!scormApiSetLocation) return; // only needed for lesson_location packages
+        // ── MutationObserver: watch iSpring's cs-viewed class for visited-slide tracking ──
+        // Replaces the old setTimeout(countIframeCheckmarks,800) + hookNavButtons approach.
+        //
+        // WHY MutationObserver instead of setTimeout/setInterval:
+        //   iSpring adds 'cs-viewed' to the TOC item DURING the slide transition,
+        //   BEFORE it starts initialising the new slide's video player (loadVideo).
+        //   A fixed 800ms setTimeout fires RIGHT when loadVideo is running, causing
+        //   "this.el.loadVideo is not a function" in slides.min.js.
+        //   MutationObserver fires at DOM mutation time — after cs-viewed is applied
+        //   but before video loading begins — so there is zero race condition.
+        //
+        // We delay the observer setup 3 s to avoid touching the iframe DOM while
+        // the very first slide's video is initialising (slide 1 works fine; we don't
+        // want to break it by setting up the observer too early).
+        let _obsvDebounce = null;
+        setTimeout(function setupCsViewedObserver() {
           try {
             const fdoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
             if (!fdoc || !fdoc.body) return;
-            const candidates = fdoc.querySelectorAll('button,a,div,span,li,td,[role="button"]');
-            candidates.forEach(el => {
-              if (el._lmsNav) return;
-              // Strip arrow chars + whitespace, uppercase — must equal PREV or NEXT exactly
-              const txt = (el.innerText || el.textContent || '')
-                .replace(/[←→▸◂←→\s]/g, '').toUpperCase();
-              const isPrev = txt === 'PREV' || txt === 'PREVIOUS';
-              const isNext = txt === 'NEXT';
-              if (!isPrev && !isNext) return;
-              el._lmsNav = true;
-              el.addEventListener('click', function() {
-                const now = Date.now();
-                if (isPrev) {
-                  if (now - _prevTs < 600) return;
-                  _prevTs = now;
-                  const base = iframeSlidePos > 0
-                    ? iframeSlidePos
-                    : (Math.floor(parseFloat(CMI['cmi.core.lesson_location'] || '')) || commitSlideCount || 1);
-                  iframeSlidePos = Math.max(1, base - 1);
-                  updateStatusBar();
-                } else {
-                  if (now - _nextTs < 600) return;
-                  _nextTs = now;
-                  iframeSlidePos = (iframeSlidePos || 0) + 1;
-                  // lesson_location LMSSetValue will also fire and clamp upward if needed
-                  updateStatusBar();
-                }
-              }, true);
+
+            const observer = new MutationObserver(function(mutations) {
+              // Only act when an element gains the cs-viewed class
+              const relevant = mutations.some(function(m) {
+                return m.type === 'attributes' &&
+                       m.attributeName === 'class' &&
+                       m.target.classList &&
+                       m.target.classList.contains('cs-viewed');
+              });
+              if (!relevant) return;
+              clearTimeout(_obsvDebounce);
+              _obsvDebounce = setTimeout(function() {
+                countIframeCheckmarks();
+                updateStatusBar();
+              }, 250); // brief debounce for rapid consecutive mutations
             });
+
+            observer.observe(fdoc.body, {
+              attributes:      true,
+              attributeFilter: ['class'],
+              subtree:         true,
+            });
+
+            // Read initial state right now (observer only fires on future changes)
+            countIframeCheckmarks();
+            updateStatusBar();
           } catch(e) {}
-        }
-        setTimeout(hookNavButtons, 1200);
-        setInterval(hookNavButtons, 2500); // re-hook after iSpring re-renders nav
+        }, 3000);
       };
       frame.onerror = () => showError('Failed to load SCORM content. The package may be corrupted.');
       frame.src = pkg.upload_path;

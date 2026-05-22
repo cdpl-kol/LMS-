@@ -826,12 +826,14 @@ function showSection(name){
 let examScoreChart,progressChart;
 async function loadOverview(){
   try{
-    const [meR,attR,examR,progR]=await Promise.all([
+    const [meR,attR,examR,progR,scormDashR]=await Promise.all([
       api('GET','/me'),
       api('GET','/attendance/student/me'),
       api('GET','/exam/results/me'),
-      api('GET','/progress/me')
+      api('GET','/progress/me'),
+      api('GET','/scorm/my-progress')
     ]);
+    const _dashScormMap=scormDashR.data||{};
     // Update profile data
     if(meR.success||meR.data){
       const d=meR.data||meR;
@@ -853,19 +855,24 @@ async function loadOverview(){
     }
     // Charts
     buildExamChart(examR.data||[]);
-    buildProgressChart(progR.data||{});
+    buildProgressChart(progR.data||{}, _dashScormMap);
     // Recent activity table
     const courses=await api('GET','/courses/enrolled');
     if(courses.success||courses.data){
       const rows=courses.data||[];
       document.getElementById('st-courses').textContent=Array.isArray(rows)?rows.length:'—';
       document.getElementById('recentTbody').innerHTML=rows.length?
-        rows.slice(0,5).map((c,i)=>`<tr>
-          <td>${i+1}</td><td>${fmt(c.title||c.course_title)}</td>
-          <td>${fmt(c.current_module||'—')}</td>
-          <td><div class="prog-bar"><div class="prog-fill" style="width:${c.progress||0}%;background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div></div><small>${c.progress||0}%</small></td>
-          <td>${statusBadge(c.status||'active')}</td>
-        </tr>`).join(''):
+        rows.slice(0,5).map((c,i)=>{
+          // Prefer SCORM slide-based % over raw course progress (0 for SCORM courses)
+          const _sp=_dashScormMap[String(c.id)];
+          const _pct=_sp&&_sp.total_slides>0?_sp.pct:(c.progress||0);
+          return`<tr>
+            <td>${i+1}</td><td>${fmt(c.title||c.course_title)}</td>
+            <td>${fmt(c.current_module||'—')}</td>
+            <td><div class="prog-bar"><div class="prog-fill" style="width:${_pct}%;background:linear-gradient(90deg,#e91e8c,#9c27b0);"></div></div><small>${_pct}%</small></td>
+            <td>${statusBadge(c.status||'active')}</td>
+          </tr>`;
+        }).join(''):
         '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No courses enrolled yet.</td></tr>';
     }
     // Assignments due count
@@ -886,12 +893,15 @@ function buildExamChart(results){
   examScoreChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Score',data:scores,borderColor:'#e91e8c',backgroundColor:'rgba(233,30,140,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#e91e8c',pointRadius:5}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}});
 }
 
-function buildProgressChart(data){
+function buildProgressChart(data, scormMap){
   const ctx=document.getElementById('progressChart');
   if(!ctx)return;
   if(progressChart)progressChart.destroy();
   const courses=data.courses||[];
-  progressChart=new Chart(ctx,{type:'doughnut',data:{labels:courses.map(c=>c.title?.substring(0,14)||'Course'),datasets:[{data:courses.map(c=>c.percentage||0),backgroundColor:['#e91e8c','#9c27b0','#7c4dff','#1a8fe3','#43a047','#ff6b35']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
+  const sm=scormMap||{};
+  // For each course prefer SCORM slide-based % when available (regular % is 0 for SCORM courses)
+  const pcts=courses.map(c=>{const sp=sm[String(c.id)];return sp&&sp.total_slides>0?sp.pct:(c.percentage||0);});
+  progressChart=new Chart(ctx,{type:'doughnut',data:{labels:courses.map(c=>c.title?.substring(0,14)||'Course'),datasets:[{data:pcts,backgroundColor:['#e91e8c','#9c27b0','#7c4dff','#1a8fe3','#43a047','#ff6b35']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
 }
 
 /* ── COURSES — Tab switch ── */
@@ -1207,6 +1217,8 @@ async function loadProgress(){
       let slideBadge='';
       if(sp&&sp.is_video&&sp.pct>0){slideBadge=`<span style="font-size:11px;background:rgba(26,35,126,0.07);color:var(--navy);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px;"><i class="fas fa-play-circle" style="margin-right:3px;"></i>${sp.pct}% watched</span>`;}
       else if(sp&&sp.total_slides>0&&sp.slides_visited>0){slideBadge=`<span style="font-size:11px;background:rgba(26,35,126,0.07);color:var(--navy);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px;"><i class="fas fa-layer-group" style="margin-right:3px;"></i>${sp.slides_visited}/${sp.total_slides} slides</span>`;}
+      // Prefer SCORM total_time over course-level time_spent_seconds for accuracy
+      const _cardTime=sp&&sp.time_seconds>0?sp.time_seconds:(c.time_spent_seconds||0);
       return `<div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid #f0f0f0;">
         <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;">${fmt(c.title)}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -1218,7 +1230,7 @@ async function loadProgress(){
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);">
           <span><i class="fas fa-layer-group" style="margin-right:4px;"></i>${c.completed_modules||0} / ${c.total_modules||0} modules</span>
-          <span><i class="fas fa-clock" style="margin-right:4px;"></i>${fmtTime(c.time_spent_seconds)}</span>
+          <span><i class="fas fa-clock" style="margin-right:4px;"></i>${_cardTime>0?fmtTime(_cardTime):'—'}</span>
         </div>
         ${c.last_accessed?`<div style="font-size:11px;color:var(--muted);margin-top:6px;"><i class="fas fa-calendar-alt" style="margin-right:4px;"></i>Last accessed: ${dateFmt(c.last_accessed)}</div>`:''}
         ${certBadge}
@@ -1274,12 +1286,21 @@ async function loadProgress(){
       }
 
       // ── SCORM slide card ──
+      const sv=t.slide_visits&&typeof t.slide_visits==='object'?t.slide_visits:{};
       const entries=Object.entries(st).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&v>0);
-      if(!entries.length)return'';
-      const visitedCount=entries.length;
+      // Compute visited count as max pg_N across slide_times AND slide_visits
+      let _maxPg=0;
+      const _pgRe=/^pg_(\d+)$/;
+      Object.keys(st).concat(Object.keys(sv)).forEach(k=>{const m=k.match(_pgRe);if(m){const n=parseInt(m[1]);if(n>_maxPg)_maxPg=n;}});
+      const visitedCount=_maxPg>0?_maxPg:entries.length;
+      if(!visitedCount&&!entries.length)return'';
       const totalSlides=p.total_slides||0;
       const slidePct=totalSlides>0?Math.min(100,Math.round((visitedCount/totalSlides)*100)):null;
-      const totalTime=entries.reduce((a,[,v])=>a+v,0);
+      // Use total_time as authoritative time; fall back to per-slide sum
+      let totalTime=0;
+      if(t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalTime=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
+      if(!totalTime)totalTime=entries.reduce((a,[,v])=>a+v,0);
+      if(!visitedCount)return'';
       const rows=entries.map(([slide,secs])=>`<tr>
         <td style="padding:6px 12px;font-size:12px;color:var(--text);border-bottom:1px solid #f0f0f0;word-break:break-all;">${slide}</td>
         <td style="padding:6px 12px;font-size:12px;font-weight:600;color:var(--navy);border-bottom:1px solid #f0f0f0;white-space:nowrap;">${fmtTime(secs)}</td>
@@ -1718,6 +1739,18 @@ async function loadScorm(){
           const _n=parseInt(k);if(!isNaN(_n)&&_n>0&&_n>_maxSlidePos)_maxSlidePos=_n;
         }
       });
+    // Also merge slide_visits — catches pg_N entries with 0 time (e.g. Articulate
+    // Storyline packages where saveTracking writes pg_N:0 for intermediate slides)
+    // and any lesson_location-based keys that only appear in slide_visits.
+    Object.keys(slideVisitsObj)
+      .filter(k=>(slideVisitsObj[k]||0)>=1)
+      .forEach(k=>{
+        const _pgM=k.match(/^pg_(\d+)$/);
+        if(_pgM){const pgN=parseInt(_pgM[1]);if(pgN>0&&pgN>_maxSlidePos)_maxSlidePos=pgN;return;}
+        if(_slOrdHasGuids&&!_slOrd.includes(k)){const m=k.match(_posKeyRe);if(m){const idx=parseInt(m[1])-1;if(idx>=0&&idx<_slOrd.length){_visitedSet.add(_slOrd[idx]);if(idx+1>_maxSlidePos)_maxSlidePos=idx+1;return;}}}
+        _visitedSet.add(k);
+        const _n=parseInt(k);if(!isNaN(_n)&&_n>0&&_n>_maxSlidePos)_maxSlidePos=_n;
+      });
     // Use highest numeric slide with time>1 (or visitedSet size as fallback).
     // Don't trust lesson_location here — it's the last-saved bookmark position
     // (e.g. slide 13 from an old session), not slides genuinely completed.
@@ -1725,13 +1758,18 @@ async function loadScorm(){
     // in that case fall back to visitedSet size (capped at total_slides).
     const _rawMax=_maxSlidePos||_visitedSet.size;
     const visitedSlides=(p.total_slides>0&&_rawMax>p.total_slides)?Math.min(_visitedSet.size,p.total_slides):_rawMax;
-    let totalSecs=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).reduce((a,[,v])=>a+parseInt(v),0);
-    if(totalSecs===0&&t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalSecs=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
+    // total_time is the authoritative accumulated session time (always >= per-slide sum).
+    // Prefer it; fall back to per-slide sum only when total_time is absent.
+    let totalSecs=0;
+    if(t.total_time){const _ttm=t.total_time.match(/(\d+):(\d+):(\d+)/);if(_ttm)totalSecs=parseInt(_ttm[1])*3600+parseInt(_ttm[2])*60+parseInt(_ttm[3]);}
+    if(totalSecs===0)totalSecs=Object.entries(slides).filter(([k,v])=>k!=='video_seconds'&&k!=='video_duration'&&parseInt(v)>1).reduce((a,[,v])=>a+parseInt(v),0);
     const score=parseInt(t.score_raw)||0;
     const scoreMax=parseInt(t.score_max)||100;
+    // If SCORM didn't report a completion status but slides were visited, treat as in-progress
+    const effectiveSt=(st==='not attempted'&&visitedSlides>0)?'incomplete':st;
     const playerUrl=`scorm-player.html?pkg=${p.id}&name=${encodeURIComponent(p.package_name||'Content')}`;
-    const actionLabel=isVideo?'Watch':st==='incomplete'?'Resume':'Launch';
-    const actionIcon=isVideo?'fa-play-circle':st==='incomplete'?'fa-rotate-right':'fa-play';
+    const actionLabel=isVideo?'Watch':effectiveSt==='incomplete'?'Resume':'Launch';
+    const actionIcon=isVideo?'fa-play-circle':effectiveSt==='incomplete'?'fa-rotate-right':'fa-play';
     return`<tr style="border-bottom:1px solid var(--brd);">
       <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--muted);">${i+1}</td>
       <td style="padding:12px 14px;">
@@ -1739,7 +1777,7 @@ async function loadScorm(){
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">${p.course_name||'—'}${p.module_name?' · '+p.module_name:''}</div>
       </td>
       <td style="padding:12px 14px;">${typeTag}</td>
-      <td style="padding:12px 14px;">${_sStatusBadge(st)}</td>
+      <td style="padding:12px 14px;">${_sStatusBadge(effectiveSt)}</td>
       <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${score>0?score+'/'+scoreMax:'—'}</td>
       <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${visitedSlides>0?(p.total_slides>0?visitedSlides+'/'+p.total_slides:visitedSlides):'—'}</td>
       <td style="padding:12px 14px;font-size:13px;font-weight:600;color:var(--navy);">${totalSecs>0?_sFmtSec(totalSecs):'—'}</td>
