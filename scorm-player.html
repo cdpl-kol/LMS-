@@ -415,6 +415,12 @@ function countIframeCheckmarks() {
     });
     iframeCheckedCount = visitedLeafs;
 
+    // Safety net: if checkmarks appear after a restart, the user has genuinely visited a slide.
+    // Clear justRestarted so the progress % unlocks — catches all package types (iSpring, Articulate).
+    if (visitedLeafs > 0 && justRestarted) {
+      justRestarted = false;
+    }
+
     // Update totalSlidesInPkg from leaf treeitem count (no aria-expanded = not a chapter)
     if (totalSlidesInPkg <= 0 && allLeafItems.length > 0) {
       totalSlidesInPkg = allLeafItems.length;
@@ -1242,6 +1248,8 @@ async function restartSCORM() {
   commitSlideCount    = 0;
   currentCommitPos    = 0;
   suspendDataKeyMap.clear();
+  suspendBitCount     = 0;       // must reset — iSpring bitmask path checks newBits > suspendBitCount
+  iframeCheckedCount  = -1;      // force fresh count from iframe after reload
   _lastDisplayedPct   = 0;
   justRestarted       = true;
   initialized         = false;
