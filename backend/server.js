@@ -1974,18 +1974,10 @@ app.post('/api/v1/corporate/razorpay/verify', auth, requireRole('corporate'), as
 });
 
 // Upload intro video for a course (admin only)
+// Uses memoryStorage + R2 (like SCORM uploads) so videos survive Render restarts.
+// Falls back to local disk when R2 is not configured (local dev).
 const videoUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const dir = path.join(uploadsDir, 'course-intro-videos');
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      cb(null, dir);
-    },
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      cb(null, 'intro-' + req.params.id + '-' + Date.now() + ext);
-    }
-  }),
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowed = ['.mp4', '.webm', '.mov', '.m4v', '.ogg', '.ogv', '.avi', '.mkv'];
     const ext = path.extname(file.originalname).toLowerCase();
@@ -1998,8 +1990,22 @@ app.post('/api/v1/courses/:id/intro-video', auth, adminOnly, (req, res) => {
   videoUpload.single('intro_video')(req, res, async (uploadErr) => {
     if (uploadErr) return err(res, uploadErr.message, 400);
     if (!req.file) return err(res, 'No video file uploaded', 400);
-    const videoPath = '/uploads/course-intro-videos/' + req.file.filename;
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const filename = 'intro-' + req.params.id + '-' + Date.now() + ext;
+    const r2Key = 'course-intro-videos/' + filename;
+    let videoPath;
     try {
+      if (r2Enabled) {
+        // Store in R2 — survives Render restarts
+        await r2Put(r2Key, req.file.buffer, r2Mime(filename));
+        videoPath = process.env.R2_PUBLIC_URL.replace(/\/$/, '') + '/' + r2Key;
+      } else {
+        // Local dev fallback — save to disk
+        const dir = path.join(uploadsDir, 'course-intro-videos');
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, filename), req.file.buffer);
+        videoPath = '/uploads/course-intro-videos/' + filename;
+      }
       await pool.query('UPDATE courses SET intro_video=$1 WHERE id=$2', [videoPath, req.params.id]);
       ok(res, { intro_video: videoPath }, 'Intro video uploaded');
     } catch (e) { err(res, e.message); }
