@@ -905,6 +905,20 @@ async function loadTracking() {
       if (t.slide_visits && typeof t.slide_visits === 'object') {
         slideVisits = t.slide_visits;
       }
+      // Pre-seed lastSuspendData so iSpring's immediate re-send of the saved
+      // suspend_data on resume is treated as "no change" and doesn't trigger
+      // a false countVisitedBits jump that corrupts per-slide timing.
+      if (t.suspend_data) {
+        lastSuspendData = t.suspend_data;
+        // Pre-seed suspendBitCount to match saved state so new slide visits
+        // register as genuine increments (newBits > suspendBitCount).
+        const _initBits = countVisitedBits(t.suspend_data, totalSlidesInPkg || 0);
+        if (_initBits > 0) {
+          suspendBitCount  = _initBits;
+          commitSlideCount = _initBits;
+          currentCommitPos = _initBits;
+        }
+      }
     }
   } catch(e) {}
   updateStatusBar();
