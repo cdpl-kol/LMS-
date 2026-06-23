@@ -217,6 +217,7 @@ let pkgSlideOrder = [];   // slide_order array from package (for GUID-based SCOR
 let scormApiSetLocation = false; // true when SCORM content sets lesson_location via LMSSetValue
 let lastSuspendData = '';        // fingerprint: detect slide changes via suspend_data
 let commitSlideCount = 0;        // max slide reached (monotonic, used for scoring)
+let maxIframeSlidePos = 0;       // highest slide number seen in iframe DOM (direct ground truth)
 let currentCommitPos = 0;       // current displayed position (decreases on PREV)
 const suspendDataKeyMap = new Map(); // suspend_data → pg_index: reuse same key on PREV so progress decreases
 let currentPkgPath = '';  // stored so Restart can reload the iframe
@@ -315,14 +316,14 @@ function updateStatusBar() {
   if (currentSlide) _stKeys.add(currentSlide);
   const _stVisited = _stKeys.size;
 
-  // Take the MAXIMUM across all tracking signals — each is a valid lower bound
-  // and any single wrong-low count (e.g. iframeCheckedCount=1 when cs-viewed
-  // selector only finds the first item, or _stVisited=0 after CCF reset) should
-  // not override a higher correct count from another source.
+  // Take the MAXIMUM across all tracking signals — each is a valid lower bound.
+  // maxIframeSlidePos is the direct ground truth (reads "12 / 30" from iframe DOM),
+  // monotonically tracks highest slide reached, never fooled by CCF/SCORM state resets.
   function _resolveVisitedCount() {
     let best = _stVisited;
     if (iframeCheckedCount > best) best = iframeCheckedCount;
     if (suspendBitCount > best) best = suspendBitCount;
+    if (maxIframeSlidePos > best) best = maxIframeSlidePos;
     return best;
   }
 
@@ -606,6 +607,8 @@ function readSlideFromIframe() {
 
     if (pos && pos !== iframeSlidePos) {
       iframeSlidePos = pos;
+      // Track highest slide reached — monotonic, never decreases on PREV
+      if (pos > maxIframeSlidePos) maxIframeSlidePos = pos;
       updateStatusBar();
     }
   } catch(e) {}
@@ -912,6 +915,7 @@ async function saveTracking(final) {
     // Also check current lesson_location as the authoritative current position
     const locFloat = parseFloat(CMI['cmi.core.lesson_location'] || '');
     if (!isNaN(locFloat) && locFloat > maxSlidePos) maxSlidePos = Math.floor(locFloat);
+    if (maxIframeSlidePos > maxSlidePos) maxSlidePos = maxIframeSlidePos;
     if (totalSlidesInPkg > 0 && maxSlidePos > 0) {
       effectiveScoreRaw = Math.min(99, Math.round((maxSlidePos / totalSlidesInPkg) * 100));
     } else if (maxSlidePos > 0) {
@@ -1368,6 +1372,7 @@ async function restartSCORM() {
   initialized         = false;
   dirty               = false;
   sessionStart        = Date.now();
+  maxIframeSlidePos   = 0;
 
   updateStatusBar();
   document.getElementById('syncStatus').textContent = '✓ Reset';
