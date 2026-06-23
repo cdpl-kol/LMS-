@@ -607,8 +607,19 @@ function readSlideFromIframe() {
 
     if (pos && pos !== iframeSlidePos) {
       iframeSlidePos = pos;
-      // Track highest slide reached — monotonic, never decreases on PREV
-      if (pos > maxIframeSlidePos) maxIframeSlidePos = pos;
+      // Track highest slide reached — monotonic, never decreases on PREV.
+      // Also populate slideVisits for every newly reached slide so that
+      // backend analytics and My Modules Progress show correct data.
+      if (pos > maxIframeSlidePos) {
+        for (let _s = maxIframeSlidePos + 1; _s <= pos; _s++) {
+          const _k = String(_s);
+          slideVisits[_k] = (slideVisits[_k] || 0) + 1;
+          // Ensure slide_times has an entry (0s) so analytics lists it as viewed
+          if (!(_k in slideTimings)) slideTimings[_k] = 0;
+        }
+        maxIframeSlidePos = pos;
+        dirty = true;
+      }
       updateStatusBar();
     }
   } catch(e) {}
