@@ -304,14 +304,14 @@ function updateStatusBar() {
   // Progress % — based on unique slides VISITED (not current position).
   // 100% is only reached when every slide has been opened at least once.
 
-  // Pre-compute slideTimings visited count: all keys the player has seen,
-  // including currentSlide even before its time has been flushed.
-  // Used as the authoritative source for lesson_location-based packages
-  // (iSpring with scormApiSetLocation=true) where iframeCheckedCount
-  // is unreliable (TOC may not use cs-viewed, or checkmarks arrive late).
-  const _stKeys = new Set(
-    Object.keys(slideTimings).filter(id => id !== 'video_seconds' && id !== 'video_duration')
-  );
+  // Pre-compute visited slide count from slideTimings + slideVisits + currentSlide.
+  // slideTimings keys get filtered (v>0) in CCF-RESET, so fast slides (<1s) disappear.
+  // slideVisits keys survive CCF because visitCount>=1 passes the filter.
+  // Merging both ensures every slide the user opened is counted regardless of time spent.
+  const _stKeys = new Set([
+    ...Object.keys(slideTimings).filter(id => id !== 'video_seconds' && id !== 'video_duration'),
+    ...Object.keys(slideVisits).filter(id => (slideVisits[id] || 0) >= 1)
+  ]);
   if (currentSlide) _stKeys.add(currentSlide);
   const _stVisited = _stKeys.size;
 
