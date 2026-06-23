@@ -217,8 +217,9 @@ let pkgSlideOrder = [];   // slide_order array from package (for GUID-based SCOR
 let scormApiSetLocation = false; // true when SCORM content sets lesson_location via LMSSetValue
 let lastSuspendData = '';        // fingerprint: detect slide changes via suspend_data
 let commitSlideCount = 0;        // max slide reached (monotonic, used for scoring)
-let maxIframeSlidePos = 0;       // highest slide number seen in iframe DOM (direct ground truth)
-let _pendingSlidePos  = 0;       // candidate for maxIframeSlidePos — confirmed after 2 consecutive polls
+let maxIframeSlidePos    = 0;    // highest slide number confirmed in iframe DOM (direct ground truth)
+let _pendingSlidePos     = 0;    // candidate for next maxIframeSlidePos
+let _pendingSlidePosTime = 0;    // timestamp when _pendingSlidePos was set
 let currentCommitPos = 0;       // current displayed position (decreases on PREV)
 const suspendDataKeyMap = new Map(); // suspend_data → pg_index: reuse same key on PREV so progress decreases
 let currentPkgPath = '';  // stored so Restart can reload the iframe
@@ -608,27 +609,29 @@ function readSlideFromIframe() {
 
     if (pos && pos !== iframeSlidePos) {
       iframeSlidePos = pos;
-      // Track highest slide reached — monotonic, never decreases on PREV.
-      // Also populate slideVisits for every newly reached slide so that
-      // backend analytics and My Modules Progress show correct data.
       if (pos > maxIframeSlidePos) {
-        // Debounce: require the same position on 2 consecutive polls (~1.6s)
-        // so a brief NEXT→PREV transition doesn't inflate the visited count.
-        if (pos === _pendingSlidePos) {
-          for (let _s = maxIframeSlidePos + 1; _s <= pos; _s++) {
-            const _k = String(_s);
-            slideVisits[_k] = (slideVisits[_k] || 0) + 1;
-            if (!(_k in slideTimings)) slideTimings[_k] = 0;
-          }
-          maxIframeSlidePos = pos;
-          _pendingSlidePos  = 0;
-          dirty = true;
-        } else {
-          _pendingSlidePos = pos;
+        // Set as pending (time-based debounce — confirmed after 1.5s on same slide)
+        if (pos !== _pendingSlidePos) {
+          _pendingSlidePos     = pos;
+          _pendingSlidePosTime = Date.now();
         }
       } else {
         _pendingSlidePos = 0; // student went back — cancel pending
       }
+      updateStatusBar();
+    }
+
+    // Confirm pending slide after student stays on it for 1.5s (runs every poll)
+    if (_pendingSlidePos > maxIframeSlidePos &&
+        (Date.now() - _pendingSlidePosTime) >= 1500) {
+      for (let _s = maxIframeSlidePos + 1; _s <= _pendingSlidePos; _s++) {
+        const _k = String(_s);
+        slideVisits[_k] = (slideVisits[_k] || 0) + 1;
+        if (!(_k in slideTimings)) slideTimings[_k] = 0;
+      }
+      maxIframeSlidePos = _pendingSlidePos;
+      _pendingSlidePos  = 0;
+      dirty = true;
       updateStatusBar();
     }
   } catch(e) {}
@@ -1392,7 +1395,9 @@ async function restartSCORM() {
   initialized         = false;
   dirty               = false;
   sessionStart        = Date.now();
-  maxIframeSlidePos   = 0;
+  maxIframeSlidePos    = 0;
+  _pendingSlidePos     = 0;
+  _pendingSlidePosTime = 0;
 
   updateStatusBar();
   document.getElementById('syncStatus').textContent = '✓ Reset';
