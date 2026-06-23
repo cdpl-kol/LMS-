@@ -218,6 +218,7 @@ let scormApiSetLocation = false; // true when SCORM content sets lesson_location
 let lastSuspendData = '';        // fingerprint: detect slide changes via suspend_data
 let commitSlideCount = 0;        // max slide reached (monotonic, used for scoring)
 let maxIframeSlidePos = 0;       // highest slide number seen in iframe DOM (direct ground truth)
+let _pendingSlidePos  = 0;       // candidate for maxIframeSlidePos — confirmed after 2 consecutive polls
 let currentCommitPos = 0;       // current displayed position (decreases on PREV)
 const suspendDataKeyMap = new Map(); // suspend_data → pg_index: reuse same key on PREV so progress decreases
 let currentPkgPath = '';  // stored so Restart can reload the iframe
@@ -611,14 +612,22 @@ function readSlideFromIframe() {
       // Also populate slideVisits for every newly reached slide so that
       // backend analytics and My Modules Progress show correct data.
       if (pos > maxIframeSlidePos) {
-        for (let _s = maxIframeSlidePos + 1; _s <= pos; _s++) {
-          const _k = String(_s);
-          slideVisits[_k] = (slideVisits[_k] || 0) + 1;
-          // Ensure slide_times has an entry (0s) so analytics lists it as viewed
-          if (!(_k in slideTimings)) slideTimings[_k] = 0;
+        // Debounce: require the same position on 2 consecutive polls (~1.6s)
+        // so a brief NEXT→PREV transition doesn't inflate the visited count.
+        if (pos === _pendingSlidePos) {
+          for (let _s = maxIframeSlidePos + 1; _s <= pos; _s++) {
+            const _k = String(_s);
+            slideVisits[_k] = (slideVisits[_k] || 0) + 1;
+            if (!(_k in slideTimings)) slideTimings[_k] = 0;
+          }
+          maxIframeSlidePos = pos;
+          _pendingSlidePos  = 0;
+          dirty = true;
+        } else {
+          _pendingSlidePos = pos;
         }
-        maxIframeSlidePos = pos;
-        dirty = true;
+      } else {
+        _pendingSlidePos = 0; // student went back — cancel pending
       }
       updateStatusBar();
     }
