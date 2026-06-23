@@ -303,18 +303,34 @@ function updateStatusBar() {
 
   // Progress % — based on unique slides VISITED (not current position).
   // 100% is only reached when every slide has been opened at least once.
+
+  // Pre-compute slideTimings visited count: all keys the player has seen,
+  // including currentSlide even before its time has been flushed.
+  // Used as the authoritative source for lesson_location-based packages
+  // (iSpring with scormApiSetLocation=true) where iframeCheckedCount
+  // is unreliable (TOC may not use cs-viewed, or checkmarks arrive late).
+  const _stKeys = new Set(
+    Object.keys(slideTimings).filter(id => id !== 'video_seconds' && id !== 'video_duration')
+  );
+  if (currentSlide) _stKeys.add(currentSlide);
+  const _stVisited = _stKeys.size;
+
+  // Priority:
+  //   lesson_location package (iSpring)  → slideTimings + currentSlide
+  //   no lesson_location (Articulate)    → iframeCheckedCount > suspendBitCount > slideTimings
+  function _resolveVisitedCount() {
+    if (scormApiSetLocation) return _stVisited;
+    if (iframeCheckedCount >= 0) return iframeCheckedCount;
+    if (suspendBitCount > 0) return suspendBitCount;
+    return _stVisited;
+  }
+
   let pct = 0;
   if (!justRestarted) {
     const st = CMI['cmi.core.lesson_status'] || 'not attempted';
     const isCompleted = (st === 'completed' || st === 'passed');
 
-    // Primary: iframe checkmark count — reads exactly what the student sees in the menu.
-    // Fallback: suspendBitCount (iSpring bitmask), then slideTimings (time-based).
-    const visitedCount = iframeCheckedCount >= 0
-      ? iframeCheckedCount
-      : (suspendBitCount > 0
-          ? suspendBitCount
-          : Object.keys(slideTimings).filter(id => (slideTimings[id] || 0) >= 1).length);
+    const visitedCount = _resolveVisitedCount();
 
     if (totalSlidesInPkg > 0 && visitedCount > 0) {
       if (visitedCount >= totalSlidesInPkg) {
@@ -337,11 +353,7 @@ function updateStatusBar() {
   document.getElementById('progressBar').style.width = pct + '%';
 
   // Update Slides: X / Y counter — same priority as visitedCount above
-  const visitedCount2 = iframeCheckedCount >= 0
-    ? iframeCheckedCount
-    : (suspendBitCount > 0
-        ? suspendBitCount
-        : Object.keys(slideTimings).filter(id => (slideTimings[id] || 0) >= 1).length);
+  const visitedCount2 = _resolveVisitedCount();
   if (totalSlidesInPkg > 0) {
     const displayVisited = Math.min(visitedCount2, totalSlidesInPkg);
     document.getElementById('slidesDisplay').textContent = displayVisited + ' / ' + totalSlidesInPkg;
@@ -383,6 +395,8 @@ setInterval(() => {
 // we can access its document. This gives the REAL current slide (decreases on PREV).
 let iframeSlidePos = 0;
 let iframeCheckedCount = -1; // checkmarked (visited) items in SCORM menu, -1 = unknown
+let _lastChkOrCCFTime  = 0;  // timestamp of last CHK fire or CCF-RESET (for auto-nav detection)
+const CHK_AUTONAV_MS   = 3000; // checkmarks within 3s of reset = iSpring auto-navigation, skip timing
 
 // Count visited slides by reading iSpring's cs-viewed class from the SCORM iframe menu.
 // iSpring adds 'cs-viewed' to each TOC item when the student visits that slide.
@@ -413,12 +427,75 @@ function countIframeCheckmarks() {
     allLeafItems.forEach(function(item) {
       if (item.querySelector('.cs-viewed')) visitedLeafs++;
     });
+    const _prevChecked = iframeCheckedCount; // save before update
     iframeCheckedCount = visitedLeafs;
 
     // Safety net: if checkmarks appear after a restart, the user has genuinely visited a slide.
     // Clear justRestarted so the progress % unlocks — catches all package types (iSpring, Articulate).
     if (visitedLeafs > 0 && justRestarted) {
       justRestarted = false;
+    }
+
+    // ── Checkmark-driven per-slide timing ────────────────────────────────────
+    // For packages where countVisitedBits returns 0 (bitmask doesn't match totalSlides),
+    // use sidebar checkmark transitions as the authoritative "slide completed" signal.
+    if (!scormApiSetLocation && visitedLeafs > 0) {
+      const _chkNow = Date.now();
+      const _isAutoNav = (_chkNow - _lastChkOrCCFTime) < CHK_AUTONAV_MS;
+
+      // Guard against stale cs-viewed from previous runs (iSpring keeps DOM state across
+      // in-player restarts / CCF cycles without reloading the iframe).
+      // commitSlideCount persists through CCF cycles (not reset in CCF-RESET), so it
+      // always reflects how many slides have been committed in this session so far.
+      // Capping at commitSlideCount+1 means: even if visitedLeafs=6 (stale pg_6 present),
+      // we only trust up to the NEXT expected slide (e.g. 5 after committing 4). ✓
+      const _trusted = Math.min(visitedLeafs, commitSlideCount + 1);
+
+      console.log('[CHK] prevChecked='+_prevChecked+' visitedLeafs='+visitedLeafs+' trusted='+_trusted+' commitSlideCount='+commitSlideCount+' isAutoNav='+_isAutoNav+' slideTimings='+JSON.stringify(slideTimings));
+
+      if (_prevChecked < 0 && !currentSlide) {
+        // Initial/restore: sync timing to where the user actually IS, not where cs-viewed
+        // jumped to.  commitSlideCount is preserved across CCF cycles and reflects the last
+        // slide the user genuinely reached.  Using _trusted here caused a mis-attribution
+        // bug: after a mid-slide CCF, iSpring's DOM still shows the NEXT slide as cs-viewed
+        // (stale mark), so _trusted jumped ahead by 1 and currentSlide was set to pg_(N+1)
+        // while the user was still watching slide N — bleeding N's time into N+1's bucket.
+        //
+        // Rule: restore to commitSlideCount (known-good) on CCF; use _trusted only on first
+        // init where commitSlideCount=0 (no prior state).
+        const _restoreTo = commitSlideCount > 0 ? commitSlideCount : _trusted;
+        // Do NOT advance commitSlideCount in the restore branch — the next real-nav CHK loop
+        // will increment it correctly.  On first init commitSlideCount stays 0 and the loop
+        // catches up normally via _trusted.
+        currentCommitPos = _restoreTo;
+        currentSlide = 'pg_' + _restoreTo;
+        if (!slideVisits[currentSlide]) slideVisits[currentSlide] = 1;
+        slideStartTime = Date.now();
+        _lastChkOrCCFTime = _chkNow;
+      } else if (_prevChecked >= 0 && visitedLeafs > _prevChecked) {
+        _lastChkOrCCFTime = _chkNow;
+        if (_isAutoNav) {
+          // iSpring auto-navigation during resume/init: update count and advance currentSlide
+          // so timing restarts from the last restored position instead of slide 1.
+          if (commitSlideCount < _trusted) {
+            commitSlideCount = _trusted;
+            currentCommitPos = _trusted;
+          }
+          if (currentSlide) {
+            currentSlide = 'pg_' + _trusted;
+            slideStartTime = Date.now();
+          }
+        } else {
+          // Real user navigation: record timing for each newly visited slide
+          while (commitSlideCount < _trusted) {
+            commitSlideCount++;
+            currentCommitPos = commitSlideCount;
+            recordSlideTime('pg_' + commitSlideCount);
+            console.log('[CHK] after recordSlideTime(pg_'+commitSlideCount+') slideTimings='+JSON.stringify(slideTimings));
+          }
+          saveTracking(false);
+        }
+      }
     }
 
     // Update totalSlidesInPkg from leaf treeitem count (no aria-expanded = not a chapter)
@@ -554,13 +631,25 @@ window.API = {
       CMI['cmi.core.session_time']    = '0000:00:00.00';
       CMI['cmi.core.entry']           = 'ab-initio';
       CMI['cmi.suspend_data']         = '';
-      slideTimings        = {};
-      slideVisits         = {};
+      // Preserve accumulated timing/visit data so iSpring's between-slide
+      // LMSFinish→LMSInitialize cycles don't wipe real per-slide times.
+      // Only keep entries with actual data (>0); synthesis zeros are discarded.
+      _lastChkOrCCFTime = Date.now(); // start grace period — skip checkmark timing for CHK_AUTONAV_MS
+      console.log('[CCF-RESET] slideTimings before preserve:', JSON.stringify(slideTimings), 'currentSlide:', currentSlide, 'slideStartTime:', slideStartTime ? (Date.now()-slideStartTime)+'ms ago' : 'null');
+      slideTimings        = Object.fromEntries(Object.entries(slideTimings).filter(([,v])=>v>0));
+      slideVisits         = Object.fromEntries(Object.entries(slideVisits).filter(([,v])=>v>0));
+      console.log('[CCF-RESET] slideTimings after preserve:', JSON.stringify(slideTimings));
       currentSlide        = null;
       slideStartTime      = null;
       scormApiSetLocation = false;
       lastSuspendData     = '';
-      commitSlideCount    = 0;
+      // commitSlideCount is intentionally NOT reset here.
+      // It persists through CCF (between-slide LMSFinish→LMSInitialize) cycles so that
+      // _trusted = min(visitedLeafs, commitSlideCount+1) can guard against stale cs-viewed
+      // from previous runs while still allowing the next legitimate slide to be tracked.
+      // It IS overwritten by the initial-CHK branch on each new LMSInitialize, so
+      // an in-player Restart (commitSlideCount→N then initial CHK sees visitedLeafs=1→resets to 1)
+      // handles the "start over" case correctly.
       currentCommitPos    = 0;
       suspendBitCount     = 0;
       iframeSlidePos      = 0;
@@ -591,6 +680,7 @@ window.API = {
 
   LMSFinish: function(s) {
     CMI['cmi.core.session_time'] = getSessionTime();
+    console.log('[LMSFinish] slideTimings='+JSON.stringify(slideTimings)+' currentSlide='+currentSlide+' slideStartTime='+(slideStartTime?(Date.now()-slideStartTime)+'ms ago':'null'));
     saveTracking(true);
     initialized = false;
     // Mark that content called finish — if LMSInitialize follows quickly it
@@ -799,13 +889,13 @@ async function saveTracking(final) {
         if (!slideVisits[_k]) slideVisits[_k] = 1;
         // Give the highest checked slide at least 1 s so maxSlidePos picks it up
         // for score_raw; others default to 0 (still counted by the server).
-        if (!(_k in slideTimings)) slideTimings[_k] = (_i === iframeCheckedCount) ? 1 : 0;
+        if (!(_k in slideTimings)) slideTimings[_k] = 0; // always 0 — slide_visits is the viewed signal
       }
-      // Keep commitSlideCount in sync for future PREV/NEXT detection
-      if (iframeCheckedCount > commitSlideCount) {
-        commitSlideCount = iframeCheckedCount;
-        currentCommitPos = iframeCheckedCount;
-      }
+      // NOTE: commitSlideCount is intentionally NOT advanced here from iframeCheckedCount.
+      // iframeCheckedCount may include stale cs-viewed from previous runs (iSpring keeps DOM
+      // state across CCF cycles), which would incorrectly push commitSlideCount past the
+      // real current slide. CHK events (countIframeCheckmarks) manage commitSlideCount via
+      // the _trusted guard and are the authoritative source.
     }
   }
 
@@ -859,7 +949,11 @@ async function saveTracking(final) {
         total_time:        _totalTimeStr,
         suspend_data:      CMI['cmi.suspend_data'] || '',
         lesson_location:   (CMI['cmi.core.lesson_location'] && CMI['cmi.core.lesson_location'] !== '0') ? CMI['cmi.core.lesson_location'] : '',
-        slide_times:       slideTimings,
+        // Filter out zero-value entries so a freshly-started slide (0s) doesn't
+        // overwrite a previously accumulated real value already in the DB.
+        // The server SQL: CASE WHEN force_zero OR slide_times!='{}' THEN new ELSE keep END
+        // — sending {} (after filter) triggers the ELSE branch, preserving good data.
+        slide_times:       Object.fromEntries(Object.entries(slideTimings).filter(([,v])=>v>0)),
         slide_visits:      slideVisits,
         force_zero:        justRestarted,
       })
@@ -1117,8 +1211,22 @@ async function loadContent() {
       frame.src = pkg.upload_path;
       // Fallback hide loader after 8s
       setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 8000);
-      // Heartbeat: save every 60s even if no LMSCommit fires
-      setInterval(() => { if (initialized && dirty) saveTracking(false); }, 60000);
+      // Short heartbeat: accumulate slide time every 5 s independently of SCORM API calls.
+      // iSpring never calls LMSSetValue during video playback inside a slide, so the
+      // 3-second auto-save timer (set in LMSSetValue) never fires.  Without this
+      // heartbeat, slideTimings['pg_1'] stays 0 until the next slide change, and if
+      // CHK fires twice in quick succession (e.g. after a CCF cycle restores position)
+      // the flush inside recordSlideTime sees elapsed=0 and pg_1 records 0 s.
+      setInterval(() => {
+        if (!initialized || !currentSlide || slideStartTime === null) return;
+        const spent = Math.floor((Date.now() - slideStartTime) / 1000);
+        if (spent > 0) {
+          slideTimings[currentSlide] = (slideTimings[currentSlide] || 0) + spent;
+          slideStartTime = Date.now();
+        }
+      }, 5000);
+      // Heartbeat: save every 60s even if no LMSCommit fires.
+      setInterval(() => { if (initialized && (dirty || currentSlide !== null)) saveTracking(false); }, 60000);
 
       // postMessage fallback: only for packages that do NOT use LMSSetValue for
       // lesson_location (scormApiSetLocation=false). When lesson_location IS
