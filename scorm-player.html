@@ -315,14 +315,15 @@ function updateStatusBar() {
   if (currentSlide) _stKeys.add(currentSlide);
   const _stVisited = _stKeys.size;
 
-  // Priority:
-  //   lesson_location package (iSpring)  → slideTimings + currentSlide
-  //   no lesson_location (Articulate)    → iframeCheckedCount > suspendBitCount > slideTimings
+  // Take the MAXIMUM across all tracking signals — each is a valid lower bound
+  // and any single wrong-low count (e.g. iframeCheckedCount=1 when cs-viewed
+  // selector only finds the first item, or _stVisited=0 after CCF reset) should
+  // not override a higher correct count from another source.
   function _resolveVisitedCount() {
-    if (scormApiSetLocation) return _stVisited;
-    if (iframeCheckedCount > 0) return iframeCheckedCount;
-    if (suspendBitCount > 0) return suspendBitCount;
-    return _stVisited;
+    let best = _stVisited;
+    if (iframeCheckedCount > best) best = iframeCheckedCount;
+    if (suspendBitCount > best) best = suspendBitCount;
+    return best;
   }
 
   let pct = 0;
