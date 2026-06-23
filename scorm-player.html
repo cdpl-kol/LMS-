@@ -320,7 +320,7 @@ function updateStatusBar() {
   //   no lesson_location (Articulate)    → iframeCheckedCount > suspendBitCount > slideTimings
   function _resolveVisitedCount() {
     if (scormApiSetLocation) return _stVisited;
-    if (iframeCheckedCount >= 0) return iframeCheckedCount;
+    if (iframeCheckedCount > 0) return iframeCheckedCount;
     if (suspendBitCount > 0) return suspendBitCount;
     return _stVisited;
   }
@@ -623,16 +623,18 @@ window.API = {
     if (contentCalledFinish) {
       clearTimeout(contentFinishTimer);
       contentCalledFinish = false;
-      // Reset all in-memory state
-      CMI['cmi.core.lesson_status']   = 'not attempted';
+      // ── iSpring CCF (Commit-Finish cycle): fires on EVERY slide transition ──
+      // iSpring calls LMSFinish → LMSInitialize between every slide, not just on
+      // Restart. We preserve all tracking state and do NOT wipe the backend.
+      // Only reset per-slide counters so the next slide starts fresh.
+      // DO NOT: set justRestarted=true (blocks lesson_status updates),
+      //         reset CMI lesson_status (loses completion state),
+      //         or call tracking/reset (wipes backend progress).
       CMI['cmi.core.lesson_location'] = '';
-      CMI['cmi.core.score.raw']       = '';
-      CMI['cmi.core.total_time']      = '0000:00:00.00';
       CMI['cmi.core.session_time']    = '0000:00:00.00';
-      CMI['cmi.core.entry']           = 'ab-initio';
+      CMI['cmi.core.entry']           = 'resume';
       CMI['cmi.suspend_data']         = '';
-      // Preserve accumulated timing/visit data so iSpring's between-slide
-      // LMSFinish→LMSInitialize cycles don't wipe real per-slide times.
+      // Preserve accumulated timing/visit data across CCF cycles.
       // Only keep entries with actual data (>0); synthesis zeros are discarded.
       _lastChkOrCCFTime = Date.now(); // start grace period — skip checkmark timing for CHK_AUTONAV_MS
       console.log('[CCF-RESET] slideTimings before preserve:', JSON.stringify(slideTimings), 'currentSlide:', currentSlide, 'slideStartTime:', slideStartTime ? (Date.now()-slideStartTime)+'ms ago' : 'null');
@@ -647,25 +649,13 @@ window.API = {
       // It persists through CCF (between-slide LMSFinish→LMSInitialize) cycles so that
       // _trusted = min(visitedLeafs, commitSlideCount+1) can guard against stale cs-viewed
       // from previous runs while still allowing the next legitimate slide to be tracked.
-      // It IS overwritten by the initial-CHK branch on each new LMSInitialize, so
-      // an in-player Restart (commitSlideCount→N then initial CHK sees visitedLeafs=1→resets to 1)
-      // handles the "start over" case correctly.
       currentCommitPos    = 0;
       suspendBitCount     = 0;
       iframeSlidePos      = 0;
       iframeCheckedCount  = -1;
       suspendDataKeyMap.clear();
-      _lastDisplayedPct   = 0;
-      justRestarted       = true;
-      dirty               = false;
       sessionStart        = Date.now();
       updateStatusBar();
-      // Clear DB so dashboard also shows 0
-      fetch(BASE+'/scorm/tracking/reset', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+TOKEN() },
-        body: JSON.stringify({ package_id: PKG_ID })
-      }).catch(()=>{});
     }
 
     initialized = true;
