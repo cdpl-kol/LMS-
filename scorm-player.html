@@ -521,26 +521,6 @@ function readSlideFromIframe() {
 
     let pos = 0;
 
-    // Strategy A: iSpring global objects that expose current slide index
-    const globalNames = ['Presentation','player','App','iSpringPlayer','PresentationController'];
-    const methodNames = ['getCurrentSlideIndex','getCurrentSlide','getSlide','getPageIndex','getPage'];
-    const propNames   = ['currentSlideIndex','slideIndex','currentSlide','pageIndex'];
-    for (const g of globalNames) {
-      if (pos || !w[g]) continue;
-      for (const fn of methodNames) {
-        if (typeof w[g][fn] === 'function') {
-          try { const r = w[g][fn](); if (typeof r === 'number' && r >= 0 && r < 500) { pos = r + 1; break; } } catch(e) {}
-        }
-      }
-      if (!pos) for (const p of propNames) {
-        if (typeof w[g][p] === 'number' && w[g][p] >= 0 && w[g][p] < 500) { pos = w[g][p] + 1; break; }
-      }
-    }
-    // also check window-level props
-    if (!pos) for (const p of propNames) {
-      if (typeof w[p] === 'number' && w[p] >= 0 && w[p] < 500) { pos = w[p] + 1; break; }
-    }
-
     // Strategy B: CSS selectors for slide counter elements
     if (!pos) {
       const sels = [
