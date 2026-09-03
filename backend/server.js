@@ -1201,7 +1201,7 @@ app.get('/api/v1/public/courses', async (req,res)=>{
 // Courses
 app.get('/api/v1/courses', auth, async (req,res)=>{ try{ const r=await pool.query(`SELECT c.id, c.name, c.name AS title, cat.name AS category, cat.name AS category_name, c.duration, c.description, c.status, c.price, c.demo_video_path, c.intro_video, c.certificate_validity_days, c.avg_rating, c.has_chapters, c.has_assignments, c.linked_trainer_id, c.course_type, c.passing_marks, c.passing_percentage, c.requires_pass, t.name AS trainer_name, t.expertise AS trainer_expertise, t.bio AS trainer_bio, t.profile_photo AS trainer_photo, (SELECT COUNT(*) FROM students WHERE course_id=c.id) AS student_count FROM courses c LEFT JOIN categories cat ON c.category_id=cat.id LEFT JOIN trainers t ON c.linked_trainer_id=t.id ORDER BY c.id`); ok(res,r.rows); }catch(e){err(res,e.message);}});
 app.post('/api/v1/courses', auth, adminOnly, async (req,res)=>{ try{ const courseName=sanitize(req.body.name||req.body.title||''); if(!courseName) return err(res,'Course name is required',400); const {category,duration,status,description,price,demo_video_path,certificate_validity_days,linked_trainer_id,has_chapters,has_assignments,course_type,passing_marks,passing_percentage,requires_pass}=req.body; const catR=await pool.query('SELECT id FROM categories WHERE LOWER(name)=LOWER($1)',[category||'']); const catId=catR.rows[0]?.id||null; const r=await pool.query('INSERT INTO courses(name,category_id,duration,status,description,price,demo_video_path,certificate_validity_days,linked_trainer_id,has_chapters,has_assignments,course_type,passing_marks,passing_percentage,requires_pass) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id',[courseName,catId,duration||'—',status||'Active',description||'',price||0,demo_video_path||null,certificate_validity_days||0,linked_trainer_id||null,has_chapters!==false,has_assignments===true,course_type||'standard',parseInt(passing_marks)||0,parseInt(passing_percentage)||0,requires_pass===true||requires_pass==='true']); const full=await pool.query('SELECT c.id,c.name,cat.name AS category,c.duration,c.description,c.status,c.price,c.demo_video_path,c.certificate_validity_days,c.avg_rating,c.has_chapters,c.has_assignments,c.course_type,c.passing_marks,c.passing_percentage,c.requires_pass FROM courses c LEFT JOIN categories cat ON c.category_id=cat.id WHERE c.id=$1',[r.rows[0].id]); ok(res,full.rows[0]); notifyConnectingdot('course_created', full.rows[0]).catch(()=>{}); }catch(e){err(res,e.message);}});
-app.put('/api/v1/courses/:id', auth, adminOnly, async (req,res)=>{ try{ const {name,category,duration,status,description,price,certificate_validity_days,demo_video_path}=req.body; const catR=await pool.query('SELECT id FROM categories WHERE LOWER(name)=LOWER($1)',[category||'']); const catId=catR.rows[0]?.id||null; const r=await pool.query('UPDATE courses SET name=$1,category_id=$2,duration=$3,status=$4,description=$5,price=$6,certificate_validity_days=$7,demo_video_path=$8 WHERE id=$9 RETURNING id',[sanitize(name),catId,duration||'',status||'Active',description||'',price||0,certificate_validity_days||0,demo_video_path||null,req.params.id]); const full=await pool.query('SELECT c.id,c.name,cat.name AS category_name,c.duration,c.description,c.status,c.price,c.certificate_validity_days,c.demo_video_path,c.avg_rating FROM courses c LEFT JOIN categories cat ON c.category_id=cat.id WHERE c.id=$1',[r.rows[0].id]); ok(res,full.rows[0]); notifyConnectingdot('course_updated', full.rows[0]).catch(()=>{}); }catch(e){err(res,e.message);}});
+app.put('/api/v1/courses/:id', auth, adminOnly, async (req,res)=>{ try{ const {name,category,duration,status,description,price,certificate_validity_days,demo_video_path,linked_trainer_id}=req.body; const catR=await pool.query('SELECT id FROM categories WHERE LOWER(name)=LOWER($1)',[category||'']); const catId=catR.rows[0]?.id||null; const r=await pool.query('UPDATE courses SET name=$1,category_id=$2,duration=$3,status=$4,description=$5,price=$6,certificate_validity_days=$7,demo_video_path=$8,linked_trainer_id=$9 WHERE id=$10 RETURNING id',[sanitize(name),catId,duration||'',status||'Active',description||'',price||0,certificate_validity_days||0,demo_video_path||null,linked_trainer_id||null,req.params.id]); const full=await pool.query('SELECT c.id,c.name,cat.name AS category_name,c.duration,c.description,c.status,c.price,c.certificate_validity_days,c.demo_video_path,c.avg_rating,t.name AS trainer_name FROM courses c LEFT JOIN categories cat ON c.category_id=cat.id LEFT JOIN trainers t ON c.linked_trainer_id=t.id WHERE c.id=$1',[r.rows[0].id]); ok(res,full.rows[0]); notifyConnectingdot('course_updated', full.rows[0]).catch(()=>{}); }catch(e){err(res,e.message);}});
 app.delete('/api/v1/courses/:id', auth, adminOnly, async (req,res)=>{ try{ const before=await pool.query('SELECT id FROM courses WHERE id=$1',[req.params.id]); await pool.query('DELETE FROM courses WHERE id=$1',[req.params.id]); ok(res,{}); if(before.rows[0]) notifyConnectingdot('course_deleted', {id: parseInt(req.params.id)}).catch(()=>{}); }catch(e){err(res,e.message);}});
 
 // Modules
@@ -1224,7 +1224,7 @@ app.delete('/api/v1/exams/:id', auth, adminOnly, async (req,res)=>{ try{ await p
 
 // Batches
 app.get('/api/v1/batches', auth, async (req,res)=>{ try{ const r=await pool.query(`SELECT b.id, b.name, c.name AS course, c.name AS course_title, b.start_date, b.start_date AS start, b.end_date, b.end_date AS "end", t.name AS trainer, t.name AS trainer_name, b.max_students, b.max_students AS students, b.status, (SELECT COUNT(*) FROM students WHERE batch_id=b.id) AS student_count FROM batches b LEFT JOIN courses c ON b.course_id=c.id LEFT JOIN trainers t ON b.trainer_id=t.id ORDER BY b.id`); ok(res,r.rows); }catch(e){err(res,e.message);}});
-app.post('/api/v1/batches', auth, adminOnly, async (req,res)=>{ try{ const {name,course,start,end,trainer,students,status}=req.body; const crsR=await pool.query('SELECT id FROM courses WHERE name=$1',[course]); const trR=await pool.query('SELECT id FROM trainers WHERE name=$1',[trainer]); const crsId=crsR.rows[0]?.id||null; const trId=trR.rows[0]?.id||null; const r=await pool.query('INSERT INTO batches(name,course_id,start_date,end_date,trainer_id,max_students,status) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id',[sanitize(name),crsId,start||null,end||null,trId,parseInt(students)||30,status||'Active']); const full=await pool.query(`SELECT b.id,b.name,c.name AS course,b.start_date AS start,b.end_date AS "end",t.name AS trainer,b.max_students AS students,b.status FROM batches b LEFT JOIN courses c ON b.course_id=c.id LEFT JOIN trainers t ON b.trainer_id=t.id WHERE b.id=$1`,[r.rows[0].id]); ok(res,full.rows[0]); }catch(e){err(res,e.message);}});
+app.post('/api/v1/batches', auth, adminOnly, async (req,res)=>{ try{ const {name,course_id,trainer_id,start_date,end_date,status}=req.body; const r=await pool.query('INSERT INTO batches(name,course_id,start_date,end_date,trainer_id,status) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[sanitize(name),course_id||null,start_date||null,end_date||null,trainer_id||null,status||'active']); const full=await pool.query(`SELECT b.id,b.name,c.name AS course_title,b.start_date,b.end_date,t.name AS trainer_name,b.status FROM batches b LEFT JOIN courses c ON b.course_id=c.id LEFT JOIN trainers t ON b.trainer_id=t.id WHERE b.id=$1`,[r.rows[0].id]); ok(res,full.rows[0]); }catch(e){err(res,e.message);}});
 app.put('/api/v1/batches/:id', auth, adminOnly, async (req,res)=>{ try{ const {name,course,start,end,trainer,students,status}=req.body; const crsR=await pool.query('SELECT id FROM courses WHERE name=$1',[course]); const trR=await pool.query('SELECT id FROM trainers WHERE name=$1',[trainer]); const crsId=crsR.rows[0]?.id||null; const trId=trR.rows[0]?.id||null; await pool.query('UPDATE batches SET name=$1,course_id=$2,start_date=$3,end_date=$4,trainer_id=$5,max_students=$6,status=$7 WHERE id=$8',[sanitize(name),crsId,start||null,end||null,trId,parseInt(students)||30,status,req.params.id]); const full=await pool.query(`SELECT b.id,b.name,c.name AS course,b.start_date AS start,b.end_date AS "end",t.name AS trainer,b.max_students AS students,b.status FROM batches b LEFT JOIN courses c ON b.course_id=c.id LEFT JOIN trainers t ON b.trainer_id=t.id WHERE b.id=$1`,[req.params.id]); ok(res,full.rows[0]); }catch(e){err(res,e.message);}});
 app.delete('/api/v1/batches/:id', auth, adminOnly, async (req,res)=>{ try{ await pool.query('DELETE FROM batches WHERE id=$1',[req.params.id]); ok(res,{}); }catch(e){err(res,e.message);}});
 
@@ -1607,9 +1607,9 @@ app.get('/api/v1/materials', auth, async (req,res)=>{
     if(req.user.role==='student'){
       r=await pool.query(`SELECT cm.*,COALESCE(m.name,'—') AS module_name,c.name AS course_title FROM course_materials cm LEFT JOIN modules m ON cm.module_id=m.id JOIN courses c ON COALESCE(cm.course_id,m.course_id)=c.id WHERE COALESCE(cm.course_id,m.course_id) IN (SELECT COALESCE(b.course_id,s.course_id) FROM students s LEFT JOIN batches b ON s.batch_id=b.id WHERE s.id=$1 AND COALESCE(b.course_id,s.course_id) IS NOT NULL) ORDER BY c.name,COALESCE(m.order_no,0),cm.created_at`,[req.user.id]);
     } else if(req.user.role==='trainer'){
-      r=await pool.query(`SELECT cm.*,m.name AS module_name,c.name AS course_title FROM course_materials cm JOIN modules m ON cm.module_id=m.id JOIN courses c ON cm.course_id=c.id WHERE cm.uploaded_by=$1 ORDER BY cm.created_at DESC`,[req.user.id]);
+      r=await pool.query(`SELECT cm.*,m.name AS module_name,COALESCE(cd.name,cm2.name) AS course_title FROM course_materials cm LEFT JOIN modules m ON cm.module_id=m.id LEFT JOIN courses cd ON cm.course_id=cd.id LEFT JOIN courses cm2 ON m.course_id=cm2.id WHERE cm.uploaded_by=$1 ORDER BY cm.created_at DESC`,[req.user.id]);
     } else {
-      r=await pool.query(`SELECT cm.*,m.name AS module_name,c.name AS course_title FROM course_materials cm JOIN modules m ON cm.module_id=m.id JOIN courses c ON cm.course_id=c.id ORDER BY cm.created_at DESC`);
+      r=await pool.query(`SELECT cm.*,m.name AS module_name,COALESCE(cd.name,cm2.name) AS course_title FROM course_materials cm LEFT JOIN modules m ON cm.module_id=m.id LEFT JOIN courses cd ON cm.course_id=cd.id LEFT JOIN courses cm2 ON m.course_id=cm2.id ORDER BY cm.created_at DESC`);
     }
     ok(res,r.rows);
   }catch(e){err(res,e.message);}
@@ -3613,6 +3613,30 @@ app.post('/api/v1/scorm/upload', auth, requireRole('admin','trainer'), scormUplo
 // List SCORM packages
 app.get('/api/v1/scorm/packages', auth, async (req, res) => {
   try {
+    const isStudent = req.user.role === 'student';
+    let enrolledCourseIds = [];
+    if (isStudent) {
+      const enr = await pool.query(`
+        SELECT DISTINCT c_id FROM (
+          SELECT course_id AS c_id FROM students WHERE id=$1 AND course_id IS NOT NULL
+          UNION
+          SELECT b.course_id AS c_id FROM students s JOIN batches b ON s.batch_id=b.id WHERE s.id=$1 AND b.course_id IS NOT NULL
+          UNION
+          SELECT course_id AS c_id FROM course_purchases WHERE student_id=$1
+        ) sub
+      `, [req.user.id]);
+      enrolledCourseIds = enr.rows.map(r => r.c_id);
+      if (!enrolledCourseIds.length) return ok(res, []);
+    }
+
+    const courseFilter = isStudent
+      ? `AND COALESCE(sp.course_id, m.course_id) = ANY($1::int[])`
+      : '';
+    const courseFilterCC = isStudent
+      ? `AND cc.course_id = ANY($1::int[])`
+      : '';
+    const params = isStudent ? [enrolledCourseIds] : [];
+
     const r = await pool.query(`
       SELECT sp.id::text AS id, sp.package_name, sp.content_type, sp.upload_path, sp.manifest_path,
              sp.scorm_version, sp.total_slides, sp.slide_order, sp.slide_durations, sp.created_at,
@@ -3623,6 +3647,7 @@ app.get('/api/v1/scorm/packages', auth, async (req, res) => {
       LEFT JOIN modules m ON sp.module_id=m.id
       LEFT JOIN courses cm ON m.course_id=cm.id
       LEFT JOIN courses cd ON sp.course_id=cd.id
+      WHERE 1=1 ${courseFilter}
       UNION ALL
       SELECT ('cc-'||cc.id) AS id, COALESCE(cc.file_name,'Content') AS package_name,
              cc.content_type, cc.file_path AS upload_path, NULL AS manifest_path,
@@ -3631,9 +3656,9 @@ app.get('/api/v1/scorm/packages', auth, async (req, res) => {
              NULL AS module_name, cc.course_id, c2.name AS course_name
       FROM course_content cc
       LEFT JOIN courses c2 ON cc.course_id=c2.id
-      WHERE cc.content_type='scorm'
+      WHERE cc.content_type='scorm' ${courseFilterCC}
       ORDER BY created_at DESC
-    `);
+    `, params);
     ok(res, r.rows);
   } catch(e) { err(res, e.message); }
 });

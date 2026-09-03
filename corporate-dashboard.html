@@ -174,7 +174,7 @@ tr:hover td{background:#f0fdf4;}
         </div>
       </div>
       <div style="background:#f0fdf4;border:1px solid #a5d6a7;border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;">
-        <i class="fas fa-info-circle" style="color:var(--teal);"></i> <strong>Login ID</strong> = participant ka email. <strong>Password</strong> = aapka set kiya hua (ya auto-generated). Participant in credentials se login kar sakta hai.
+        <i class="fas fa-info-circle" style="color:var(--teal);"></i> <strong>Login ID</strong> = participant's email. <strong>Password</strong> = the one you set (or auto-generated if left empty). The participant can log in using these credentials.
       </div>
       <button class="btn btn-primary" onclick="addParticipant()"><i class="fas fa-user-plus"></i> Add Participant</button>
     </div>
@@ -1455,7 +1455,7 @@ async function assignCourse(){
 }
 
 async function deleteParticipant(participantId, name){
-  if(!confirm(`"${name}" ko permanently delete karna chahte ho?\n\nYeh action undo nahi ho sakti — participant aur unka sara progress delete ho jayega.`))return;
+  if(!confirm(`Permanently delete "${name}"?\n\nThis action cannot be undone — the participant and all their progress will be deleted.`))return;
   const r=await api('DELETE',`/corporate/participants/${participantId}`);
   if(r.success){showToast(`✅ ${name} deleted successfully!`,'success');loadParticipants();}
   else showToast('Error: '+(r.error||'Could not delete participant.'),'');

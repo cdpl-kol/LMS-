@@ -149,15 +149,11 @@ tr:hover td{background:#f8f9ff;}
   <span class="sb-section">Academic</span>
   <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Courses</button>
   <button class="nav-item" onclick="showSection('attendance')"><i class="fas fa-calendar-check"></i>Mark Attendance</button>
-  <button class="nav-item" onclick="showSection('assignments')"><i class="fas fa-tasks"></i>Assignments</button>
-  <button class="nav-item" onclick="showSection('timetable')"><i class="fas fa-clock"></i>Timetable</button>
   <button class="nav-item" onclick="showSection('materials')"><i class="fas fa-folder-open"></i>Study Materials</button>
   <button class="nav-item" onclick="showSection('elearning')"><i class="fas fa-cube"></i>E-Learning</button>
   <span class="sb-section">Reports</span>
-  <button class="nav-item" onclick="showSection('results')"><i class="fas fa-chart-bar"></i>Exam Results</button>
   <button class="nav-item" onclick="showSection('reports')"><i class="fas fa-file-chart-pie"></i>Batch Reports</button>
   <button class="nav-item" onclick="showSection('queries')"><i class="fas fa-question-circle"></i>Student Queries</button>
-  <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-line"></i>Student Progress</button>
   <span class="sb-section">Account</span>
   <button class="nav-item" onclick="showSection('notifications')"><i class="fas fa-bell"></i>Notifications</button>
   <button class="nav-item" onclick="showSection('profile')"><i class="fas fa-user"></i>My Profile</button>
@@ -657,7 +653,14 @@ function showToast(m,t=''){const el=document.getElementById('toast');el.textCont
 function showAlert(id,m,t='error'){const el=document.getElementById(id);if(!el)return;el.textContent=m;el.className='alert '+t;el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
 function logout(){localStorage.clear();window.location.href='trainer-login.html';}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
-function openModal(id){document.getElementById('modalOverlay').classList.add('open');document.querySelectorAll('.modal-box').forEach(m=>m.style.display='none');document.getElementById(id).style.display='block';}
+async function openModal(id){document.getElementById('modalOverlay').classList.add('open');document.querySelectorAll('.modal-box').forEach(m=>m.style.display='none');document.getElementById(id).style.display='block';
+  if(id==='addMaterialModal'){
+    const r=await api('GET','/courses');
+    const courses=(r.data||[]);
+    const sel=document.getElementById('mat-course');
+    sel.innerHTML='<option value="">Select Course</option>'+courses.map(c=>`<option value="${c.id}">${c.name||c.title}</option>`).join('');
+  }
+}
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
 document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
@@ -947,14 +950,16 @@ async function loadMaterials(){
   const r=await api('GET','/materials?trainer=me');
   const rows=r.data||[];
   document.getElementById('materialsTbody').innerHTML=rows.length?
-    rows.map((m,i)=>`<tr><td>${i+1}</td><td>${fmt(m.title)}</td><td><span class="badge pending">${fmt(m.type||'—')}</span></td><td>${fmt(m.course_title||m.module_name||'—')}</td><td>${dateFmt(m.created_at)}</td><td><a href="${m.file_path_or_url||'#'}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-download"></i> Open</a></td></tr>`).join(''):
+    rows.map((m,i)=>`<tr><td>${i+1}</td><td>${fmt(m.title)}</td><td><span class="badge pending">${fmt(m.type||'—')}</span></td><td>${fmt(m.course_title||m.module_name||'—')}</td><td>${dateFmt(m.created_at)}</td><td style="white-space:nowrap;"><a href="${m.file_path_or_url||'#'}" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-download"></i> Open</a> <button class="btn btn-sm btn-danger" style="background:#e53935;color:#fff;" onclick="deleteMaterial(${m.id})"><i class="fas fa-trash"></i></button></td></tr>`).join(''):
     '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No materials uploaded yet.</td></tr>';
 }
+async function deleteMaterial(id){if(!confirm('Delete this material?'))return;const r=await api('DELETE','/materials/'+id);if(r.success){showToast('Material deleted.','success');loadMaterials();}else showToast(r.error||'Error deleting.','error');}
 async function uploadMaterial(){
   const title=document.getElementById('mat-title').value.trim(),type=document.getElementById('mat-type').value;
   if(!title){showAlert('addMatAlert','Title is required.');return;}
   const file=document.getElementById('mat-file').files[0];
-  const fd=new FormData();fd.append('title',title);fd.append('type',type);if(file)fd.append('file',file);
+  const course_id=document.getElementById('mat-course').value;
+  const fd=new FormData();fd.append('title',title);fd.append('type',type);if(course_id)fd.append('course_id',course_id);if(file)fd.append('file',file);
   try{
     const r=await fetch(BASE+'/materials',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN()},body:fd});
     const d=await r.json();

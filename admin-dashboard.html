@@ -179,22 +179,16 @@ tr:hover td{background:#f8f9ff;}
   <button class="nav-item" onclick="showSection('batches')"><i class="fas fa-layer-group"></i>Batches</button>
 
   <span class="sb-section">Academic</span>
-  <button class="nav-item" onclick="showSection('attendance')" style="opacity:0.7;"><i class="fas fa-calendar-check"></i>Attendance <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
-  <button class="nav-item" onclick="showSection('exams')" style="opacity:0.7;"><i class="fas fa-file-pen"></i>Exams <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
-  <button class="nav-item" onclick="showSection('assignments')" style="opacity:0.7;"><i class="fas fa-tasks"></i>Assignments <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
-  <button class="nav-item" onclick="showSection('timetable')" style="opacity:0.7;"><i class="fas fa-clock"></i>Timetable <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
   <button class="nav-item" onclick="showSection('materials')"><i class="fas fa-folder-open"></i>Materials</button>
   <button class="nav-item" onclick="showSection('certificates')"><i class="fas fa-certificate"></i>Certificates</button>
 
   <span class="sb-section">Finance & Reports</span>
-  <button class="nav-item" onclick="showSection('fees')"><i class="fas fa-indian-rupee-sign"></i>Fee Management</button>
   <button class="nav-item" onclick="showSection('analytics')"><i class="fas fa-chart-line"></i>Analytics</button>
   <button class="nav-item" onclick="showSection('reports')"><i class="fas fa-file-chart-pie"></i>Reports</button>
 
   <span class="sb-section">E-Learning</span>
   <button class="nav-item" onclick="showSection('scorm')"><i class="fas fa-cube"></i>SCORM Packages</button>
   <button class="nav-item" onclick="showSection('corporate')"><i class="fas fa-building"></i>Corporate Clients</button>
-  <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-bar"></i>Student Progress</button>
   <button class="nav-item" onclick="showSection('queries')"><i class="fas fa-question-circle"></i>Queries</button>
 
   <span class="sb-section">System</span>
@@ -316,8 +310,8 @@ tr:hover td{background:#f8f9ff;}
         </div>
       </div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>#</th><th>Title</th><th>Category</th><th>Price</th><th>Duration</th><th>Rating</th><th>Cert. Validity</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="coursesTbody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
+        <thead><tr><th>#</th><th>Title</th><th>Category</th><th>Trainer</th><th>Price</th><th>Duration</th><th>Rating</th><th>Cert. Validity</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="coursesTbody"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px;"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr></tbody>
       </table></div>
     </div>
   </div>
@@ -1121,7 +1115,7 @@ tr:hover td{background:#f8f9ff;}
 
         <!-- Option 3 info -->
         <div id="ct-quiz-info" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#2e7d32;display:none;">
-          <i class="fas fa-info-circle"></i> <strong>Option 3:</strong> Participant pehle course content complete karega, uske baad Custom Quiz show hoga. MCQ questions aur correct answers set kar sakte ho.
+          <i class="fas fa-info-circle"></i> <strong>Option 3:</strong> The participant must complete the course content first; the Custom Quiz will appear after. Set MCQ questions and correct answers below.
         </div>
 
         <!-- Option 3: Custom Quiz Builder -->
@@ -1471,6 +1465,7 @@ tr:hover td{background:#f8f9ff;}
             </select>
           </div>
         </div>
+        <div class="form-group"><label>Trainer</label><select id="ec-trainer" style="padding:8px 10px;border:1px solid var(--brd);border-radius:6px;width:100%;font-size:14px;"><option value="">— No Trainer —</option></select></div>
         <div class="form-group"><label>Description</label><textarea id="ec-desc" placeholder="Course description…"></textarea></div>
         <div class="form-group"><label>Certificate Validity (days)</label><input type="number" id="ec-cert-validity" min="0" placeholder="0 = Lifetime"/></div>
         <div class="form-group"><label>Demo Video URL</label><input type="text" id="ec-demo-video" placeholder="YouTube URL or video path"/></div>
@@ -1632,7 +1627,7 @@ function showSection(name){
 
 function fmt(v){return v===null||v===undefined?'—':v;}
 function dateFmt(d){if(!d)return'—';return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
-function statusBadge(s){const m={active:'active',pending:'pending',approved:'active',inactive:'inactive',paid:'active',overdue:'inactive',present:'active',absent:'inactive'};return`<span class="badge ${m[s]||'pending'}">${s}</span>`;}
+function statusBadge(s){const m={active:'active',pending:'pending',approved:'active',inactive:'inactive',paid:'active',overdue:'inactive',present:'active',absent:'inactive',completed:'inactive'};const k=(s||'').toLowerCase();return`<span class="badge ${m[k]||'pending'}">${s}</span>`;}
 
 // ─ OVERVIEW ─
 let enrollChartInst,courseChartInst;
@@ -1782,6 +1777,7 @@ async function loadCourses(){
         <td>${i+1}</td>
         <td><strong>${fmt(c.name||c.title)}</strong>${c.demo_video_path?'<i class="fas fa-video" style="color:var(--orange);margin-left:6px;" title="Has demo video"></i>':''}</td>
         <td>${fmt(c.category_name||c.category||'—')}</td>
+        <td>${fmt(c.trainer_name||'—')}</td>
         <td>${c.price>0?'<b>₹'+Number(c.price).toLocaleString()+'</b>':'<span class="badge active">Free</span>'}</td>
         <td>${fmt(c.duration||'—')}</td>
         <td>${c.avg_rating>0?`<span style="color:#f59e0b;">★${Number(c.avg_rating).toFixed(1)}</span>`:'—'}</td>
@@ -1789,7 +1785,6 @@ async function loadCourses(){
         <td>${statusBadge((c.status||'Active').toLowerCase())}</td>
         <td style="white-space:nowrap;">
           <button class="btn btn-sm" style="background:var(--orange);color:#fff;margin-right:2px;" onclick="openEditCourse(${c.id})" title="Edit Course"><i class="fas fa-edit"></i> Edit</button>
-          <button class="btn btn-sm" style="background:#43a047;color:#fff;margin-right:2px;" onclick="openCourseProgress(${c.id},${JSON.stringify(c.name||'')})" title="View Student Progress"><i class="fas fa-chart-line"></i> Progress</button>
           <button class="btn btn-sm" style="background:var(--teal);color:#fff;margin-right:2px;" onclick="openCloneCourse(${c.id},${JSON.stringify(c.name||'')})" title="Clone"><i class="fas fa-copy"></i></button>
           <button class="btn btn-sm btn-danger" onclick="deleteCourse(${c.id})" title="Delete" style="background:#e53935;color:#fff;"><i class="fas fa-trash"></i></button>
         </td>
@@ -2184,6 +2179,12 @@ async function openEditCourse(id){
   const ecCat=document.getElementById('ec-category');
   ecCat.innerHTML='<option value="">— Select Category —</option>'+cats.map(ct=>`<option value="${ct.name}">${ct.name}</option>`).join('');
   ecCat.value=c.category_name||c.category||'';
+  // Load trainer dropdown
+  const trR=await api('GET','/trainers');
+  const trainers=trR.data||[];
+  const ecTr=document.getElementById('ec-trainer');
+  ecTr.innerHTML='<option value="">— No Trainer —</option>'+trainers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  ecTr.value=c.linked_trainer_id||'';
   // Load existing content
   loadEditCourseContent(id);
   openModal('editCourseModal');
@@ -2291,8 +2292,9 @@ async function updateCourse(){
   const description=document.getElementById('ec-desc').value.trim();
   const certificate_validity_days=parseInt(document.getElementById('ec-cert-validity').value||0);
   const demo_video_path=document.getElementById('ec-demo-video').value.trim();
+  const linked_trainer_id=document.getElementById('ec-trainer').value||null;
   if(!name){showFormAlert('editCourseAlert','Course title is required.');return;}
-  const r=await api('PUT',`/courses/${id}`,{name,category,duration,price,status,description,certificate_validity_days,demo_video_path});
+  const r=await api('PUT',`/courses/${id}`,{name,category,duration,price,status,description,certificate_validity_days,demo_video_path,linked_trainer_id});
   if(r.success){showFormAlert('editCourseAlert','Course updated!','success');setTimeout(()=>{closeModal();loadCourses();},900);}
   else showFormAlert('editCourseAlert',r.error||'Failed to update course','error');
 }
@@ -2983,7 +2985,7 @@ async function submitEditCategory(){
 
 async function deleteCategory(id,name,courseCount){
   if(courseCount>0){
-    if(!confirm(`"${name}" se ${courseCount} course(s) linked hain.\n\nPhir bhi delete karna chahte ho? (Courses ka category unlink ho jayega)`))return;
+    if(!confirm(`"${name}" has ${courseCount} course(s) linked to it.\n\nDelete anyway? (Those courses will have their category unlinked.)`))return;
   } else {
     if(!confirm(`"${name}" category delete karna chahte ho?`))return;
   }
@@ -3263,7 +3265,7 @@ async function loadBatches(){
 }
 async function addBatch(){
   const name=document.getElementById('ab-name').value.trim(),course_id=document.getElementById('ab-course').value,trainer_id=document.getElementById('ab-trainer').value,start_date=document.getElementById('ab-start').value,end_date=document.getElementById('ab-end').value;
-  if(!name||!course_id){showFormAlert('addBatchAlert','Batch name and course are required.');return;}
+  if(!name){showFormAlert('addBatchAlert','Batch name is required.');return;}
   const r=await api('POST','/batches',{name,course_id:+course_id,trainer_id:trainer_id?+trainer_id:null,start_date,end_date});
   if(r.success){closeModal();loadBatches();}else showFormAlert('addBatchAlert',r.error||'Error');
 }
@@ -3905,11 +3907,11 @@ async function reassignScormCourse(pkgId, pkgName, currentCourseId){
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML=`<div style="background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-    <h3 style="margin:0 0 6px;color:#1a237e;font-size:16px;"><i class="fas fa-link" style="color:#7c3aed;margin-right:8px;"></i>Course Assign Karo</h3>
+    <h3 style="margin:0 0 6px;color:#1a237e;font-size:16px;"><i class="fas fa-link" style="color:#7c3aed;margin-right:8px;"></i>Assign Course</h3>
     <p style="margin:0 0 18px;color:#78909c;font-size:13px;">${pkgName}</p>
-    <label style="font-size:12px;font-weight:600;color:#546e7a;display:block;margin-bottom:6px;">Course Select Karo</label>
+    <label style="font-size:12px;font-weight:600;color:#546e7a;display:block;margin-bottom:6px;">Select Course</label>
     <select id="_rcSel" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;margin-bottom:18px;outline:none;">
-      <option value="">— Koi nahi —</option>${opts}
+      <option value="">— None —</option>${opts}
     </select>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">Cancel</button>

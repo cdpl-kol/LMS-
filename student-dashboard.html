@@ -203,12 +203,7 @@ tr:hover td{background:#f8f9ff;}
   <span class="sb-section">Learning</span>
   <button class="nav-item" onclick="showSection('courses')"><i class="fas fa-book-open"></i>Courses</button>
   <button class="nav-item" onclick="showSection('progress')"><i class="fas fa-chart-line"></i>My Progress</button>
-  <button class="nav-item" onclick="showSection('exams')" style="opacity:0.7;"><i class="fas fa-file-pen"></i>Exams & Results <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
-  <button class="nav-item" onclick="showSection('assignments')" style="opacity:0.7;"><i class="fas fa-tasks"></i>Assignments <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
   <button class="nav-item" onclick="showSection('queries')"><i class="fas fa-question-circle"></i>My Queries</button>
-  <span class="sb-section">School</span>
-  <button class="nav-item" onclick="showSection('attendance')" style="opacity:0.7;"><i class="fas fa-calendar-check"></i>Attendance <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
-  <button class="nav-item" onclick="showSection('timetable')" style="opacity:0.7;"><i class="fas fa-clock"></i>Timetable <span style="margin-left:auto;font-size:9px;background:rgba(255,107,53,0.85);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700;letter-spacing:.3px;">SOON</span></button>
   <button class="nav-item" onclick="showSection('materials')"><i class="fas fa-folder-open"></i>Study Materials</button>
   <button class="nav-item" onclick="showSection('scorm')"><i class="fas fa-cube"></i>E-Learning (SCORM)</button>
   <button class="nav-item" onclick="showSection('certificates')"><i class="fas fa-certificate"></i>My Certificates</button>
@@ -1096,7 +1091,28 @@ function openCourseDetail(courseId) {
     const isYoutube = videoPath.includes('youtube.com') || videoPath.includes('youtu.be');
     if (isYoutube) {
       ytSec.style.display = 'block';
-      document.getElementById('cdm-youtube').src = videoPath;
+      // Convert any YouTube URL to embed format
+      let embedUrl = videoPath;
+      const ytMatch = videoPath.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+      if (ytMatch) embedUrl = 'https://www.youtube.com/embed/' + ytMatch[1];
+      const ytFrame = document.getElementById('cdm-youtube');
+      ytFrame.src = embedUrl;
+      // Fallback: if embedding is blocked (e.g. Error 153), show "Watch on YouTube" button
+      ytFrame.onerror = () => showYoutubeFallback(videoPath);
+      ytFrame.onload = function() {
+        // Check if iframe loaded an error page by listening for postMessage from YouTube
+      };
+      // Always show fallback button below the iframe
+      let existingFb = ytSec.querySelector('.yt-fallback');
+      if (!existingFb) {
+        const fb = document.createElement('div');
+        fb.className = 'yt-fallback';
+        fb.style.cssText = 'text-align:center;padding:10px;background:#000;';
+        fb.innerHTML = `<a href="${videoPath}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#ff0000;color:#fff;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;"><i class="fab fa-youtube"></i> Watch on YouTube</a>`;
+        ytSec.appendChild(fb);
+      } else {
+        existingFb.querySelector('a').href = videoPath;
+      }
     } else {
       videoSec.style.display = 'block';
       document.getElementById('cdm-video').src = videoPath;
@@ -2147,7 +2163,7 @@ async function openStudentCourseContent(courseId, courseName){
   overlay.style.display='flex';
   const r=await api('GET',`/student/courses/${courseId}/content`);
   if(!r.success&&r.error){
-    document.getElementById('ccm-body').innerHTML=`<div style="text-align:center;padding:40px;color:#c62828;"><i class="fas fa-triangle-exclamation" style="font-size:40px;opacity:0.5;display:block;margin-bottom:12px;"></i><p>${r.error||'Content load nahi hua.'}</p></div>`;
+    document.getElementById('ccm-body').innerHTML=`<div style="text-align:center;padding:40px;color:#c62828;"><i class="fas fa-triangle-exclamation" style="font-size:40px;opacity:0.5;display:block;margin-bottom:12px;"></i><p>${r.error||'Failed to load content.'}</p></div>`;
     return;
   }
   const modules=r.data||[];

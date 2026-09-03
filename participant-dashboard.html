@@ -322,7 +322,7 @@ function renderCourseCard(c,id){
   if(needsQuiz){
     if(c.course_type==='custom_quiz' && !scormDone){
       quizBtnHtml=`<div style="width:100%;margin-bottom:8px;padding:8px 12px;background:#f0f4ff;border-radius:8px;font-size:12px;color:var(--muted);text-align:center;border:1.5px dashed #b0bec5;">
-        <i class="fas fa-lock" style="margin-right:6px;"></i>Quiz pehle SCORM complete karo
+        <i class="fas fa-lock" style="margin-right:6px;"></i>Complete the SCORM module first to unlock the quiz
       </div>`;
     } else {
       quizBtnHtml=`<button class="btn btn-sm" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg,#43a047,#1b5e20);color:#fff;" onclick="openQuizModal(${c.id},'${(c.name||'').replace(/'/g,"\\'")}')">
@@ -711,14 +711,14 @@ async function openCourseContent(courseId, courseName){
   const r=await api('GET',`/participant/courses/${courseId}/content`);
 
   if(!r.success && r.error){
-    document.getElementById('cmBody').innerHTML=`<div style="text-align:center;padding:40px;color:#c62828;"><i class="fas fa-triangle-exclamation" style="font-size:40px;opacity:0.5;display:block;margin-bottom:12px;"></i><p>Content load nahi hua.<br><small style="color:var(--muted);">${r.error||'Server error — please try again.'}</small></p></div>`;
+    document.getElementById('cmBody').innerHTML=`<div style="text-align:center;padding:40px;color:#c62828;"><i class="fas fa-triangle-exclamation" style="font-size:40px;opacity:0.5;display:block;margin-bottom:12px;"></i><p>Failed to load content.<br><small style="color:var(--muted);">${r.error||'Server error — please try again.'}</small></p></div>`;
     return;
   }
 
   const modules=r.data||[];
 
   if(!modules.length){
-    document.getElementById('cmBody').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-folder-open" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i><p>Is course mein abhi koi content nahi hai.<br><small>Admin se contact karein.</small></p></div>';
+    document.getElementById('cmBody').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);"><i class="fas fa-folder-open" style="font-size:40px;opacity:0.3;display:block;margin-bottom:12px;"></i><p>No content available in this course yet.<br><small>Please contact your administrator.</small></p></div>';
     return;
   }
 
